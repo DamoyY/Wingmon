@@ -1,8 +1,13 @@
-import { setText, statusEl, state } from "./ui.js";
-
-const toolNames = {
+import {
+  setText,
+  statusEl,
+  state,
+  convertPageContentToMarkdown,
+} from "./ui.js";
+export const toolNames = {
   openBrowserPage: "open_page",
   clickElement: "clickElement",
+  getPageMarkdown: "get_page",
 };
 const openPageToolSchema = {
   type: "object",
@@ -17,6 +22,12 @@ const clickElementToolSchema = {
   type: "object",
   properties: { id: { type: "string", description: "要点击的 botton 的 ID" } },
   required: ["id"],
+  additionalProperties: false,
+};
+const pageMarkdownToolSchema = {
+  type: "object",
+  properties: { tabId: { type: "number", description: "标签页 ID" } },
+  required: ["tabId"],
   additionalProperties: false,
 };
 export const getToolDefinitions = (apiType) => {
@@ -34,6 +45,13 @@ export const getToolDefinitions = (apiType) => {
         name: toolNames.clickElement,
         description: "点击当前页面上指定的 botton",
         parameters: clickElementToolSchema,
+        strict: true,
+      },
+      {
+        type: "function",
+        name: toolNames.getPageMarkdown,
+        description: "输入 tabId 读取页面内容",
+        parameters: pageMarkdownToolSchema,
         strict: true,
       },
     ];
@@ -54,6 +72,15 @@ export const getToolDefinitions = (apiType) => {
         name: toolNames.clickElement,
         description: "点击当前页面上指定 ID 的元素。",
         parameters: clickElementToolSchema,
+        strict: true,
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: toolNames.getPageMarkdown,
+        description: "输入 tabId 读取页面内容",
+        parameters: pageMarkdownToolSchema,
         strict: true,
       },
     },
@@ -209,11 +236,30 @@ const validateClickElementArgs = (args) => {
   }
   return { id: args.id.trim() };
 };
+const validateGetPageMarkdownArgs = (args) => {
+  if (!args || typeof args !== "object") {
+    throw new Error("工具参数必须是对象");
+  }
+  const raw = args.tabId;
+  if (typeof raw === "number" && Number.isInteger(raw) && raw > 0) {
+    return { tabId: raw };
+  }
+  if (typeof raw === "string" && raw.trim()) {
+    const parsed = Number(raw);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      throw new Error("tabId 必须是正整数");
+    }
+    return { tabId: parsed };
+  }
+  throw new Error("tabId 必须是正整数");
+};
 const executeOpenBrowserPage = async (args) => {
   const { url, focus } = validateOpenPageArgs(args);
   const tab = await createTab(url, focus);
   await waitForContentScript(tab.id);
-  return "成功";
+  const pageData = await sendMessageToTab(tab.id, { type: "getPageContent" });
+  const { title, content } = convertPageContentToMarkdown(pageData);
+  return `**成功**\ntabId: "${tab.id}"；\n标题：“${title}”；\n内容：\n${content}`;
 };
 const getActiveTabId = () =>
   new Promise((resolve, reject) => {
@@ -280,6 +326,15 @@ const executeClickElement = async (args) => {
   }
   return "成功";
 };
+const executeGetPageMarkdown = async (args) => {
+  const { tabId } = validateGetPageMarkdownArgs(args);
+  await waitForContentScript(tabId);
+  const pageData = await sendMessageToTab(tabId, { type: "getPageContent" });
+  const { title, url, content } = convertPageContentToMarkdown(pageData);
+  return `**标题：**\n${title}\n**地址：**\n${url}\n**内容：**\n${content}`;
+};
+export const buildPageMarkdownToolOutput = async (tabId) =>
+  executeGetPageMarkdown({ tabId });
 const executeToolCall = async (toolCall) => {
   const normalized = normalizeToolCall(toolCall);
   if (!normalized) {
@@ -291,6 +346,9 @@ const executeToolCall = async (toolCall) => {
   }
   if (normalized.name === toolNames.clickElement) {
     return executeClickElement(args);
+  }
+  if (normalized.name === toolNames.getPageMarkdown) {
+    return executeGetPageMarkdown(args);
   }
   throw new Error(`未支持的工具：${normalized.name}`);
 };

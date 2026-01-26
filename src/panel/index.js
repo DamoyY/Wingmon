@@ -43,6 +43,8 @@ import {
   attachToolCallsToAssistant,
   handleToolCalls,
   parseJson,
+  toolNames,
+  buildPageMarkdownToolOutput,
 } from "./tools.js";
 
 const normalizeTabUrl = (url) => (url || "").trim().toLowerCase();
@@ -279,6 +281,45 @@ const requestModel = async (settings) => {
   if (!reply && !toolCalls.length) throw new Error("未收到有效回复");
   return { toolCalls };
 };
+const createToolCallId = () => {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `local_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+};
+const prefillSharedPage = async () => {
+  if (!shareToggle.checked) return;
+  const activeTab = await getActiveTab();
+  if (typeof activeTab.id !== "number") {
+    throw new Error("活动标签页缺少 tabId");
+  }
+  setText(statusEl, "读取页面中…");
+  const callId = createToolCallId();
+  const args = { tabId: activeTab.id };
+  const output = await buildPageMarkdownToolOutput(activeTab.id);
+  const toolCall = {
+    id: callId,
+    type: "function",
+    function: {
+      name: toolNames.getPageMarkdown,
+      arguments: JSON.stringify(args),
+    },
+    call_id: callId,
+  };
+  state.messages.push({
+    role: "assistant",
+    content: "",
+    tool_calls: [toolCall],
+    hidden: true,
+  });
+  state.messages.push({
+    role: "tool",
+    content: output,
+    tool_call_id: callId,
+    name: toolNames.getPageMarkdown,
+    hidden: true,
+  });
+};
 const sendMessage = async () => {
   if (state.sending) return;
   const content = promptEl.value.trim();
@@ -294,8 +335,9 @@ const sendMessage = async () => {
   promptEl.value = "";
   renderMessages();
   state.sending = true;
-  setText(statusEl, "请求中…");
   try {
+    await prefillSharedPage();
+    setText(statusEl, "请求中…");
     let pendingToolCalls = [];
     do {
       const { toolCalls } = await requestModel(settings);
