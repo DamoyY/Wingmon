@@ -3,6 +3,7 @@ export const toolNames = {
   clickBotton: "clickBotton",
   getPageMarkdown: "get_page",
   closeBrowserPage: "close_page",
+  runConsoleCommand: "run_console",
 };
 const openPageToolSchema = {
   type: "object",
@@ -29,6 +30,12 @@ const closePageToolSchema = {
   type: "object",
   properties: { tabId: { type: "number", description: "标签页 ID" } },
   required: ["tabId"],
+  additionalProperties: false,
+};
+const consoleToolSchema = {
+  type: "object",
+  properties: { command: { type: "string", description: "要执行的命令" } },
+  required: ["command"],
   additionalProperties: false,
 };
 export const getToolDefinitions = (apiType) => {
@@ -60,6 +67,13 @@ export const getToolDefinitions = (apiType) => {
         name: toolNames.closeBrowserPage,
         description: "输入 tabId 关闭标签页",
         parameters: closePageToolSchema,
+        strict: true,
+      },
+      {
+        type: "function",
+        name: toolNames.runConsoleCommand,
+        description: "在当前页面执行命令并返回结果",
+        parameters: consoleToolSchema,
         strict: true,
       },
     ];
@@ -98,6 +112,15 @@ export const getToolDefinitions = (apiType) => {
         name: toolNames.closeBrowserPage,
         description: "输入 tabId 关闭标签页",
         parameters: closePageToolSchema,
+        strict: true,
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: toolNames.runConsoleCommand,
+        description: "在当前页面执行命令并返回结果",
+        parameters: consoleToolSchema,
         strict: true,
       },
     },
@@ -156,4 +179,13 @@ export const validateClosePageArgs = (args) => {
     return { tabId: parsed };
   }
   throw new Error("tabId 必须是正整数");
+};
+export const validateConsoleArgs = (args) => {
+  if (!args || typeof args !== "object") {
+    throw new Error("工具参数必须是对象");
+  }
+  if (typeof args.command !== "string" || !args.command.trim()) {
+    throw new Error("command 必须是非空字符串");
+  }
+  return { command: args.command };
 };

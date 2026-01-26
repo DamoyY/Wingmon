@@ -1,3 +1,5 @@
+const VIEWPORT_MARKER_ATTR = "data-llm-viewport-center";
+
 const assignLlmIds = (root) => {
   const buttons = root.querySelectorAll(
     'button, input[type="button"], input[type="submit"]',
@@ -20,14 +22,64 @@ const assignLlmIds = (root) => {
   });
 };
 
+const insertViewportMarker = (root) => {
+  if (!root) {
+    throw new Error("页面没有可用的 body");
+  }
+  const centerX = Math.max(0, Math.floor(window.innerWidth / 2));
+  const centerY = Math.max(0, Math.floor(window.innerHeight / 2));
+  const centerElement = document.elementFromPoint(centerX, centerY);
+  const marker = document.createElement("span");
+  marker.setAttribute(VIEWPORT_MARKER_ATTR, "true");
+  marker.textContent = "";
+  if (!centerElement) {
+    root.appendChild(marker);
+    return marker;
+  }
+  let insertionTarget = centerElement;
+  let parentNode = centerElement.parentNode;
+  if (typeof centerElement.getRootNode === "function") {
+    const rootNode = centerElement.getRootNode();
+    if (rootNode && rootNode instanceof ShadowRoot && rootNode.host) {
+      insertionTarget = rootNode.host;
+      parentNode = insertionTarget.parentNode;
+    }
+  }
+  if (!parentNode) {
+    root.appendChild(marker);
+    return marker;
+  }
+  if (
+    insertionTarget === document.documentElement ||
+    insertionTarget === root
+  ) {
+    root.appendChild(marker);
+    return marker;
+  }
+  parentNode.insertBefore(marker, insertionTarget);
+  return marker;
+};
+
 const handleGetPageContent = (sendResponse) => {
   if (!document.body) {
     sendResponse({ error: "页面没有可用的 body" });
     return;
   }
-  assignLlmIds(document.body);
-  const html = document.body.innerHTML;
-  sendResponse({ html, title: document.title || "", url: location.href || "" });
+  let marker = null;
+  try {
+    marker = insertViewportMarker(document.body);
+    assignLlmIds(document.body);
+    const html = document.body.innerHTML;
+    sendResponse({
+      html,
+      title: document.title || "",
+      url: location.href || "",
+    });
+  } finally {
+    if (marker && marker.parentNode) {
+      marker.parentNode.removeChild(marker);
+    }
+  }
 };
 
 const handleclickBotton = (message, sendResponse) => {
@@ -54,6 +106,36 @@ const handleclickBotton = (message, sendResponse) => {
   sendResponse({ ok: true });
 };
 
+const serializeConsoleResult = (result) => {
+  if (typeof result === "string") return result;
+  if (typeof result === "undefined") return "undefined";
+  if (result === null) return "null";
+  const serialized = JSON.stringify(result);
+  if (typeof serialized !== "string") {
+    throw new Error("结果不可序列化");
+  }
+  return serialized;
+};
+const handleRunConsoleCommand = async (message, sendResponse) => {
+  const command =
+    typeof message?.command === "string" ? message.command.trim() : "";
+  if (!command) {
+    sendResponse({ error: "command 必须是非空字符串" });
+    return;
+  }
+  let result;
+  try {
+    result = eval(command);
+    if (result instanceof Promise) {
+      result = await result;
+    }
+    const output = serializeConsoleResult(result);
+    sendResponse({ ok: true, output });
+  } catch (error) {
+    sendResponse({ error: error?.message || "命令执行失败" });
+  }
+};
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   try {
     if (message?.type === "ping") {
@@ -70,6 +152,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     if (message?.type === "clickBotton") {
       handleclickBotton(message, sendResponse);
+      return;
+    }
+    if (message?.type === "runConsoleCommand") {
+      handleRunConsoleCommand(message, sendResponse);
+      return true;
     }
   } catch (error) {
     sendResponse({ error: error?.message || "未知错误" });

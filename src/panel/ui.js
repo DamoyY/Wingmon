@@ -182,9 +182,41 @@ export const convertPageContentToMarkdown = (pageData) => {
       button.setAttribute("value", replacement);
     }
   });
+  const viewportMarkerToken = "LLMVIEWPORTCENTERMARKER";
+  const viewportMarker = documentResult.body.querySelector(
+    "[data-llm-viewport-center]",
+  );
+  if (!viewportMarker) {
+    throw new Error("未找到视口中心标记，无法定位截取范围");
+  }
+  viewportMarker.textContent = viewportMarkerToken;
   const processedHtml = documentResult.body.innerHTML;
   const content = turndown.turndown(processedHtml);
-  return { title: pageData.title || "", url: pageData.url || "", content };
+  const markerIndex = content.indexOf(viewportMarkerToken);
+  if (markerIndex < 0) {
+    throw new Error("视口中心标记丢失，无法定位截取范围");
+  }
+  const range = 20000;
+  const start = Math.max(0, markerIndex - range);
+  const end = Math.min(
+    content.length,
+    markerIndex + viewportMarkerToken.length + range,
+  );
+  const hasLeadingCut = start > 0;
+  const hasTrailingCut = end < content.length;
+  let sliced = content.slice(start, end);
+  sliced = sliced.replace(viewportMarkerToken, "");
+  if (hasLeadingCut) {
+    sliced = "[[TRUNCATED_START]]\n" + sliced;
+  }
+  if (hasTrailingCut) {
+    sliced = sliced + "\n[[TRUNCATED_END]]";
+  }
+  return {
+    title: pageData.title || "",
+    url: pageData.url || "",
+    content: sliced,
+  };
 };
 export const setText = (node, text) => {
   node.textContent = text || "";

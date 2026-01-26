@@ -11,6 +11,7 @@ import {
   getToolCallName,
   validateGetPageMarkdownArgs,
   validateClosePageArgs,
+  validateConsoleArgs,
 } from "./definitions.js";
 
 const parseToolArguments = (text) => parseJson(text);
@@ -186,6 +187,18 @@ const executeCloseBrowserPage = async (args) => {
   await closeTab(tabId);
   return "成功";
 };
+const executeRunConsoleCommand = async (args) => {
+  const { command } = validateConsoleArgs(args);
+  const tabId = await getActiveTabId();
+  const result = await sendMessageToTab(tabId, {
+    type: "runConsoleCommand",
+    command,
+  });
+  if (!result?.ok) {
+    throw new Error(result?.error || "命令执行失败");
+  }
+  return result.output;
+};
 export const buildPageMarkdownToolOutput = async (tabId) =>
   executeGetPageMarkdown({ tabId });
 const executeToolCall = async (toolCall) => {
@@ -205,6 +218,9 @@ const executeToolCall = async (toolCall) => {
   }
   if (normalized.name === toolNames.closeBrowserPage) {
     return executeCloseBrowserPage(args);
+  }
+  if (normalized.name === toolNames.runConsoleCommand) {
+    return executeRunConsoleCommand(args);
   }
   throw new Error(`未支持的工具：${normalized.name}`);
 };
