@@ -12,7 +12,7 @@ import {
   sendButton,
   clearButton,
   statusEl,
-  shareToggle,
+  sendWithPageButton,
 } from "../ui/elements.js";
 import { setText } from "../ui/text.js";
 import { showKeyView, showChatView } from "../ui/views.js";
@@ -39,10 +39,9 @@ import {
   handleToolCalls,
 } from "../tools/runtime.js";
 import { requestModel } from "../api/client.js";
-import { refreshShareToggle } from "./shareToggle.js";
+import { refreshSendWithPageButton } from "./sendWithPageButton.js";
 
 const prefillSharedPage = async () => {
-  if (!shareToggle.checked) return;
   const activeTab = await getActiveTab();
   if (typeof activeTab.id !== "number") {
     throw new Error("活动标签页缺少 tabId");
@@ -92,7 +91,7 @@ const handleNonStreamingResponse = (reply, toolCalls) => {
   }
   if (!reply && !toolCalls.length) throw new Error("未收到有效回复");
 };
-const sendMessage = async () => {
+const sendMessage = async ({ includePage = false } = {}) => {
   if (state.sending) return;
   const content = promptEl.value.trim();
   if (!content) return;
@@ -108,7 +107,9 @@ const sendMessage = async () => {
   renderMessages();
   state.sending = true;
   try {
-    await prefillSharedPage();
+    if (includePage) {
+      await prefillSharedPage();
+    }
     setText(statusEl, "请求中…");
     let pendingToolCalls = [];
     do {
@@ -179,6 +180,9 @@ export const bindEvents = () => {
     fillSettingsForm(settings);
   });
   sendButton.addEventListener("click", sendMessage);
+  sendWithPageButton.addEventListener("click", () =>
+    sendMessage({ includePage: true }),
+  );
   promptEl.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -186,20 +190,17 @@ export const bindEvents = () => {
     }
   });
   clearButton.addEventListener("click", clearChat);
-  shareToggle.addEventListener("change", async () => {
-    await updateSettings({ sharePage: shareToggle.checked });
-  });
   themeSelect.addEventListener("change", async () => {
     const theme = applyTheme(themeSelect.value);
     await updateSettings({ theme });
   });
   chrome.tabs.onActivated.addListener(() => {
-    refreshShareToggle();
+    refreshSendWithPageButton();
   });
   chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
     if (!tab?.active) return;
     if (changeInfo.url || changeInfo.status === "complete") {
-      refreshShareToggle();
+      refreshSendWithPageButton();
     }
   });
 };

@@ -40,5 +40,19 @@
       ],
       "run_at": "document_end"
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/content/messaging/listener.js",
+        "src/content/handlers/getPageContent.js",
+        "src/content/handlers/clickButton.js",
+        "src/content/dom/buttonIds.js",
+        "src/content/dom/viewportMarker.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
   ]
 }

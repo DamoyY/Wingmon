@@ -3,7 +3,7 @@ import { fillSettingsForm } from "../ui/forms.js";
 import { applyTheme } from "../ui/theme.js";
 import { showChatView, showKeyView } from "../ui/views.js";
 import { bindEvents } from "./controller.js";
-import { refreshShareToggle } from "./shareToggle.js";
+import { refreshSendWithPageButton } from "./sendWithPageButton.js";
 export const initPanel = async () => {
   const settings = await getSettings();
   fillSettingsForm(settings);
@@ -14,5 +14,5 @@ export const initPanel = async () => {
     showKeyView();
   }
   bindEvents();
-  await refreshShareToggle(settings);
+  await refreshSendWithPageButton();
 };

@@ -14,9 +14,9 @@ export const [
   messagesEl,
   promptEl,
   sendButton,
+  sendWithPageButton,
   clearButton,
   statusEl,
-  shareToggle,
 ] = [
   "key-view",
   "chat-view",
@@ -32,7 +32,7 @@ export const [
   "messages",
   "prompt",
   "send",
+  "send-with-page",
   "clear",
   "status",
-  "share-page",
 ].map(byId);

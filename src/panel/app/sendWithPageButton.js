@@ -1,7 +1,6 @@
-import { shareToggle, statusEl } from "../ui/elements.js";
+import { sendWithPageButton, statusEl } from "../ui/elements.js";
 import { setText } from "../ui/text.js";
 import { getActiveTab } from "../services/tabs.js";
-import { getSettings } from "../services/settings.js";
 import { normalizeUrl } from "../utils/url.js";
 const isNewTabUrl = (url) => {
   const normalized = normalizeUrl(url);
@@ -12,39 +11,36 @@ const isNewTabUrl = (url) => {
   );
 };
 const isChromeInternalUrl = (url) => normalizeUrl(url).startsWith("chrome://");
-const disableShareToggle = (reason) => {
-  shareToggle.checked = false;
-  shareToggle.disabled = true;
-  shareToggle.title = reason || "当前标签页不支持共享";
+const disableSendWithPageButton = (reason) => {
+  sendWithPageButton.disabled = true;
+  sendWithPageButton.title = reason || "当前标签页不支持携页面发送";
 };
-const enableShareToggle = (settings) => {
-  shareToggle.disabled = false;
-  shareToggle.title = "";
-  shareToggle.checked = settings.sharePage;
+const enableSendWithPageButton = () => {
+  sendWithPageButton.disabled = false;
+  sendWithPageButton.title = "";
 };
-export const updateShareToggleAvailability = async (settings) => {
+export const updateSendWithPageButtonAvailability = async () => {
   const activeTab = await getActiveTab();
   if (!activeTab.url) {
     throw new Error("活动标签页缺少 URL");
   }
   const normalizedUrl = normalizeUrl(activeTab.url);
   if (isNewTabUrl(normalizedUrl)) {
-    disableShareToggle("新标签页不支持共享");
+    disableSendWithPageButton("新标签页不支持携页面发送");
     return;
   }
   if (isChromeInternalUrl(normalizedUrl)) {
-    disableShareToggle("Chrome:// 页面不支持共享");
+    disableSendWithPageButton("Chrome:// 页面不支持携页面发送");
     return;
   }
-  const resolvedSettings = settings || (await getSettings());
-  enableShareToggle(resolvedSettings);
+  enableSendWithPageButton();
 };
-export const refreshShareToggle = async (settings) => {
+export const refreshSendWithPageButton = async () => {
   try {
-    await updateShareToggleAvailability(settings);
+    await updateSendWithPageButtonAvailability();
   } catch (error) {
     const message = error?.message || "无法读取活动标签页";
-    disableShareToggle(message);
+    disableSendWithPageButton(message);
     setText(statusEl, message);
   }
 };

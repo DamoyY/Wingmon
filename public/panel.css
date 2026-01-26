@@ -118,6 +118,12 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  background: var(--color-secondary-button);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 button#clear,
 button#open-settings,
 button#cancel-settings {

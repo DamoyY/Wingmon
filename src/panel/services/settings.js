@@ -4,7 +4,6 @@ const settingsKeys = {
   apiKey: "openai_api_key",
   baseUrl: "openai_base_url",
   model: "openai_model",
-  sharePage: "openai_share_page",
   apiType: "openai_api_type",
   theme: "openai_theme",
 };
@@ -12,7 +11,6 @@ const toSettings = (data) => ({
   apiKey: data?.[settingsKeys.apiKey] || "",
   baseUrl: data?.[settingsKeys.baseUrl] || "",
   model: data?.[settingsKeys.model] || "",
-  sharePage: Boolean(data?.[settingsKeys.sharePage]),
   apiType: data?.[settingsKeys.apiType] || "chat",
   theme: normalizeTheme(data?.[settingsKeys.theme] || "auto"),
 });
@@ -29,7 +27,6 @@ const setSettings = (settings) =>
         [settingsKeys.apiKey]: settings.apiKey,
         [settingsKeys.baseUrl]: settings.baseUrl,
         [settingsKeys.model]: settings.model,
-        [settingsKeys.sharePage]: settings.sharePage,
         [settingsKeys.apiType]: settings.apiType,
         [settingsKeys.theme]: normalizeTheme(settings.theme),
       },
