@@ -181,31 +181,23 @@ export const buildSystemPrompt = async () => {
         if (svgLabel) return svgLabel;
         return "未命名按钮";
       };
-      const buttons = documentResult.body.querySelectorAll(
-        'button, input[type="button"], input[type="submit"]',
-      );
-      const buttonCount = buttons.length;
-      const idBase = 36;
-      const minIdLength = 4;
-      const idLength =
-        buttonCount <= 1 ? minIdLength : (
-          Math.max(
-            minIdLength,
-            Math.ceil(Math.log(buttonCount) / Math.log(idBase)),
-          )
-        );
+      const buttons = documentResult.body.querySelectorAll("[data-llm-id]");
       const usedIds = new Set();
-      buttons.forEach((button, index) => {
-        const text = getButtonLabel(button);
-        const id = index.toString(idBase).padStart(idLength, "0");
+      buttons.forEach((button) => {
+        const id = normalizeText(button.getAttribute("data-llm-id"));
+        if (!id) {
+          throw new Error("按钮缺少 data-llm-id");
+        }
         if (usedIds.has(id)) {
-          throw new Error(`生成按钮 ID 重复: ${id}`);
+          throw new Error(`页面返回的按钮 ID 重复: ${id}`);
         }
         usedIds.add(id);
+        const text = getButtonLabel(button);
         const replacement = `[button: "${text}", id: "${id}"]`;
         button.textContent = replacement;
         if (button.tagName === "INPUT") {
           button.value = replacement;
+          button.setAttribute("value", replacement);
         }
       });
       const processedHtml = documentResult.body.innerHTML;

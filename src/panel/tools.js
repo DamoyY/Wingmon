@@ -1,6 +1,9 @@
 import { setText, statusEl, state } from "./ui.js";
 
-const toolNames = { openBrowserPage: "open_page" };
+const toolNames = {
+  openBrowserPage: "open_page",
+  clickElement: "clickElement",
+};
 const openPageToolSchema = {
   type: "object",
   properties: {
@@ -10,14 +13,27 @@ const openPageToolSchema = {
   required: ["url", "focus"],
   additionalProperties: false,
 };
+const clickElementToolSchema = {
+  type: "object",
+  properties: { id: { type: "string", description: "要点击的 botton 的 ID" } },
+  required: ["id"],
+  additionalProperties: false,
+};
 export const getToolDefinitions = (apiType) => {
   if (apiType === "responses") {
     return [
       {
         type: "function",
         name: toolNames.openBrowserPage,
-        description: "在当前浏览器打开指定网页。",
+        description: "在当前浏览器打开指定网页",
         parameters: openPageToolSchema,
+        strict: true,
+      },
+      {
+        type: "function",
+        name: toolNames.clickElement,
+        description: "点击当前页面上指定的 botton",
+        parameters: clickElementToolSchema,
         strict: true,
       },
     ];
@@ -29,6 +45,15 @@ export const getToolDefinitions = (apiType) => {
         name: toolNames.openBrowserPage,
         description: "在当前浏览器打开指定网页。",
         parameters: openPageToolSchema,
+        strict: true,
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: toolNames.clickElement,
+        description: "点击当前页面上指定 ID 的元素。",
+        parameters: clickElementToolSchema,
         strict: true,
       },
     },
@@ -167,9 +192,64 @@ const validateOpenPageArgs = (args) => {
   }
   return { url: parsedUrl.toString(), focus: args.focus };
 };
+const validateClickElementArgs = (args) => {
+  if (!args || typeof args !== "object") {
+    throw new Error("工具参数必须是对象");
+  }
+  if (typeof args.id !== "string" || !args.id.trim()) {
+    throw new Error("id 必须是非空字符串");
+  }
+  return { id: args.id.trim() };
+};
 const executeOpenBrowserPage = async (args) => {
   const { url, focus } = validateOpenPageArgs(args);
   await createTab(url, focus);
+  return "成功";
+};
+const getActiveTabId = () =>
+  new Promise((resolve, reject) => {
+    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+      if (chrome.runtime.lastError) {
+        const message =
+          chrome.runtime.lastError.message || "无法查询活动标签页";
+        reject(new Error(message));
+        return;
+      }
+      const tabId = tabs?.[0]?.id;
+      if (!tabId) {
+        reject(new Error("未找到活动标签页"));
+        return;
+      }
+      resolve(tabId);
+    });
+  });
+const sendMessageToTab = (tabId, payload) =>
+  new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(tabId, payload, (response) => {
+      if (chrome.runtime.lastError) {
+        const message =
+          chrome.runtime.lastError.message || "无法发送消息到页面";
+        reject(new Error(message));
+        return;
+      }
+      if (!response) {
+        reject(new Error("页面未返回结果"));
+        return;
+      }
+      if (response.error) {
+        reject(new Error(response.error));
+        return;
+      }
+      resolve(response);
+    });
+  });
+const executeClickElement = async (args) => {
+  const { id } = validateClickElementArgs(args);
+  const tabId = await getActiveTabId();
+  const result = await sendMessageToTab(tabId, { type: "clickElement", id });
+  if (!result?.ok) {
+    throw new Error("点击元素失败");
+  }
   return "成功";
 };
 const executeToolCall = async (toolCall) => {
@@ -177,11 +257,14 @@ const executeToolCall = async (toolCall) => {
   if (!normalized) {
     throw new Error("工具调用格式不正确");
   }
-  if (normalized.name !== toolNames.openBrowserPage) {
-    throw new Error(`未支持的工具：${normalized.name}`);
-  }
   const args = parseToolArguments(normalized.arguments || "{}");
-  return executeOpenBrowserPage(args);
+  if (normalized.name === toolNames.openBrowserPage) {
+    return executeOpenBrowserPage(args);
+  }
+  if (normalized.name === toolNames.clickElement) {
+    return executeClickElement(args);
+  }
+  throw new Error(`未支持的工具：${normalized.name}`);
 };
 export const addChatToolCallDelta = (collector, deltas) => {
   deltas.forEach((delta) => {
@@ -308,8 +391,9 @@ export const handleToolCalls = async (toolCalls) => {
     try {
       output = await executeToolCall(call);
     } catch (error) {
-      setText(statusEl, error.message);
-      output = "失败";
+      const message = error?.message || "工具调用失败";
+      setText(statusEl, message);
+      output = `失败: ${message}`;
     }
     state.messages.push({
       role: "tool",

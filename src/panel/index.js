@@ -231,17 +231,12 @@ const sendMessage = async () => {
   setText(statusEl, "请求中…");
   try {
     const systemPrompt = await buildSystemPrompt();
-    let toolLoop = 0;
     let pendingToolCalls = [];
     do {
       const { toolCalls } = await requestModel(settings, systemPrompt);
       pendingToolCalls = toolCalls || [];
       if (pendingToolCalls.length) {
         await handleToolCalls(pendingToolCalls);
-        toolLoop += 1;
-        if (toolLoop > 3) {
-          throw new Error("工具调用次数过多");
-        }
         setText(statusEl, "请求中…");
       }
     } while (pendingToolCalls.length);
