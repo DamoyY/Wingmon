@@ -83,14 +83,13 @@ export const buildEndpoint = (baseUrl, apiType) => {
 };
 const loadSystemPrompt = async () => {
   if (state.systemPrompt !== null) return state.systemPrompt;
-  try {
-    const response = await fetch(
-      chrome.runtime.getURL("public/system_prompt.md"),
-    );
-    state.systemPrompt = response.ok ? (await response.text()) || "" : "";
-  } catch (error) {
-    state.systemPrompt = "";
+  const response = await fetch(
+    chrome.runtime.getURL("public/system_prompt.md"),
+  );
+  if (!response.ok) {
+    throw new Error(`系统提示加载失败：${response.status}`);
   }
+  state.systemPrompt = (await response.text()) || "";
   return state.systemPrompt;
 };
 const getActiveTabContent = () =>
@@ -128,7 +127,89 @@ export const buildSystemPrompt = async () => {
       throw new Error(pageData.error);
     }
     if (pageData?.html) {
-      const content = turndown.turndown(pageData.html);
+      if (typeof DOMParser !== "function") {
+        throw new Error("DOMParser 不可用，无法解析页面 HTML");
+      }
+      const parser = new DOMParser();
+      const documentResult = parser.parseFromString(pageData.html, "text/html");
+      if (!documentResult?.body) {
+        throw new Error("解析页面 HTML 失败");
+      }
+      const normalizeText = (value) => (value || "").trim();
+      const getLabelFromIds = (ids) => {
+        const labels = ids.map((id) => {
+          const target = documentResult.getElementById(id);
+          if (!target) {
+            throw new Error(`aria-labelledby 指向不存在的元素: ${id}`);
+          }
+          return normalizeText(target.textContent);
+        });
+        const merged = labels.filter(Boolean).join(" ").trim();
+        return merged || "";
+      };
+      const getButtonLabel = (button) => {
+        const directText =
+          button.tagName === "INPUT" ? button.value : button.textContent;
+        const normalizedText = normalizeText(directText);
+        if (normalizedText) return normalizedText;
+        const ariaLabel = normalizeText(button.getAttribute("aria-label"));
+        if (ariaLabel) return ariaLabel;
+        const ariaLabelledby = normalizeText(
+          button.getAttribute("aria-labelledby"),
+        );
+        if (ariaLabelledby) {
+          const ids = ariaLabelledby.split(/\s+/).filter(Boolean);
+          if (!ids.length) {
+            throw new Error("aria-labelledby 为空，无法解析按钮名称");
+          }
+          const labeledText = getLabelFromIds(ids);
+          if (labeledText) return labeledText;
+        }
+        const titleText = normalizeText(button.getAttribute("title"));
+        if (titleText) return titleText;
+        const imgAlt = normalizeText(
+          button.querySelector("img")?.getAttribute("alt"),
+        );
+        if (imgAlt) return imgAlt;
+        const svgTitle = normalizeText(
+          button.querySelector("svg title")?.textContent,
+        );
+        if (svgTitle) return svgTitle;
+        const svgLabel = normalizeText(
+          button.querySelector("svg")?.getAttribute("aria-label"),
+        );
+        if (svgLabel) return svgLabel;
+        return "未命名按钮";
+      };
+      const buttons = documentResult.body.querySelectorAll(
+        'button, input[type="button"], input[type="submit"]',
+      );
+      const buttonCount = buttons.length;
+      const idBase = 36;
+      const minIdLength = 4;
+      const idLength =
+        buttonCount <= 1 ? minIdLength : (
+          Math.max(
+            minIdLength,
+            Math.ceil(Math.log(buttonCount) / Math.log(idBase)),
+          )
+        );
+      const usedIds = new Set();
+      buttons.forEach((button, index) => {
+        const text = getButtonLabel(button);
+        const id = index.toString(idBase).padStart(idLength, "0");
+        if (usedIds.has(id)) {
+          throw new Error(`生成按钮 ID 重复: ${id}`);
+        }
+        usedIds.add(id);
+        const replacement = `[button: "${text}", id: "${id}"]`;
+        button.textContent = replacement;
+        if (button.tagName === "INPUT") {
+          button.value = replacement;
+        }
+      });
+      const processedHtml = documentResult.body.innerHTML;
+      const content = turndown.turndown(processedHtml);
       pageContent = `\n## 以下是用户当前正在查看的页面：\n\n**标题：**\n${pageData.title}\n**地址：**\n${pageData.url}\n**内容：**\n${content}`;
     } else {
       throw new Error("页面内容为空");
