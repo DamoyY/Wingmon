@@ -18,6 +18,14 @@
   "background": {
     "service_worker": "src/background/index.js"
   },
+  "sandbox": {
+    "pages": [
+      "public/sandbox.html"
+    ]
+  },
+  "content_security_policy": {
+    "sandbox": "sandbox allow-scripts; script-src 'self' 'unsafe-eval';"
+  },
   "side_panel": {
     "default_path": "public/panel.html"
   },

@@ -37,7 +37,11 @@ const consoleToolSchema = {
   type: "object",
   properties: {
     command: { type: "string", description: "要执行的命令" },
-    tabId: { type: "number", description: "可选，标签页 ID" },
+    tabId: {
+      type: "number",
+      description:
+        "标签页 ID，不填则在 Sandboxed Page 里执行；填了则在指定标签页执行",
+    },
   },
   required: ["command"],
   additionalProperties: false,
@@ -55,17 +59,17 @@ const toolDescriptors = [
   },
   {
     name: toolNames.getPageMarkdown,
-    description: "输入 tabId 读取页面内容",
+    description: "读取页面内容",
     parameters: pageMarkdownToolSchema,
   },
   {
     name: toolNames.closeBrowserPage,
-    description: "输入 tabId 关闭标签页",
+    description: "关闭标签页",
     parameters: closePageToolSchema,
   },
   {
     name: toolNames.runConsoleCommand,
-    description: "在指定标签页或 Service Worker 中执行命令并返回结果",
+    description: "执行控制台命令并返回结果",
     parameters: consoleToolSchema,
   },
 ];
@@ -137,8 +141,7 @@ const validateTabIdArgs = (args) => {
   }
   throw new Error("tabId 必须是正整数");
 };
-export const validateGetPageMarkdownArgs = (args) =>
-  validateTabIdArgs(args);
+export const validateGetPageMarkdownArgs = (args) => validateTabIdArgs(args);
 export const validateClosePageArgs = (args) => {
   return validateTabIdArgs(args);
 };
