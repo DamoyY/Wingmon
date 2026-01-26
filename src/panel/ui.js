@@ -1,4 +1,47 @@
+import { normalizeUrl } from "./utils.js";
+
 export const state = { messages: [], sending: false, systemPrompt: null };
+const hasMessageContent = (content) =>
+  typeof content === "string" && Boolean(content.trim());
+const resolveMessageHidden = (message) => {
+  if (message?.role === "tool") return true;
+  if (message?.role === "assistant" && !hasMessageContent(message.content)) {
+    return true;
+  }
+  return false;
+};
+const normalizeMessage = (message) => {
+  if (!message || typeof message !== "object") {
+    throw new Error("消息格式无效");
+  }
+  const normalized = { ...message };
+  normalized.hidden = resolveMessageHidden(normalized);
+  return normalized;
+};
+export const addMessage = (message) => {
+  const normalized = normalizeMessage(message);
+  state.messages.push(normalized);
+  return normalized;
+};
+export const updateMessage = (index, patch) => {
+  if (!Number.isInteger(index) || index < 0 || index >= state.messages.length) {
+    throw new Error("消息索引无效");
+  }
+  const current = state.messages[index];
+  const next =
+    typeof patch === "function" ?
+      patch({ ...current })
+    : { ...current, ...patch };
+  const normalized = normalizeMessage(next);
+  state.messages[index] = normalized;
+  return normalized;
+};
+export const setMessages = (messages) => {
+  if (!Array.isArray(messages)) {
+    throw new Error("messages 必须是数组");
+  }
+  state.messages = messages.map((message) => normalizeMessage(message));
+};
 const byId = (id) => document.getElementById(id);
 export const [
   keyView,
@@ -42,8 +85,6 @@ export const markdown = window.markdownit({
   linkify: true,
   breaks: true,
 });
-const normalizeUrl = (url) =>
-  (url || "").replace(/[\u0000-\u001F\u007F\s]+/g, "").toLowerCase();
 const isSafeUrl = (url) => {
   const normalized = normalizeUrl(url);
   if (!normalized) return false;
@@ -164,16 +205,11 @@ export const convertPageContentToMarkdown = (pageData) => {
     return "未命名按钮";
   };
   const buttons = documentResult.body.querySelectorAll("[data-llm-id]");
-  const usedIds = new Set();
   buttons.forEach((button) => {
     const id = normalizeText(button.getAttribute("data-llm-id"));
     if (!id) {
       throw new Error("按钮缺少 data-llm-id");
     }
-    if (usedIds.has(id)) {
-      throw new Error(`页面返回的按钮 ID 重复: ${id}`);
-    }
-    usedIds.add(id);
     const text = getButtonLabel(button);
     const replacement = `[button: "${text}", id: "${id}"]`;
     button.textContent = replacement;
@@ -223,6 +259,46 @@ export const setText = (node, text) => {
 };
 export const normalizeTheme = (theme) =>
   theme === "light" || theme === "dark" || theme === "auto" ? theme : "auto";
+let autoThemeMedia = null;
+let autoThemeListener = null;
+const stopAutoThemeSync = () => {
+  if (!autoThemeMedia || !autoThemeListener) {
+    autoThemeMedia = null;
+    autoThemeListener = null;
+    return;
+  }
+  if (typeof autoThemeMedia.removeEventListener === "function") {
+    autoThemeMedia.removeEventListener("change", autoThemeListener);
+  } else if (typeof autoThemeMedia.removeListener === "function") {
+    autoThemeMedia.removeListener(autoThemeListener);
+  } else {
+    throw new Error("无法移除系统主题监听");
+  }
+  autoThemeMedia = null;
+  autoThemeListener = null;
+};
+const startAutoThemeSync = () => {
+  if (typeof window.matchMedia !== "function") {
+    throw new Error("matchMedia 不可用，无法应用自动主题");
+  }
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  const applySystemTheme = () => {
+    document.documentElement.setAttribute(
+      "data-theme",
+      media.matches ? "dark" : "light",
+    );
+  };
+  applySystemTheme();
+  if (typeof media.addEventListener === "function") {
+    media.addEventListener("change", applySystemTheme);
+  } else if (typeof media.addListener === "function") {
+    media.addListener(applySystemTheme);
+  } else {
+    throw new Error("无法监听系统主题变化");
+  }
+  autoThemeMedia = media;
+  autoThemeListener = applySystemTheme;
+};
 export const showKeyView = () => {
   keyView.classList.remove("hidden");
   chatView.classList.add("hidden");
@@ -236,19 +312,18 @@ export const showChatView = () => {
 };
 export const applyTheme = (theme) => {
   const normalized = normalizeTheme(theme);
+  stopAutoThemeSync();
   if (normalized === "auto") {
-    document.documentElement.removeAttribute("data-theme");
-  } else {
-    document.documentElement.setAttribute("data-theme", normalized);
+    startAutoThemeSync();
+    return normalized;
   }
+  document.documentElement.setAttribute("data-theme", normalized);
   return normalized;
 };
 export const renderMessages = () => {
   messagesEl.innerHTML = "";
   state.messages.forEach((msg) => {
     if (msg.hidden) return;
-    if (msg.role === "tool") return;
-    if (msg.role === "assistant" && !msg.content) return;
     const node = document.createElement("div");
     node.className = `message ${msg.role}`;
     node.innerHTML = renderMarkdown(msg.content);
@@ -258,23 +333,26 @@ export const renderMessages = () => {
 };
 export const appendAssistantDelta = (delta) => {
   if (!delta) return;
-  const last = state.messages[state.messages.length - 1];
+  const lastIndex = state.messages.length - 1;
+  const last = state.messages[lastIndex];
   if (!last || last.role !== "assistant") {
-    state.messages.push({ role: "assistant", content: delta });
+    addMessage({ role: "assistant", content: delta });
     renderMessages();
     return;
   }
-  last.content += delta;
+  const updated = updateMessage(lastIndex, {
+    content: `${last.content || ""}${delta}`,
+  });
   const lastEl = messagesEl.lastElementChild;
-  if (lastEl && lastEl.classList.contains("assistant")) {
-    lastEl.innerHTML = renderMarkdown(last.content);
+  if (lastEl && lastEl.classList.contains("assistant") && !updated.hidden) {
+    lastEl.innerHTML = renderMarkdown(updated.content);
     messagesEl.scrollTop = messagesEl.scrollHeight;
     return;
   }
   renderMessages();
 };
 export const clearChat = () => {
-  state.messages = [];
+  setMessages([]);
   renderMessages();
   setText(statusEl, "已清空对话");
 };

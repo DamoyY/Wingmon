@@ -107,6 +107,9 @@ export const parseJson = (text) => {
     throw new Error(`JSON 解析失败：${error.message}`);
   }
 };
+export const parseToolArguments = (text) => parseJson(text);
+export const getToolCallArguments = (call) =>
+  call?.function?.arguments ?? call?.arguments ?? "";
 export const getToolCallId = (call) => {
   const callId = call?.call_id || call?.id;
   if (!callId) throw new Error("工具调用缺少 call_id");

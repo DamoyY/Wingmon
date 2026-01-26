@@ -1,22 +1,21 @@
 import {
   setText,
   statusEl,
-  state,
+  addMessage,
   convertPageContentToMarkdown,
 } from "../ui.js";
 import {
   toolNames,
-  parseJson,
+  parseToolArguments,
+  getToolCallArguments,
   getToolCallId,
   getToolCallName,
   validateGetPageMarkdownArgs,
   validateClosePageArgs,
   validateConsoleArgs,
 } from "./definitions.js";
+import { createRandomId } from "../utils.js";
 
-const parseToolArguments = (text) => parseJson(text);
-const getToolCallArguments = (call) =>
-  call.function?.arguments ?? call.arguments ?? "";
 const SANDBOX_FRAME_ID = "llm-sandbox-frame";
 const SANDBOX_RESPONSE_TYPE = "runConsoleResult";
 const SANDBOX_REQUEST_TYPE = "runConsoleCommand";
@@ -190,18 +189,12 @@ const getSandboxWindow = async () => {
   }
   return sandboxReadyPromise;
 };
-const createSandboxRequestId = () => {
-  if (globalThis.crypto?.randomUUID) {
-    return globalThis.crypto.randomUUID();
-  }
-  return `sandbox_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-};
 const sendMessageToSandbox = async (payload, timeoutMs = 5000) => {
   const targetWindow = await getSandboxWindow();
   if (!targetWindow) {
     throw new Error("sandbox 窗口不可用");
   }
-  const requestId = createSandboxRequestId();
+  const requestId = createRandomId("sandbox");
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       window.removeEventListener("message", handleMessage);
@@ -313,12 +306,6 @@ export const handleToolCalls = async (toolCalls) => {
       output =
         name === toolNames.closeBrowserPage ? "失败" : `失败: ${message}`;
     }
-    state.messages.push({
-      role: "tool",
-      content: output,
-      tool_call_id: callId,
-      name,
-      hidden: true,
-    });
+    addMessage({ role: "tool", content: output, tool_call_id: callId, name });
   }
 };

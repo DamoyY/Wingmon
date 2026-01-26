@@ -1,15 +1,13 @@
-import { state } from "../ui.js";
+import { state, addMessage, updateMessage } from "../ui.js";
 import {
   toolNames,
-  parseJson,
+  parseToolArguments,
+  getToolCallArguments,
   getToolCallId,
   getToolCallName,
   validateGetPageMarkdownArgs,
 } from "./definitions.js";
 
-const parseToolArguments = (text) => parseJson(text);
-const getToolCallArguments = (call) =>
-  call.function?.arguments ?? call.arguments ?? "";
 const toChatToolCallForRequest = (entry) => ({
   id: entry.callId,
   type: "function",
@@ -134,10 +132,10 @@ const collectToolCallEntries = (toolCalls, removeToolCallIds) => {
   });
   return entries;
 };
-export const buildChatMessages = (systemPrompt) => {
-  const messages = [];
-  if (systemPrompt) {
-    messages.push({ role: "system", content: systemPrompt });
+const buildStructuredMessages = ({ systemPrompt, format }) => {
+  const output = [];
+  if (format === "chat" && systemPrompt) {
+    output.push({ role: "system", content: systemPrompt });
   }
   const { removeToolCallIds, trimOpenPageResponseIds } =
     collectPageReadDedupeSets(state.messages);
@@ -147,57 +145,61 @@ export const buildChatMessages = (systemPrompt) => {
       if (!callId) throw new Error("工具响应缺少 tool_call_id");
       if (removeToolCallIds.has(callId)) return;
       const content = getToolOutputContent(msg, trimOpenPageResponseIds);
-      messages.push({ role: "tool", content, tool_call_id: callId });
-      return;
-    }
-    const entry = { role: msg.role };
-    if (msg.content) entry.content = msg.content;
-    const toolCallEntries = collectToolCallEntries(
-      msg.tool_calls,
-      removeToolCallIds,
-    );
-    if (toolCallEntries.length) {
-      entry.tool_calls = toolCallEntries.map(toChatToolCallForRequest);
-    }
-    if (entry.content || entry.tool_calls?.length) {
-      messages.push(entry);
-    }
-  });
-  return messages;
-};
-export const buildResponsesInput = () => {
-  const input = [];
-  const { removeToolCallIds, trimOpenPageResponseIds } =
-    collectPageReadDedupeSets(state.messages);
-  state.messages.forEach((msg) => {
-    if (msg.role === "tool") {
-      const callId = msg.tool_call_id;
-      if (!callId) throw new Error("工具响应缺少 tool_call_id");
-      if (removeToolCallIds.has(callId)) return;
-      const output = getToolOutputContent(msg, trimOpenPageResponseIds);
-      input.push({ type: "function_call_output", call_id: callId, output });
-      return;
-    }
-    if (msg.role === "user" || msg.role === "assistant") {
-      if (msg.content) {
-        input.push({ role: msg.role, content: msg.content });
+      if (format === "chat") {
+        output.push({ role: "tool", content, tool_call_id: callId });
+        return;
       }
+      output.push({
+        type: "function_call_output",
+        call_id: callId,
+        output: content,
+      });
+      return;
+    }
+    if (
+      format === "responses" &&
+      msg.role !== "user" &&
+      msg.role !== "assistant"
+    ) {
+      return;
+    }
+    if (format === "chat") {
+      const entry = { role: msg.role };
+      if (msg.content) entry.content = msg.content;
       const toolCallEntries = collectToolCallEntries(
         msg.tool_calls,
         removeToolCallIds,
       );
-      toolCallEntries.forEach((entry) => {
-        input.push({
-          type: "function_call",
-          call_id: entry.callId,
-          name: entry.name,
-          arguments: entry.arguments,
-        });
-      });
+      if (toolCallEntries.length) {
+        entry.tool_calls = toolCallEntries.map(toChatToolCallForRequest);
+      }
+      if (entry.content || entry.tool_calls?.length) {
+        output.push(entry);
+      }
+      return;
     }
+    if (msg.content) {
+      output.push({ role: msg.role, content: msg.content });
+    }
+    const toolCallEntries = collectToolCallEntries(
+      msg.tool_calls,
+      removeToolCallIds,
+    );
+    toolCallEntries.forEach((entry) => {
+      output.push({
+        type: "function_call",
+        call_id: entry.callId,
+        name: entry.name,
+        arguments: entry.arguments,
+      });
+    });
   });
-  return input;
+  return output;
 };
+export const buildChatMessages = (systemPrompt) =>
+  buildStructuredMessages({ systemPrompt, format: "chat" });
+export const buildResponsesInput = () =>
+  buildStructuredMessages({ format: "responses" });
 export const addChatToolCallDelta = (collector, deltas) => {
   deltas.forEach((delta) => {
     const index = typeof delta.index === "number" ? delta.index : 0;
@@ -218,10 +220,33 @@ export const addChatToolCallDelta = (collector, deltas) => {
     }
   });
 };
+const normalizeToolCall = ({
+  id,
+  callId,
+  name,
+  argumentsText,
+  defaultArguments,
+}) => {
+  if (!name) return null;
+  const resolvedId = callId || id;
+  const resolvedArguments =
+    typeof argumentsText === "string" ? argumentsText : defaultArguments;
+  return {
+    id: resolvedId,
+    type: "function",
+    function: { name, arguments: resolvedArguments },
+    call_id: resolvedId,
+  };
+};
+const normalizeToolCallList = (items, mapper) =>
+  items.map((item) => normalizeToolCall(mapper(item))).filter(Boolean);
 export const finalizeChatToolCalls = (collector) =>
-  Object.values(collector)
-    .filter((call) => call.function?.name)
-    .map((call) => ({ ...call, call_id: call.call_id || call.id }));
+  normalizeToolCallList(Object.values(collector), (call) => ({
+    id: call.id,
+    callId: call.call_id,
+    name: call.function?.name,
+    argumentsText: call.function?.arguments,
+  }));
 export const addResponsesToolCallEvent = (collector, payload, eventType) => {
   const resolvedType = payload?.type || eventType;
   if (resolvedType === "response.output_item.added") {
@@ -252,46 +277,48 @@ export const addResponsesToolCallEvent = (collector, payload, eventType) => {
   }
 };
 export const finalizeResponsesToolCalls = (collector) =>
-  Object.values(collector)
-    .filter((call) => call?.name)
-    .map((call) => ({
-      id: call.call_id || call.id,
-      type: "function",
-      function: { name: call.name, arguments: call.arguments || "" },
-      call_id: call.call_id || call.id,
-    }));
+  normalizeToolCallList(Object.values(collector), (call) => ({
+    id: call.id,
+    callId: call.call_id,
+    name: call?.name,
+    argumentsText: call.arguments,
+    defaultArguments: "",
+  }));
 export const extractChatToolCalls = (data) => {
   const message = data?.choices?.[0]?.message;
   if (!message) return [];
   if (Array.isArray(message.tool_calls)) {
-    return message.tool_calls.map((call) => ({
-      ...call,
-      call_id: call.call_id || call.id,
+    return normalizeToolCallList(message.tool_calls, (call) => ({
+      id: call.id,
+      callId: call.call_id,
+      name: call.function?.name,
+      argumentsText: call.function?.arguments,
     }));
   }
   if (message.function_call) {
     const call = message.function_call;
-    return [
-      {
-        id: message.id || call.name,
-        type: "function",
-        function: { name: call.name, arguments: call.arguments || "" },
-        call_id: message.id || call.name,
-      },
-    ];
+    return normalizeToolCallList([call], () => ({
+      id: message.id || call.name,
+      callId: message.id || call.name,
+      name: call.name,
+      argumentsText: call.arguments,
+      defaultArguments: "",
+    }));
   }
   return [];
 };
 export const extractResponsesToolCalls = (data) => {
   const output = Array.isArray(data?.output) ? data.output : [];
-  return output
-    .filter((item) => item?.type === "function_call")
-    .map((item) => ({
-      id: item.call_id || item.id,
-      type: "function",
-      function: { name: item.name, arguments: item.arguments || "" },
-      call_id: item.call_id || item.id,
-    }));
+  return normalizeToolCallList(
+    output.filter((item) => item?.type === "function_call"),
+    (item) => ({
+      id: item.id,
+      callId: item.call_id,
+      name: item.name,
+      argumentsText: item.arguments,
+      defaultArguments: "",
+    }),
+  );
 };
 export const attachToolCallsToAssistant = (toolCalls, assistantIndex) => {
   if (!toolCalls.length) return;
@@ -301,14 +328,8 @@ export const attachToolCallsToAssistant = (toolCalls, assistantIndex) => {
     );
   const target = state.messages[index];
   if (target && target.role === "assistant") {
-    target.tool_calls = toolCalls;
-    if (!target.content) target.hidden = true;
+    updateMessage(index, { tool_calls: toolCalls });
     return;
   }
-  state.messages.push({
-    role: "assistant",
-    content: "",
-    tool_calls: toolCalls,
-    hidden: true,
-  });
+  addMessage({ role: "assistant", content: "", tool_calls: toolCalls });
 };

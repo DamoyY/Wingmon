@@ -19,6 +19,7 @@ import {
   showKeyView,
   showChatView,
   applyTheme,
+  addMessage,
   renderMessages,
   appendAssistantDelta,
   clearChat,
@@ -30,7 +31,11 @@ import {
   buildEndpoint,
   buildSystemPrompt,
 } from "./settings.js";
-import { getToolDefinitions, parseJson, toolNames } from "./tools/definitions.js";
+import {
+  getToolDefinitions,
+  parseJson,
+  toolNames,
+} from "./tools/definitions.js";
 import {
   buildChatMessages,
   buildResponsesInput,
@@ -46,18 +51,17 @@ import {
   handleToolCalls,
   buildPageMarkdownToolOutput,
 } from "./tools/runtime.js";
+import { normalizeUrl, createRandomId } from "./utils.js";
 
-const normalizeTabUrl = (url) => (url || "").trim().toLowerCase();
 const isNewTabUrl = (url) => {
-  const normalized = normalizeTabUrl(url);
+  const normalized = normalizeUrl(url);
   return (
     normalized === "chrome://newtab/" ||
     normalized === "chrome://new-tab-page/" ||
     normalized === "chrome://new-tab-page"
   );
 };
-const isChromeInternalUrl = (url) =>
-  normalizeTabUrl(url).startsWith("chrome://");
+const isChromeInternalUrl = (url) => normalizeUrl(url).startsWith("chrome://");
 const getActiveTab = () =>
   new Promise((resolve, reject) => {
     chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
@@ -189,24 +193,56 @@ const extractResponsesText = (data) => {
   });
   return texts.join("").trim();
 };
+const apiStrategies = {
+  chat: {
+    buildRequestBody: (settings, systemPrompt, tools) => ({
+      model: settings.model,
+      messages: buildChatMessages(systemPrompt),
+      stream: true,
+      tools,
+    }),
+    stream: async (response, { onDelta }) => {
+      const collector = {};
+      await streamChatCompletion(response, {
+        onDelta,
+        onToolCallDelta: (deltas) => addChatToolCallDelta(collector, deltas),
+      });
+      return finalizeChatToolCalls(collector);
+    },
+    extractToolCalls: (data) => extractChatToolCalls(data),
+    extractReply: (data) => data?.choices?.[0]?.message?.content?.trim(),
+  },
+  responses: {
+    buildRequestBody: (settings, systemPrompt, tools) => ({
+      model: settings.model,
+      input: buildResponsesInput(),
+      stream: true,
+      tools,
+      ...(systemPrompt ? { instructions: systemPrompt } : {}),
+    }),
+    stream: async (response, { onDelta }) => {
+      const collector = {};
+      await streamResponses(response, {
+        onDelta,
+        onToolCallEvent: (payload, eventType) =>
+          addResponsesToolCallEvent(collector, payload, eventType),
+      });
+      return finalizeResponsesToolCalls(collector);
+    },
+    extractToolCalls: (data) => extractResponsesToolCalls(data),
+    extractReply: (data) => extractResponsesText(data),
+  },
+};
+const getApiStrategy = (apiType) => {
+  const strategy = apiStrategies[apiType];
+  if (!strategy) throw new Error(`不支持的 API 类型: ${apiType}`);
+  return strategy;
+};
 const requestModel = async (settings) => {
   const systemPrompt = await buildSystemPrompt();
   const tools = getToolDefinitions(settings.apiType);
-  const requestBody =
-    settings.apiType === "responses" ?
-      {
-        model: settings.model,
-        input: buildResponsesInput(),
-        stream: true,
-        tools,
-        ...(systemPrompt ? { instructions: systemPrompt } : {}),
-      }
-    : {
-        model: settings.model,
-        messages: buildChatMessages(systemPrompt),
-        stream: true,
-        tools,
-      };
+  const strategy = getApiStrategy(settings.apiType);
+  const requestBody = strategy.buildRequestBody(settings, systemPrompt, tools);
   const response = await fetch(
     buildEndpoint(settings.baseUrl, settings.apiType),
     {
@@ -225,33 +261,16 @@ const requestModel = async (settings) => {
   const contentType = response.headers.get("content-type") || "";
   if (contentType.includes("text/event-stream")) {
     const assistantIndex = state.messages.length;
-    state.messages.push({ role: "assistant", content: "" });
+    addMessage({ role: "assistant", content: "" });
     renderMessages();
     setText(statusEl, "回复中…");
-    let toolCalls = [];
-    if (settings.apiType === "responses") {
-      const collector = {};
-      await streamResponses(response, {
-        onDelta: appendAssistantDelta,
-        onToolCallEvent: (payload, eventType) =>
-          addResponsesToolCallEvent(collector, payload, eventType),
-      });
-      toolCalls = finalizeResponsesToolCalls(collector);
-    } else {
-      const collector = {};
-      await streamChatCompletion(response, {
-        onDelta: appendAssistantDelta,
-        onToolCallDelta: (deltas) => addChatToolCallDelta(collector, deltas),
-      });
-      toolCalls = finalizeChatToolCalls(collector);
-    }
+    const toolCalls = await strategy.stream(response, {
+      onDelta: appendAssistantDelta,
+    });
     const assistantMessage = state.messages[assistantIndex];
     const hasText = Boolean(assistantMessage?.content?.trim());
     if (toolCalls.length) {
       attachToolCallsToAssistant(toolCalls, assistantIndex);
-    }
-    if (!hasText && toolCalls.length) {
-      assistantMessage.hidden = true;
     }
     if (!hasText && !toolCalls.length) {
       state.messages.splice(assistantIndex, 1);
@@ -262,16 +281,10 @@ const requestModel = async (settings) => {
     return { toolCalls };
   }
   const data = await response.json();
-  const toolCalls =
-    settings.apiType === "responses" ?
-      extractResponsesToolCalls(data)
-    : extractChatToolCalls(data);
-  const reply =
-    settings.apiType === "responses" ?
-      extractResponsesText(data)
-    : data?.choices?.[0]?.message?.content?.trim();
+  const toolCalls = strategy.extractToolCalls(data);
+  const reply = strategy.extractReply(data);
   if (reply) {
-    state.messages.push({ role: "assistant", content: reply });
+    addMessage({ role: "assistant", content: reply });
     renderMessages();
   }
   if (toolCalls.length) {
@@ -281,12 +294,6 @@ const requestModel = async (settings) => {
   if (!reply && !toolCalls.length) throw new Error("未收到有效回复");
   return { toolCalls };
 };
-const createToolCallId = () => {
-  if (globalThis.crypto?.randomUUID) {
-    return globalThis.crypto.randomUUID();
-  }
-  return `local_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-};
 const prefillSharedPage = async () => {
   if (!shareToggle.checked) return;
   const activeTab = await getActiveTab();
@@ -294,7 +301,7 @@ const prefillSharedPage = async () => {
     throw new Error("活动标签页缺少 tabId");
   }
   setText(statusEl, "读取页面中…");
-  const callId = createToolCallId();
+  const callId = createRandomId("local");
   const args = { tabId: activeTab.id };
   const output = await buildPageMarkdownToolOutput(activeTab.id);
   const toolCall = {
@@ -306,18 +313,12 @@ const prefillSharedPage = async () => {
     },
     call_id: callId,
   };
-  state.messages.push({
-    role: "assistant",
-    content: "",
-    tool_calls: [toolCall],
-    hidden: true,
-  });
-  state.messages.push({
+  addMessage({ role: "assistant", content: "", tool_calls: [toolCall] });
+  addMessage({
     role: "tool",
     content: output,
     tool_call_id: callId,
     name: toolNames.getPageMarkdown,
-    hidden: true,
   });
 };
 const sendMessage = async () => {
@@ -331,7 +332,7 @@ const sendMessage = async () => {
     setText(keyStatus, "请先补全 API Key、Base URL 和模型");
     return;
   }
-  state.messages.push({ role: "user", content });
+  addMessage({ role: "user", content });
   promptEl.value = "";
   renderMessages();
   state.sending = true;
