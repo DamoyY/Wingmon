@@ -106,36 +106,6 @@ const handleClickButton = (message, sendResponse) => {
   sendResponse({ ok: true });
 };
 
-const serializeConsoleResult = (result) => {
-  if (typeof result === "string") return result;
-  if (typeof result === "undefined") return "undefined";
-  if (result === null) return "null";
-  const serialized = JSON.stringify(result);
-  if (typeof serialized !== "string") {
-    throw new Error("结果不可序列化");
-  }
-  return serialized;
-};
-const handleRunConsoleCommand = async (message, sendResponse) => {
-  const command =
-    typeof message?.command === "string" ? message.command.trim() : "";
-  if (!command) {
-    sendResponse({ error: "command 必须是非空字符串" });
-    return;
-  }
-  let result;
-  try {
-    result = eval(command);
-    if (result instanceof Promise) {
-      result = await result;
-    }
-    const output = serializeConsoleResult(result);
-    sendResponse({ ok: true, output });
-  } catch (error) {
-    sendResponse({ error: error?.message || "命令执行失败" });
-  }
-};
-
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   try {
     if (message?.type === "ping") {
@@ -153,10 +123,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message?.type === "clickButton") {
       handleClickButton(message, sendResponse);
       return;
-    }
-    if (message?.type === "runConsoleCommand") {
-      handleRunConsoleCommand(message, sendResponse);
-      return true;
     }
   } catch (error) {
     sendResponse({ error: error?.message || "未知错误" });

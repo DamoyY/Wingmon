@@ -9,7 +9,7 @@ const TOOL_STRICT = true;
 const openPageToolSchema = {
   type: "object",
   properties: {
-    url: { type: "string", description: "要打开的 URL" },
+    url: { type: "string" },
     focus: { type: "boolean", description: "是否切换浏览器焦点到新页面" },
   },
   required: ["url", "focus"],
@@ -23,26 +23,19 @@ const clickButtonToolSchema = {
 };
 const pageMarkdownToolSchema = {
   type: "object",
-  properties: { tabId: { type: "number", description: "标签页 ID" } },
+  properties: { tabId: { type: "number" } },
   required: ["tabId"],
   additionalProperties: false,
 };
 const closePageToolSchema = {
   type: "object",
-  properties: { tabId: { type: "number", description: "标签页 ID" } },
+  properties: { tabId: { type: "number" } },
   required: ["tabId"],
   additionalProperties: false,
 };
 const consoleToolSchema = {
   type: "object",
-  properties: {
-    command: { type: "string", description: "要执行的命令" },
-    tabId: {
-      type: "number",
-      description:
-        "标签页 ID，不填则在 Sandboxed Page 里执行；填了则在指定标签页执行",
-    },
-  },
+  properties: { command: { type: "string" } },
   required: ["command"],
   additionalProperties: false,
 };
@@ -69,7 +62,7 @@ const toolDescriptors = [
   },
   {
     name: toolNames.runConsoleCommand,
-    description: "执行控制台命令并返回结果",
+    description: "在 Sandbox Page 中执行控制台命令并获取结果",
     parameters: consoleToolSchema,
   },
 ];
@@ -152,20 +145,4 @@ export const validateConsoleArgs = (args) => {
   if (typeof args.command !== "string" || !args.command.trim()) {
     throw new Error("command 必须是非空字符串");
   }
-  let tabId;
-  if (Object.prototype.hasOwnProperty.call(args, "tabId")) {
-    const raw = args.tabId;
-    if (typeof raw === "number" && Number.isInteger(raw) && raw > 0) {
-      tabId = raw;
-    } else if (typeof raw === "string" && raw.trim()) {
-      const parsed = Number(raw);
-      if (!Number.isInteger(parsed) || parsed <= 0) {
-        throw new Error("tabId 必须是正整数");
-      }
-      tabId = parsed;
-    } else {
-      throw new Error("tabId 必须是正整数");
-    }
-  }
-  return { command: args.command.trim(), tabId };
 };

@@ -268,17 +268,8 @@ const executeCloseBrowserPage = async (args) => {
   return "成功";
 };
 const executeRunConsoleCommand = async (args) => {
-  const { command, tabId } = validateConsoleArgs(args);
-  let result;
-  if (typeof tabId === "number") {
-    await waitForContentScript(tabId);
-    result = await sendMessageToTab(tabId, {
-      type: "runConsoleCommand",
-      command,
-    });
-  } else {
-    result = await sendMessageToSandbox({ command });
-  }
+  const { command } = validateConsoleArgs(args);
+  const result = await sendMessageToSandbox({ command });
   if (!result?.ok) {
     throw new Error(result?.error || "命令执行失败");
   }
