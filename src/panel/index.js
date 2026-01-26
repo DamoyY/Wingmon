@@ -122,7 +122,8 @@ const extractResponsesText = (data) => {
   });
   return texts.join("").trim();
 };
-const requestModel = async (settings, systemPrompt) => {
+const requestModel = async (settings) => {
+  const systemPrompt = await buildSystemPrompt();
   const tools = getToolDefinitions(settings.apiType);
   const requestBody =
     settings.apiType === "responses" ?
@@ -230,10 +231,9 @@ const sendMessage = async () => {
   state.sending = true;
   setText(statusEl, "请求中…");
   try {
-    const systemPrompt = await buildSystemPrompt();
     let pendingToolCalls = [];
     do {
-      const { toolCalls } = await requestModel(settings, systemPrompt);
+      const { toolCalls } = await requestModel(settings);
       pendingToolCalls = toolCalls || [];
       if (pendingToolCalls.length) {
         await handleToolCalls(pendingToolCalls);
