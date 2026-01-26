@@ -56,6 +56,7 @@ const isSafeUrl = (url) => {
     normalized.startsWith("mailto:")
   );
 };
+const isDataUrl = (url) => normalizeUrl(url).startsWith("data:");
 const sanitizeRenderedHtml = (html) => {
   const template = document.createElement("template");
   template.innerHTML = html || "";
@@ -87,6 +88,20 @@ const renderMarkdown = (content) =>
   sanitizeRenderedHtml(markdown.render(content || ""));
 export const turndown = new TurndownService({ codeBlockStyle: "fenced" });
 turndown.remove(["script", "style"]);
+turndown.addRule("image", {
+  filter: "img",
+  replacement: (_content, node) => {
+    if (!node || node.nodeName !== "IMG") return "";
+    const src = node.getAttribute("src") || "";
+    const alt = node.getAttribute("alt") || "";
+    if (!src || isDataUrl(src)) {
+      return turndown.escape(alt);
+    }
+    const title = node.getAttribute("title");
+    const titlePart = title ? ` "${turndown.escape(title)}"` : "";
+    return `![${turndown.escape(alt)}](${src}${titlePart})`;
+  },
+});
 export const setText = (node, text) => {
   node.textContent = text || "";
 };
