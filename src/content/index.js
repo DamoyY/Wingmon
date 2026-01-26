@@ -82,7 +82,7 @@ const handleGetPageContent = (sendResponse) => {
   }
 };
 
-const handleclickBotton = (message, sendResponse) => {
+const handleClickButton = (message, sendResponse) => {
   const id = typeof message?.id === "string" ? message.id.trim() : "";
   if (!id) {
     sendResponse({ error: "id 必须是非空字符串" });
@@ -150,8 +150,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       handleGetPageContent(sendResponse);
       return;
     }
-    if (message?.type === "clickBotton") {
-      handleclickBotton(message, sendResponse);
+    if (message?.type === "clickButton") {
+      handleClickButton(message, sendResponse);
       return;
     }
     if (message?.type === "runConsoleCommand") {

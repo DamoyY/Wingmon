@@ -93,7 +93,7 @@ const validateOpenPageArgs = (args) => {
   }
   return { url: parsedUrl.toString(), focus: args.focus };
 };
-const validateclickBottonArgs = (args) => {
+const validateClickButtonArgs = (args) => {
   if (!args || typeof args !== "object") {
     throw new Error("工具参数必须是对象");
   }
@@ -147,6 +147,26 @@ const sendMessageToTab = (tabId, payload) =>
       resolve(response);
     });
   });
+const sendMessageToServiceWorker = (payload) =>
+  new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(payload, (response) => {
+      if (chrome.runtime.lastError) {
+        const message =
+          chrome.runtime.lastError.message || "无法发送消息到 Service Worker";
+        reject(new Error(message));
+        return;
+      }
+      if (!response) {
+        reject(new Error("Service Worker 未返回结果"));
+        return;
+      }
+      if (response.error) {
+        reject(new Error(response.error));
+        return;
+      }
+      resolve(response);
+    });
+  });
 const waitForContentScript = async (tabId, timeoutMs = 5000) => {
   if (typeof tabId !== "number") {
     throw new Error("tabId 必须是数字");
@@ -166,10 +186,10 @@ const waitForContentScript = async (tabId, timeoutMs = 5000) => {
   const tail = lastError?.message ? `，最后错误：${lastError.message}` : "";
   throw new Error(`等待页面内容脚本就绪超时（${timeoutMs}ms${tail}）`);
 };
-const executeclickBotton = async (args) => {
-  const { id } = validateclickBottonArgs(args);
+const executeClickButton = async (args) => {
+  const { id } = validateClickButtonArgs(args);
   const tabId = await getActiveTabId();
-  const result = await sendMessageToTab(tabId, { type: "clickBotton", id });
+  const result = await sendMessageToTab(tabId, { type: "clickButton", id });
   if (!result?.ok) {
     throw new Error("点击按钮失败");
   }
@@ -188,12 +208,20 @@ const executeCloseBrowserPage = async (args) => {
   return "成功";
 };
 const executeRunConsoleCommand = async (args) => {
-  const { command } = validateConsoleArgs(args);
-  const tabId = await getActiveTabId();
-  const result = await sendMessageToTab(tabId, {
-    type: "runConsoleCommand",
-    command,
-  });
+  const { command, tabId } = validateConsoleArgs(args);
+  let result;
+  if (typeof tabId === "number") {
+    await waitForContentScript(tabId);
+    result = await sendMessageToTab(tabId, {
+      type: "runConsoleCommand",
+      command,
+    });
+  } else {
+    result = await sendMessageToServiceWorker({
+      type: "runConsoleCommand",
+      command,
+    });
+  }
   if (!result?.ok) {
     throw new Error(result?.error || "命令执行失败");
   }
@@ -210,8 +238,8 @@ const executeToolCall = async (toolCall) => {
   if (normalized.name === toolNames.openBrowserPage) {
     return executeOpenBrowserPage(args);
   }
-  if (normalized.name === toolNames.clickBotton) {
-    return executeclickBotton(args);
+  if (normalized.name === toolNames.clickButton) {
+    return executeClickButton(args);
   }
   if (normalized.name === toolNames.getPageMarkdown) {
     return executeGetPageMarkdown(args);
