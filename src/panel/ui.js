@@ -122,7 +122,7 @@ export const convertPageContentToMarkdown = (pageData) => {
     const labels = ids.map((id) => {
       const target = documentResult.getElementById(id);
       if (!target) {
-        throw new Error(`aria-labelledby 指向不存在的元素: ${id}`);
+        throw new Error(`aria-labelledby 指向不存在的按钮: ${id}`);
       }
       return normalizeText(target.textContent);
     });

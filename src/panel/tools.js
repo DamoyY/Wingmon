@@ -70,7 +70,7 @@ export const getToolDefinitions = (apiType) => {
       type: "function",
       function: {
         name: toolNames.clickElement,
-        description: "点击当前页面上指定 ID 的元素。",
+        description: "点击当前页面上指定 ID 的按钮。",
         parameters: clickElementToolSchema,
         strict: true,
       },
@@ -128,38 +128,169 @@ const toChatToolCallForRequest = (call) => ({
     arguments: call.function?.arguments ?? call.arguments ?? "",
   },
 });
+const getToolCallId = (call) => {
+  const callId = call.call_id || call.id;
+  if (!callId) throw new Error("工具调用缺少 call_id");
+  return callId;
+};
+const getToolCallName = (call) => {
+  const name = call.function?.name || call.name;
+  if (!name) throw new Error("工具调用缺少 name");
+  return name;
+};
+const extractGetPageTabIdFromCall = (call) => {
+  const argsText = call.function?.arguments ?? call.arguments ?? "";
+  let args;
+  try {
+    args = parseToolArguments(argsText || "{}");
+  } catch (error) {
+    const message = error?.message || "未知错误";
+    throw new Error(`get_page 工具参数解析失败：${message}`);
+  }
+  const { tabId } = validateGetPageMarkdownArgs(args);
+  return tabId;
+};
+const extractOpenPageTabIdFromOutput = (content) => {
+  if (typeof content !== "string") {
+    throw new Error("open_page 工具响应必须是字符串");
+  }
+  const trimmed = content.trim();
+  if (!trimmed) {
+    throw new Error("open_page 工具响应不能为空");
+  }
+  if (!trimmed.startsWith("**成功**")) {
+    return null;
+  }
+  if (trimmed === "**成功**") {
+    return null;
+  }
+  const match = trimmed.match(/tabId:\s*["'“”]?(\d+)["'“”]?/);
+  if (!match) {
+    throw new Error("open_page 成功响应缺少 tabId");
+  }
+  const tabId = Number(match[1]);
+  if (!Number.isInteger(tabId) || tabId <= 0) {
+    throw new Error("open_page 响应 tabId 无效");
+  }
+  return tabId;
+};
+const isGetPageSuccessOutput = (content) =>
+  typeof content === "string" && content.trim().startsWith("**标题：**");
+const collectPageReadDedupeSets = (messages) => {
+  const callInfoById = new Map();
+  messages.forEach((msg) => {
+    if (!Array.isArray(msg.tool_calls)) return;
+    msg.tool_calls.forEach((call) => {
+      const callId = getToolCallId(call);
+      const name = getToolCallName(call);
+      if (callInfoById.has(callId)) {
+        const existing = callInfoById.get(callId);
+        if (existing?.name !== name) {
+          throw new Error(`重复的工具调用 id：${callId}`);
+        }
+        return;
+      }
+      const info = { name };
+      if (name === toolNames.getPageMarkdown) {
+        info.tabId = extractGetPageTabIdFromCall(call);
+      }
+      callInfoById.set(callId, info);
+    });
+  });
+  const readEvents = [];
+  messages.forEach((msg, index) => {
+    if (msg.role !== "tool") return;
+    const callId = msg.tool_call_id;
+    if (!callId) throw new Error("工具响应缺少 tool_call_id");
+    const info = callInfoById.get(callId);
+    const name = msg.name || info?.name;
+    if (!name) {
+      throw new Error(`工具响应缺少 name：${callId}`);
+    }
+    if (name === toolNames.getPageMarkdown) {
+      if (!isGetPageSuccessOutput(msg.content)) return;
+      const tabId = info?.tabId;
+      if (!tabId) {
+        throw new Error(`get_page 工具响应缺少 tabId：${callId}`);
+      }
+      readEvents.push({ tabId, type: name, callId, index });
+      return;
+    }
+    if (name === toolNames.openBrowserPage) {
+      const tabId = extractOpenPageTabIdFromOutput(msg.content);
+      if (!tabId) return;
+      readEvents.push({ tabId, type: name, callId, index });
+    }
+  });
+  const latestByTabId = new Map();
+  readEvents.forEach((event) => {
+    const existing = latestByTabId.get(event.tabId);
+    if (!existing || event.index > existing.index) {
+      latestByTabId.set(event.tabId, event);
+    }
+  });
+  const removeToolCallIds = new Set();
+  const trimOpenPageResponseIds = new Set();
+  readEvents.forEach((event) => {
+    const latest = latestByTabId.get(event.tabId);
+    if (!latest || latest.callId === event.callId) return;
+    if (event.type === toolNames.getPageMarkdown) {
+      removeToolCallIds.add(event.callId);
+      return;
+    }
+    if (event.type === toolNames.openBrowserPage) {
+      trimOpenPageResponseIds.add(event.callId);
+    }
+  });
+  return { removeToolCallIds, trimOpenPageResponseIds };
+};
 export const buildChatMessages = (systemPrompt) => {
   const messages = [];
   if (systemPrompt) {
     messages.push({ role: "system", content: systemPrompt });
   }
+  const { removeToolCallIds, trimOpenPageResponseIds } =
+    collectPageReadDedupeSets(state.messages);
   state.messages.forEach((msg) => {
     if (msg.role === "tool") {
-      messages.push({
-        role: "tool",
-        content: msg.content,
-        tool_call_id: msg.tool_call_id,
-      });
+      const callId = msg.tool_call_id;
+      if (!callId) throw new Error("工具响应缺少 tool_call_id");
+      if (removeToolCallIds.has(callId)) return;
+      const content =
+        trimOpenPageResponseIds.has(callId) ? "**成功**" : msg.content;
+      messages.push({ role: "tool", content, tool_call_id: callId });
       return;
     }
     const entry = { role: msg.role };
     if (msg.content) entry.content = msg.content;
     if (msg.tool_calls?.length) {
-      entry.tool_calls = msg.tool_calls.map(toChatToolCallForRequest);
+      const toolCalls = msg.tool_calls.filter((call) => {
+        const callId = getToolCallId(call);
+        getToolCallName(call);
+        return !removeToolCallIds.has(callId);
+      });
+      if (toolCalls.length) {
+        entry.tool_calls = toolCalls.map(toChatToolCallForRequest);
+      }
     }
-    messages.push(entry);
+    if (entry.content || entry.tool_calls?.length) {
+      messages.push(entry);
+    }
   });
   return messages;
 };
 export const buildResponsesInput = () => {
   const input = [];
+  const { removeToolCallIds, trimOpenPageResponseIds } =
+    collectPageReadDedupeSets(state.messages);
   state.messages.forEach((msg) => {
     if (msg.role === "tool") {
-      input.push({
-        type: "function_call_output",
-        call_id: msg.tool_call_id,
-        output: msg.content,
-      });
+      const callId = msg.tool_call_id;
+      if (!callId) throw new Error("工具响应缺少 tool_call_id");
+      if (removeToolCallIds.has(callId)) return;
+      const output =
+        trimOpenPageResponseIds.has(callId) ? "**成功**" : msg.content;
+      input.push({ type: "function_call_output", call_id: callId, output });
       return;
     }
     if (msg.role === "user" || msg.role === "assistant") {
@@ -168,9 +299,9 @@ export const buildResponsesInput = () => {
       }
       if (msg.tool_calls?.length) {
         msg.tool_calls.forEach((call) => {
-          const name = call.function?.name || call.name;
-          const callId = call.call_id || call.id;
-          if (!name || !callId) return;
+          const name = getToolCallName(call);
+          const callId = getToolCallId(call);
+          if (removeToolCallIds.has(callId)) return;
           input.push({
             type: "function_call",
             call_id: callId,
@@ -322,7 +453,7 @@ const executeClickElement = async (args) => {
   const tabId = await getActiveTabId();
   const result = await sendMessageToTab(tabId, { type: "clickElement", id });
   if (!result?.ok) {
-    throw new Error("点击元素失败");
+    throw new Error("点击按钮失败");
   }
   return "成功";
 };
