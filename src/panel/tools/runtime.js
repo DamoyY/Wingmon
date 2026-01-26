@@ -159,7 +159,7 @@ const waitForContentScript = async (tabId, timeoutMs = 5000) => {
       throw new Error("页面未返回就绪信号");
     } catch (error) {
       lastError = error;
-      await delay(200);
+      await delay(1000);
     }
   }
   const tail = lastError?.message ? `，最后错误：${lastError.message}` : "";
