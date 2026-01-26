@@ -30,8 +30,8 @@ import {
   buildEndpoint,
   buildSystemPrompt,
 } from "./settings.js";
+import { getToolDefinitions, parseJson, toolNames } from "./tools/definitions.js";
 import {
-  getToolDefinitions,
   buildChatMessages,
   buildResponsesInput,
   addChatToolCallDelta,
@@ -41,11 +41,11 @@ import {
   extractChatToolCalls,
   extractResponsesToolCalls,
   attachToolCallsToAssistant,
+} from "./tools/messages.js";
+import {
   handleToolCalls,
-  parseJson,
-  toolNames,
   buildPageMarkdownToolOutput,
-} from "./tools.js";
+} from "./tools/runtime.js";
 
 const normalizeTabUrl = (url) => (url || "").trim().toLowerCase();
 const isNewTabUrl = (url) => {
