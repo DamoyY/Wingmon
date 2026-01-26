@@ -35,18 +35,17 @@ export const getToolDefinitions = (apiType) => {
   ];
 };
 export const parseJson = (text) => {
+  if (typeof text !== "string") {
+    throw new Error("JSON 输入必须是字符串");
+  }
   try {
     return JSON.parse(text);
   } catch (error) {
-    return null;
+    throw new Error(`JSON 解析失败：${error.message}`);
   }
 };
 const parseToolArguments = (text) => {
-  const parsed = parseJson(text);
-  if (!parsed) {
-    throw new Error("工具参数不是有效 JSON");
-  }
-  return parsed;
+  return parseJson(text);
 };
 const normalizeToolCall = (toolCall) => {
   if (!toolCall) return null;
