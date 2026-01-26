@@ -45,6 +45,71 @@ import {
   parseJson,
 } from "./tools.js";
 
+const normalizeTabUrl = (url) => (url || "").trim().toLowerCase();
+const isNewTabUrl = (url) => {
+  const normalized = normalizeTabUrl(url);
+  return (
+    normalized === "chrome://newtab/" ||
+    normalized === "chrome://new-tab-page/" ||
+    normalized === "chrome://new-tab-page"
+  );
+};
+const isChromeInternalUrl = (url) =>
+  normalizeTabUrl(url).startsWith("chrome://");
+const getActiveTab = () =>
+  new Promise((resolve, reject) => {
+    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+      if (chrome.runtime.lastError) {
+        const message =
+          chrome.runtime.lastError.message || "无法查询活动标签页";
+        reject(new Error(message));
+        return;
+      }
+      const tab = tabs?.[0];
+      if (!tab) {
+        reject(new Error("未找到活动标签页"));
+        return;
+      }
+      resolve(tab);
+    });
+  });
+const disableShareToggle = (reason) => {
+  shareToggle.checked = false;
+  shareToggle.disabled = true;
+  shareToggle.title = reason || "当前标签页不支持共享";
+};
+const enableShareToggle = (settings) => {
+  shareToggle.disabled = false;
+  shareToggle.title = "";
+  shareToggle.checked = settings.sharePage;
+};
+const updateShareToggleAvailability = async (settings) => {
+  const activeTab = await getActiveTab();
+  if (!activeTab.url) {
+    throw new Error("活动标签页缺少 URL");
+  }
+  const normalizedUrl = normalizeTabUrl(activeTab.url);
+  if (isNewTabUrl(normalizedUrl)) {
+    disableShareToggle("新标签页不支持共享");
+    return;
+  }
+  if (isChromeInternalUrl(normalizedUrl)) {
+    disableShareToggle("Chrome:// 页面不支持共享");
+    return;
+  }
+  const resolvedSettings = settings || (await getSettings());
+  enableShareToggle(resolvedSettings);
+};
+const refreshShareToggle = async (settings) => {
+  try {
+    await updateShareToggleAvailability(settings);
+  } catch (error) {
+    const message = error?.message || "无法读取活动标签页";
+    disableShareToggle(message);
+    setText(statusEl, message);
+  }
+};
+
 const streamSse = async (response, onPayload) => {
   if (!response.body) throw new Error("无法读取流式响应");
   const reader = response.body.getReader();
@@ -294,11 +359,19 @@ const bindEvents = () => {
     const theme = applyTheme(themeSelect.value);
     await updateSettings({ theme });
   });
+  chrome.tabs.onActivated.addListener(() => {
+    refreshShareToggle();
+  });
+  chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+    if (!tab?.active) return;
+    if (changeInfo.url || changeInfo.status === "complete") {
+      refreshShareToggle();
+    }
+  });
 };
 const init = async () => {
   const settings = await getSettings();
   fillSettingsForm(settings);
-  shareToggle.checked = settings.sharePage;
   applyTheme(settings.theme);
   if (settings.apiKey && settings.baseUrl && settings.model) {
     showChatView();
@@ -306,5 +379,6 @@ const init = async () => {
     showKeyView();
   }
   bindEvents();
+  await refreshShareToggle(settings);
 };
 init();

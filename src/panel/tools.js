@@ -168,8 +168,16 @@ const createTab = (url, active) =>
         reject(new Error("创建标签页失败"));
         return;
       }
+      if (typeof tab.id !== "number") {
+        reject(new Error("创建标签页失败：缺少 tab.id"));
+        return;
+      }
       resolve(tab);
     });
+  });
+const delay = (ms) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
   });
 const validateOpenPageArgs = (args) => {
   if (!args || typeof args !== "object") {
@@ -203,7 +211,8 @@ const validateClickElementArgs = (args) => {
 };
 const executeOpenBrowserPage = async (args) => {
   const { url, focus } = validateOpenPageArgs(args);
-  await createTab(url, focus);
+  const tab = await createTab(url, focus);
+  await waitForContentScript(tab.id);
   return "成功";
 };
 const getActiveTabId = () =>
@@ -243,6 +252,25 @@ const sendMessageToTab = (tabId, payload) =>
       resolve(response);
     });
   });
+const waitForContentScript = async (tabId, timeoutMs = 5000) => {
+  if (typeof tabId !== "number") {
+    throw new Error("tabId 必须是数字");
+  }
+  const start = Date.now();
+  let lastError = null;
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const response = await sendMessageToTab(tabId, { type: "ping" });
+      if (response?.ok) return;
+      throw new Error("页面未返回就绪信号");
+    } catch (error) {
+      lastError = error;
+      await delay(200);
+    }
+  }
+  const tail = lastError?.message ? `，最后错误：${lastError.message}` : "";
+  throw new Error(`等待页面内容脚本就绪超时（${timeoutMs}ms${tail}）`);
+};
 const executeClickElement = async (args) => {
   const { id } = validateClickElementArgs(args);
   const tabId = await getActiveTabId();
