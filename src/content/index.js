@@ -30,7 +30,7 @@ const handleGetPageContent = (sendResponse) => {
   sendResponse({ html, title: document.title || "", url: location.href || "" });
 };
 
-const handleClickElement = (message, sendResponse) => {
+const handleclickBotton = (message, sendResponse) => {
   const id = typeof message?.id === "string" ? message.id.trim() : "";
   if (!id) {
     sendResponse({ error: "id 必须是非空字符串" });
@@ -68,8 +68,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       handleGetPageContent(sendResponse);
       return;
     }
-    if (message?.type === "clickElement") {
-      handleClickElement(message, sendResponse);
+    if (message?.type === "clickBotton") {
+      handleclickBotton(message, sendResponse);
     }
   } catch (error) {
     sendResponse({ error: error?.message || "未知错误" });

@@ -1,7 +1,8 @@
 export const toolNames = {
   openBrowserPage: "open_page",
-  clickElement: "clickElement",
+  clickBotton: "clickBotton",
   getPageMarkdown: "get_page",
+  closeBrowserPage: "close_page",
 };
 const openPageToolSchema = {
   type: "object",
@@ -12,13 +13,19 @@ const openPageToolSchema = {
   required: ["url", "focus"],
   additionalProperties: false,
 };
-const clickElementToolSchema = {
+const clickBottonToolSchema = {
   type: "object",
   properties: { id: { type: "string", description: "要点击的 botton 的 ID" } },
   required: ["id"],
   additionalProperties: false,
 };
 const pageMarkdownToolSchema = {
+  type: "object",
+  properties: { tabId: { type: "number", description: "标签页 ID" } },
+  required: ["tabId"],
+  additionalProperties: false,
+};
+const closePageToolSchema = {
   type: "object",
   properties: { tabId: { type: "number", description: "标签页 ID" } },
   required: ["tabId"],
@@ -36,9 +43,9 @@ export const getToolDefinitions = (apiType) => {
       },
       {
         type: "function",
-        name: toolNames.clickElement,
+        name: toolNames.clickBotton,
         description: "点击当前页面上指定的 botton",
-        parameters: clickElementToolSchema,
+        parameters: clickBottonToolSchema,
         strict: true,
       },
       {
@@ -46,6 +53,13 @@ export const getToolDefinitions = (apiType) => {
         name: toolNames.getPageMarkdown,
         description: "输入 tabId 读取页面内容",
         parameters: pageMarkdownToolSchema,
+        strict: true,
+      },
+      {
+        type: "function",
+        name: toolNames.closeBrowserPage,
+        description: "输入 tabId 关闭标签页",
+        parameters: closePageToolSchema,
         strict: true,
       },
     ];
@@ -63,9 +77,9 @@ export const getToolDefinitions = (apiType) => {
     {
       type: "function",
       function: {
-        name: toolNames.clickElement,
+        name: toolNames.clickBotton,
         description: "点击当前页面上指定 ID 的按钮。",
-        parameters: clickElementToolSchema,
+        parameters: clickBottonToolSchema,
         strict: true,
       },
     },
@@ -75,6 +89,15 @@ export const getToolDefinitions = (apiType) => {
         name: toolNames.getPageMarkdown,
         description: "输入 tabId 读取页面内容",
         parameters: pageMarkdownToolSchema,
+        strict: true,
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: toolNames.closeBrowserPage,
+        description: "输入 tabId 关闭标签页",
+        parameters: closePageToolSchema,
         strict: true,
       },
     },
@@ -101,6 +124,23 @@ export const getToolCallName = (call) => {
   return name;
 };
 export const validateGetPageMarkdownArgs = (args) => {
+  if (!args || typeof args !== "object") {
+    throw new Error("工具参数必须是对象");
+  }
+  const raw = args.tabId;
+  if (typeof raw === "number" && Number.isInteger(raw) && raw > 0) {
+    return { tabId: raw };
+  }
+  if (typeof raw === "string" && raw.trim()) {
+    const parsed = Number(raw);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      throw new Error("tabId 必须是正整数");
+    }
+    return { tabId: parsed };
+  }
+  throw new Error("tabId 必须是正整数");
+};
+export const validateClosePageArgs = (args) => {
   if (!args || typeof args !== "object") {
     throw new Error("工具参数必须是对象");
   }

@@ -10,6 +10,7 @@ import {
   getToolCallId,
   getToolCallName,
   validateGetPageMarkdownArgs,
+  validateClosePageArgs,
 } from "./definitions.js";
 
 const parseToolArguments = (text) => parseJson(text);
@@ -55,6 +56,17 @@ const createTab = (url, active) =>
       resolve(tab);
     });
   });
+const closeTab = (tabId) =>
+  new Promise((resolve, reject) => {
+    chrome.tabs.remove(tabId, () => {
+      if (chrome.runtime.lastError) {
+        const message = chrome.runtime.lastError.message || "无法关闭标签页";
+        reject(new Error(message));
+        return;
+      }
+      resolve();
+    });
+  });
 const delay = (ms) =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -80,7 +92,7 @@ const validateOpenPageArgs = (args) => {
   }
   return { url: parsedUrl.toString(), focus: args.focus };
 };
-const validateClickElementArgs = (args) => {
+const validateclickBottonArgs = (args) => {
   if (!args || typeof args !== "object") {
     throw new Error("工具参数必须是对象");
   }
@@ -153,10 +165,10 @@ const waitForContentScript = async (tabId, timeoutMs = 5000) => {
   const tail = lastError?.message ? `，最后错误：${lastError.message}` : "";
   throw new Error(`等待页面内容脚本就绪超时（${timeoutMs}ms${tail}）`);
 };
-const executeClickElement = async (args) => {
-  const { id } = validateClickElementArgs(args);
+const executeclickBotton = async (args) => {
+  const { id } = validateclickBottonArgs(args);
   const tabId = await getActiveTabId();
-  const result = await sendMessageToTab(tabId, { type: "clickElement", id });
+  const result = await sendMessageToTab(tabId, { type: "clickBotton", id });
   if (!result?.ok) {
     throw new Error("点击按钮失败");
   }
@@ -169,6 +181,11 @@ const executeGetPageMarkdown = async (args) => {
   const { title, url, content } = convertPageContentToMarkdown(pageData);
   return `**标题：**\n${title}\n**地址：**\n${url}\n**内容：**\n${content}`;
 };
+const executeCloseBrowserPage = async (args) => {
+  const { tabId } = validateClosePageArgs(args);
+  await closeTab(tabId);
+  return "成功";
+};
 export const buildPageMarkdownToolOutput = async (tabId) =>
   executeGetPageMarkdown({ tabId });
 const executeToolCall = async (toolCall) => {
@@ -180,11 +197,14 @@ const executeToolCall = async (toolCall) => {
   if (normalized.name === toolNames.openBrowserPage) {
     return executeOpenBrowserPage(args);
   }
-  if (normalized.name === toolNames.clickElement) {
-    return executeClickElement(args);
+  if (normalized.name === toolNames.clickBotton) {
+    return executeclickBotton(args);
   }
   if (normalized.name === toolNames.getPageMarkdown) {
     return executeGetPageMarkdown(args);
+  }
+  if (normalized.name === toolNames.closeBrowserPage) {
+    return executeCloseBrowserPage(args);
   }
   throw new Error(`未支持的工具：${normalized.name}`);
 };
@@ -198,7 +218,8 @@ export const handleToolCalls = async (toolCalls) => {
     } catch (error) {
       const message = error?.message || "工具调用失败";
       setText(statusEl, message);
-      output = `失败: ${message}`;
+      output =
+        name === toolNames.closeBrowserPage ? "失败" : `失败: ${message}`;
     }
     state.messages.push({
       role: "tool",
