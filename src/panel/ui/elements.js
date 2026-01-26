@@ -15,6 +15,7 @@ export const [
   promptEl,
   sendButton,
   sendWithPageButton,
+  stopButton,
   clearButton,
   statusEl,
 ] = [
@@ -33,6 +34,7 @@ export const [
   "prompt",
   "send",
   "send-with-page",
+  "stop",
   "clear",
   "status",
 ].map(byId);

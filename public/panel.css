@@ -18,6 +18,7 @@
   --color-pre-text: #e2e8f0;
   --color-primary: #3b6df6;
   --color-primary-text: #ffffff;
+  --color-danger: #e03131;
   --color-assistant-bg: #ffffff;
   --color-assistant-border: #e3e3ed;
 }
@@ -37,6 +38,7 @@
   --color-pre-bg: #0b1120;
   --color-assistant-bg: #151c2c;
   --color-assistant-border: #2a3245;
+  --color-danger: #ff6b6b;
 }
 
 body {
@@ -128,6 +130,11 @@ button#clear,
 button#open-settings,
 button#cancel-settings {
   background: var(--color-secondary-button);
+}
+
+button#stop {
+  background: var(--color-danger);
+  color: #ffffff;
 }
 
 button#open-settings {

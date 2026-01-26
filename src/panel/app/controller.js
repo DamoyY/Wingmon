@@ -13,6 +13,7 @@ import {
   clearButton,
   statusEl,
   sendWithPageButton,
+  stopButton,
 } from "../ui/elements.js";
 import { setText } from "../ui/text.js";
 import { showKeyView, showChatView } from "../ui/views.js";
@@ -40,6 +41,21 @@ import {
 } from "../tools/runtime.js";
 import { requestModel } from "../api/client.js";
 import { refreshSendWithPageButton } from "./sendWithPageButton.js";
+
+let activeAbortController = null;
+const setComposerSending = (sending) => {
+  sendButton.classList.toggle("hidden", sending);
+  sendWithPageButton.classList.toggle("hidden", sending);
+  stopButton.classList.toggle("hidden", !sending);
+};
+const ensureNotAborted = (signal) => {
+  if (signal?.aborted) throw new Error("已停止");
+};
+const stopSending = () => {
+  if (!activeAbortController) return;
+  activeAbortController.abort();
+  setText(statusEl, "已停止");
+};
 
 const prefillSharedPage = async () => {
   const activeTab = await getActiveTab();
@@ -106,13 +122,19 @@ const sendMessage = async ({ includePage = false } = {}) => {
   promptEl.value = "";
   renderMessages();
   state.sending = true;
+  const abortController = new AbortController();
+  activeAbortController = abortController;
+  setComposerSending(true);
   try {
+    ensureNotAborted(abortController.signal);
     if (includePage) {
       await prefillSharedPage();
     }
+    ensureNotAborted(abortController.signal);
     setText(statusEl, "请求中…");
     let pendingToolCalls = [];
     do {
+      ensureNotAborted(abortController.signal);
       let assistantIndex = null;
       const onStreamStart = () => {
         assistantIndex = state.messages.length;
@@ -128,6 +150,7 @@ const sendMessage = async ({ includePage = false } = {}) => {
         tools,
         onDelta: appendAssistantDelta,
         onStreamStart,
+        signal: abortController.signal,
       });
       pendingToolCalls = toolCalls || [];
       if (streamed) {
@@ -137,14 +160,21 @@ const sendMessage = async ({ includePage = false } = {}) => {
       }
       if (pendingToolCalls.length) {
         await handleToolCalls(pendingToolCalls);
+        ensureNotAborted(abortController.signal);
         setText(statusEl, "请求中…");
       }
     } while (pendingToolCalls.length);
     setText(statusEl, "");
   } catch (error) {
+    if (error?.name === "AbortError" || error?.message === "已停止") {
+      setText(statusEl, "已停止");
+      return;
+    }
     setText(statusEl, `${error.message}`);
   } finally {
     state.sending = false;
+    activeAbortController = null;
+    setComposerSending(false);
   }
 };
 export const bindEvents = () => {
@@ -183,6 +213,7 @@ export const bindEvents = () => {
   sendWithPageButton.addEventListener("click", () =>
     sendMessage({ includePage: true }),
   );
+  stopButton.addEventListener("click", stopSending);
   promptEl.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();

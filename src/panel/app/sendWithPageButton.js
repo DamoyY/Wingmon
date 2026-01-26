@@ -10,7 +10,14 @@ const isNewTabUrl = (url) => {
     normalized === "chrome://new-tab-page"
   );
 };
-const isChromeInternalUrl = (url) => normalizeUrl(url).startsWith("chrome://");
+const isChromeInternalUrl = (url) => {
+  const normalized = normalizeUrl(url);
+  return (
+    normalized.startsWith("chrome://") ||
+    normalized.startsWith("https://chromewebstore.google.com") ||
+    normalized.startsWith("http://chromewebstore.google.com")
+  );
+};
 const disableSendWithPageButton = (reason) => {
   sendWithPageButton.disabled = true;
   sendWithPageButton.title = reason || "当前标签页不支持携页面发送";
@@ -30,7 +37,7 @@ export const updateSendWithPageButtonAvailability = async () => {
     return;
   }
   if (isChromeInternalUrl(normalizedUrl)) {
-    disableSendWithPageButton("Chrome:// 页面不支持携页面发送");
+    disableSendWithPageButton("内部页面不支持携页面发送");
     return;
   }
   enableSendWithPageButton();

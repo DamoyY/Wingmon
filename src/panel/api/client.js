@@ -6,6 +6,7 @@ export const requestModel = async ({
   tools,
   onDelta,
   onStreamStart,
+  signal,
 }) => {
   const strategy = getApiStrategy(settings.apiType);
   const requestBody = strategy.buildRequestBody(settings, systemPrompt, tools);
@@ -18,6 +19,7 @@ export const requestModel = async ({
         Authorization: `Bearer ${settings.apiKey}`,
       },
       body: JSON.stringify(requestBody),
+      signal,
     },
   );
   if (!response.ok) {
