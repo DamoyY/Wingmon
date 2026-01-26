@@ -10,11 +10,13 @@ import {
   getToolCallArguments,
   getToolCallId,
   getToolCallName,
+  validateOpenPageArgs,
+  validateClickButtonArgs,
   validateGetPageMarkdownArgs,
   validateClosePageArgs,
   validateConsoleArgs,
 } from "./definitions.js";
-import { createRandomId } from "../utils.js";
+import { createRandomId, getActiveTab } from "../utils.js";
 
 const SANDBOX_FRAME_ID = "llm-sandbox-frame";
 const SANDBOX_RESPONSE_TYPE = "runConsoleResult";
@@ -77,36 +79,6 @@ const delay = (ms) =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
-const validateOpenPageArgs = (args) => {
-  if (!args || typeof args !== "object") {
-    throw new Error("工具参数必须是对象");
-  }
-  if (typeof args.url !== "string" || !args.url.trim()) {
-    throw new Error("url 必须是非空字符串");
-  }
-  if (typeof args.focus !== "boolean") {
-    throw new Error("focus 必须是布尔值");
-  }
-  let parsedUrl;
-  try {
-    parsedUrl = new URL(args.url);
-  } catch (error) {
-    throw new Error("url 格式不正确");
-  }
-  if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-    throw new Error("url 仅支持 http 或 https");
-  }
-  return { url: parsedUrl.toString(), focus: args.focus };
-};
-const validateClickButtonArgs = (args) => {
-  if (!args || typeof args !== "object") {
-    throw new Error("工具参数必须是对象");
-  }
-  if (typeof args.id !== "string" || !args.id.trim()) {
-    throw new Error("id 必须是非空字符串");
-  }
-  return { id: args.id.trim() };
-};
 const executeOpenBrowserPage = async (args) => {
   const { url, focus } = validateOpenPageArgs(args);
   const tab = await createTab(url, focus);
@@ -115,23 +87,6 @@ const executeOpenBrowserPage = async (args) => {
   const { title, content } = convertPageContentToMarkdown(pageData);
   return `**成功**\ntabId: "${tab.id}"；\n标题：“${title}”；\n内容：\n${content}`;
 };
-const getActiveTabId = () =>
-  new Promise((resolve, reject) => {
-    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
-      if (chrome.runtime.lastError) {
-        const message =
-          chrome.runtime.lastError.message || "无法查询活动标签页";
-        reject(new Error(message));
-        return;
-      }
-      const tabId = tabs?.[0]?.id;
-      if (!tabId) {
-        reject(new Error("未找到活动标签页"));
-        return;
-      }
-      resolve(tabId);
-    });
-  });
 const sendMessageToTab = (tabId, payload) =>
   new Promise((resolve, reject) => {
     chrome.tabs.sendMessage(tabId, payload, (response) => {
@@ -241,7 +196,11 @@ const waitForContentScript = async (tabId, timeoutMs = 5000) => {
 };
 const executeClickButton = async (args) => {
   const { id } = validateClickButtonArgs(args);
-  const tabId = await getActiveTabId();
+  const activeTab = await getActiveTab();
+  if (typeof activeTab.id !== "number") {
+    throw new Error("活动标签页缺少 tabId");
+  }
+  const tabId = activeTab.id;
   const result = await sendMessageToTab(tabId, { type: "clickButton", id });
   if (!result?.ok) {
     throw new Error("点击按钮失败");
