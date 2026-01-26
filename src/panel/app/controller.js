@@ -22,10 +22,7 @@ import { setText } from "../ui/text.js";
 import { showKeyView, showChatView } from "../ui/views.js";
 import { applyTheme } from "../ui/theme.js";
 import { fillSettingsForm } from "../ui/forms.js";
-import {
-  renderMessages,
-  appendAssistantDelta,
-} from "../ui/messages.js";
+import { renderMessages, appendAssistantDelta } from "../ui/messages.js";
 import {
   state,
   addMessage,
@@ -53,6 +50,7 @@ import {
   getHistory,
   saveConversation,
   loadConversation,
+  deleteConversation,
 } from "../services/history.js";
 
 let activeAbortController = null;
@@ -203,6 +201,18 @@ const saveCurrentConversation = async () => {
   await saveConversation(state.conversationId, state.messages, state.updatedAt);
 };
 
+const handleDeleteConversation = async (id) => {
+  if (confirm("确定要删除这条记录吗？")) {
+    await deleteConversation(id);
+    if (id === state.conversationId) {
+      resetConversation();
+      renderMessages();
+      setText(statusEl, "");
+    }
+    await renderHistoryList();
+  }
+};
+
 const renderHistoryList = async () => {
   const history = await getHistory();
   historyList.innerHTML = "";
@@ -217,7 +227,21 @@ const renderHistoryList = async () => {
     if (item.id === state.conversationId) {
       el.classList.add("active");
     }
-    el.textContent = formatDateTime(item.updatedAt);
+
+    const textSpan = document.createElement("span");
+    textSpan.textContent = formatDateTime(item.updatedAt);
+    el.appendChild(textSpan);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "history-delete";
+    deleteBtn.innerHTML = "×";
+    deleteBtn.title = "删除";
+    deleteBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      handleDeleteConversation(item.id);
+    });
+    el.appendChild(deleteBtn);
+
     el.dataset.id = item.id;
     el.addEventListener("click", () => handleLoadConversation(item.id));
     historyList.appendChild(el);
@@ -249,7 +273,11 @@ const handleLoadConversation = async (id) => {
   }
   await saveCurrentConversation();
   const conversation = await loadConversation(id);
-  loadConversationState(conversation.id, conversation.messages, conversation.updatedAt);
+  loadConversationState(
+    conversation.id,
+    conversation.messages,
+    conversation.updatedAt,
+  );
   renderMessages();
   historyPanel.classList.add("hidden");
   setText(statusEl, "");
