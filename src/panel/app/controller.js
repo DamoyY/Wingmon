@@ -10,10 +10,13 @@ import {
   cancelSettings,
   promptEl,
   sendButton,
-  clearButton,
   statusEl,
   sendWithPageButton,
   stopButton,
+  newChatButton,
+  historyButton,
+  historyPanel,
+  historyList,
 } from "../ui/elements.js";
 import { setText } from "../ui/text.js";
 import { showKeyView, showChatView } from "../ui/views.js";
@@ -22,9 +25,14 @@ import { fillSettingsForm } from "../ui/forms.js";
 import {
   renderMessages,
   appendAssistantDelta,
-  clearChat,
 } from "../ui/messages.js";
-import { state, addMessage } from "../state/store.js";
+import {
+  state,
+  addMessage,
+  resetConversation,
+  loadConversationState,
+  touchUpdatedAt,
+} from "../state/store.js";
 import { normalizeTheme } from "../utils/theme.js";
 import { createRandomId } from "../utils/ids.js";
 import { getActiveTab } from "../services/tabs.js";
@@ -41,6 +49,11 @@ import {
 } from "../tools/runtime.js";
 import { requestModel } from "../api/client.js";
 import { refreshSendWithPageButton } from "./sendWithPageButton.js";
+import {
+  getHistory,
+  saveConversation,
+  loadConversation,
+} from "../services/history.js";
 
 let activeAbortController = null;
 const setComposerSending = (sending) => {
@@ -177,6 +190,71 @@ const sendMessage = async ({ includePage = false } = {}) => {
     setComposerSending(false);
   }
 };
+
+const formatDateTime = (timestamp) => {
+  const date = new Date(timestamp);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const saveCurrentConversation = async () => {
+  if (!state.messages.length) return;
+  touchUpdatedAt();
+  await saveConversation(state.conversationId, state.messages, state.updatedAt);
+};
+
+const renderHistoryList = async () => {
+  const history = await getHistory();
+  historyList.innerHTML = "";
+  if (!history.length) {
+    historyList.innerHTML = '<div class="history-empty">暂无历史记录</div>';
+    return;
+  }
+  const sorted = [...history].sort((a, b) => b.updatedAt - a.updatedAt);
+  sorted.forEach((item) => {
+    const el = document.createElement("div");
+    el.className = "history-item";
+    if (item.id === state.conversationId) {
+      el.classList.add("active");
+    }
+    el.textContent = formatDateTime(item.updatedAt);
+    el.dataset.id = item.id;
+    el.addEventListener("click", () => handleLoadConversation(item.id));
+    historyList.appendChild(el);
+  });
+};
+
+const toggleHistoryPanel = async () => {
+  const isHidden = historyPanel.classList.contains("hidden");
+  if (isHidden) {
+    await renderHistoryList();
+  }
+  historyPanel.classList.toggle("hidden");
+};
+
+const handleNewChat = async () => {
+  if (state.sending) return;
+  await saveCurrentConversation();
+  resetConversation();
+  renderMessages();
+  historyPanel.classList.add("hidden");
+  setText(statusEl, "");
+};
+
+const handleLoadConversation = async (id) => {
+  if (state.sending) return;
+  if (id === state.conversationId) {
+    historyPanel.classList.add("hidden");
+    return;
+  }
+  await saveCurrentConversation();
+  const conversation = await loadConversation(id);
+  loadConversationState(conversation.id, conversation.messages, conversation.updatedAt);
+  renderMessages();
+  historyPanel.classList.add("hidden");
+  setText(statusEl, "");
+};
+
 export const bindEvents = () => {
   saveKey.addEventListener("click", async () => {
     const apiKey = keyInput.value.trim();
@@ -220,7 +298,8 @@ export const bindEvents = () => {
       sendMessage();
     }
   });
-  clearButton.addEventListener("click", clearChat);
+  newChatButton.addEventListener("click", handleNewChat);
+  historyButton.addEventListener("click", toggleHistoryPanel);
   themeSelect.addEventListener("change", async () => {
     const theme = applyTheme(themeSelect.value);
     await updateSettings({ theme });

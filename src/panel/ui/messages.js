@@ -1,11 +1,9 @@
-import { messagesEl, statusEl } from "./elements.js";
-import { setText } from "./text.js";
+import { messagesEl } from "./elements.js";
 import { renderMarkdown } from "../markdown/renderer.js";
 import {
   state,
   addMessage,
   updateMessage,
-  setMessages,
 } from "../state/store.js";
 export const renderMessages = () => {
   messagesEl.innerHTML = "";
@@ -37,9 +35,4 @@ export const appendAssistantDelta = (delta) => {
     return;
   }
   renderMessages();
-};
-export const clearChat = () => {
-  setMessages([]);
-  renderMessages();
-  setText(statusEl, "已清空对话");
 };

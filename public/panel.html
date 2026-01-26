@@ -52,9 +52,17 @@
       </section>
       <section id="chat-view" class="view hidden">
         <header class="header">
+          <button id="new-chat" title="新建对话">+</button>
           <div class="title">对话</div>
-          <button id="open-settings" title="设置">⚙️</button>
+          <div class="header-actions">
+            <button id="history" title="历史记录">📋</button>
+            <button id="open-settings" title="设置">⚙️</button>
+          </div>
         </header>
+        <div id="history-panel" class="history-panel hidden">
+          <div class="history-header">历史记录</div>
+          <div id="history-list" class="history-list"></div>
+        </div>
         <div id="messages" class="messages"></div>
         <div class="composer">
           <textarea id="prompt" rows="3" placeholder="输入你的问题"></textarea>
@@ -62,7 +70,6 @@
             <button id="send">发送</button>
             <button id="send-with-page">携页面发送</button>
             <button id="stop" class="hidden">停止</button>
-            <button id="clear">清空</button>
           </div>
         </div>
         <div id="status" class="status"></div>

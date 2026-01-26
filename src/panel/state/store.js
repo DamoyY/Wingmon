@@ -1,4 +1,12 @@
-export const state = { messages: [], sending: false, systemPrompt: null };
+import { createRandomId } from "../utils/ids.js";
+
+export const state = {
+  conversationId: createRandomId("conv"),
+  messages: [],
+  sending: false,
+  systemPrompt: null,
+  updatedAt: Date.now(),
+};
 const hasMessageContent = (content) =>
   typeof content === "string" && Boolean(content.trim());
 const resolveMessageHidden = (message) => {
@@ -39,4 +47,20 @@ export const setMessages = (messages) => {
     throw new Error("messages 必须是数组");
   }
   state.messages = messages.map((message) => normalizeMessage(message));
+};
+
+export const touchUpdatedAt = () => {
+  state.updatedAt = Date.now();
+};
+
+export const resetConversation = () => {
+  state.conversationId = createRandomId("conv");
+  state.messages = [];
+  state.updatedAt = Date.now();
+};
+
+export const loadConversationState = (id, messages, updatedAt) => {
+  state.conversationId = id;
+  state.messages = messages.map((message) => normalizeMessage(message));
+  state.updatedAt = updatedAt;
 };

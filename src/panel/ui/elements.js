@@ -16,8 +16,11 @@ export const [
   sendButton,
   sendWithPageButton,
   stopButton,
-  clearButton,
   statusEl,
+  newChatButton,
+  historyButton,
+  historyPanel,
+  historyList,
 ] = [
   "key-view",
   "chat-view",
@@ -35,6 +38,9 @@ export const [
   "send",
   "send-with-page",
   "stop",
-  "clear",
   "status",
+  "new-chat",
+  "history",
+  "history-panel",
+  "history-list",
 ].map(byId);

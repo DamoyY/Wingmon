@@ -126,7 +126,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-button#clear,
 button#open-settings,
 button#cancel-settings {
   background: var(--color-secondary-button);
@@ -241,4 +240,64 @@ button#open-settings {
 .status {
   font-size: 12px;
   color: var(--color-muted);
+}
+
+.header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+button#new-chat,
+button#history {
+  width: 40px;
+  padding: 8px 0;
+  font-size: 16px;
+  background: var(--color-secondary-button);
+}
+
+.history-panel {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-input-bg);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.history-header {
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 13px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-item {
+  padding: 10px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-item:hover {
+  background: var(--color-border);
+}
+
+.history-item.active {
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.history-empty {
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--color-muted);
+  text-align: center;
 }
