@@ -1,3 +1,4 @@
+import { parseJson } from "../utils/json.js";
 export const toolNames = {
   openBrowserPage: "open_page",
   clickButton: "clickButton",
@@ -96,16 +97,6 @@ export const getToolDefinitions = (apiType) => {
   return toolDescriptors.map((tool) =>
     buildToolDefinition(tool, useResponsesFormat),
   );
-};
-export const parseJson = (text) => {
-  if (typeof text !== "string") {
-    throw new Error("JSON 输入必须是字符串");
-  }
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    throw new Error(`JSON 解析失败：${error.message}`);
-  }
 };
 export const parseToolArguments = (text) => parseJson(text);
 export const getToolCallArguments = (call) =>

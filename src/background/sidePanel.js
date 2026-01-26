@@ -1,18 +1,10 @@
-const enablePanelBehavior = async () => {
+export const enablePanelBehavior = async () => {
   if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
     await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
   }
 };
-const openPanelForTab = async (tab) => {
+export const openPanelForTab = async (tab) => {
   if (chrome.sidePanel && chrome.sidePanel.open && tab?.windowId) {
     await chrome.sidePanel.open({ windowId: tab.windowId });
   }
 };
-
-enablePanelBehavior();
-chrome.runtime.onInstalled.addListener(() => {
-  enablePanelBehavior();
-});
-chrome.action.onClicked.addListener(async (tab) => {
-  await openPanelForTab(tab);
-});

@@ -1,0 +1,2 @@
+export const normalizeTheme = (theme) =>
+  theme === "light" || theme === "dark" || theme === "auto" ? theme : "auto";

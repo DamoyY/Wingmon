@@ -1,0 +1,39 @@
+import { buildEndpoint } from "../services/settings.js";
+import { getApiStrategy } from "./strategies.js";
+export const requestModel = async ({
+  settings,
+  systemPrompt,
+  tools,
+  onDelta,
+  onStreamStart,
+}) => {
+  const strategy = getApiStrategy(settings.apiType);
+  const requestBody = strategy.buildRequestBody(settings, systemPrompt, tools);
+  const response = await fetch(
+    buildEndpoint(settings.baseUrl, settings.apiType),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${settings.apiKey}`,
+      },
+      body: JSON.stringify(requestBody),
+    },
+  );
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "请求失败");
+  }
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("text/event-stream")) {
+    if (typeof onStreamStart === "function") {
+      onStreamStart();
+    }
+    const toolCalls = await strategy.stream(response, { onDelta });
+    return { toolCalls, streamed: true };
+  }
+  const data = await response.json();
+  const toolCalls = strategy.extractToolCalls(data);
+  const reply = strategy.extractReply(data);
+  return { toolCalls, reply, streamed: false };
+};

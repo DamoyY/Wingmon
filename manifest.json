@@ -16,7 +16,8 @@
     "default_title": "LLM 侧边栏"
   },
   "background": {
-    "service_worker": "src/background/index.js"
+    "service_worker": "src/background/index.js",
+    "type": "module"
   },
   "sandbox": {
     "pages": [
