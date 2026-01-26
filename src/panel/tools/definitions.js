@@ -5,6 +5,7 @@ export const toolNames = {
   getPageMarkdown: "get_page",
   closeBrowserPage: "close_page",
   runConsoleCommand: "run_console",
+  listTabs: "list_tabs",
 };
 const TOOL_STRICT = true;
 const openPageToolSchema = {
@@ -40,6 +41,11 @@ const consoleToolSchema = {
   required: ["command"],
   additionalProperties: false,
 };
+const listTabsToolSchema = {
+  type: "object",
+  properties: {},
+  additionalProperties: false,
+};
 const toolDescriptors = [
   {
     name: toolNames.openBrowserPage,
@@ -65,6 +71,11 @@ const toolDescriptors = [
     name: toolNames.runConsoleCommand,
     description: "在 Sandbox Page 中执行控制台命令并获取结果",
     parameters: consoleToolSchema,
+  },
+  {
+    name: toolNames.listTabs,
+    description: "列出当前浏览器中打开的所有标签页的标题、URL 和 TabID",
+    parameters: listTabsToolSchema,
   },
 ];
 
@@ -170,4 +181,10 @@ export const validateClickButtonArgs = (args) => {
     throw new Error("id 必须是非空字符串");
   }
   return { id: args.id.trim() };
+};
+export const validateListTabsArgs = (args) => {
+  if (!args || typeof args !== "object") {
+    throw new Error("工具参数必须是对象");
+  }
+  return {};
 };

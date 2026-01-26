@@ -19,6 +19,18 @@ export const getActiveTab = () =>
       resolve(tab);
     });
   });
+export const getAllTabs = () =>
+  new Promise((resolve, reject) => {
+    chrome.tabs.query({}, (tabs) => {
+      if (chrome.runtime.lastError) {
+        const message =
+          chrome.runtime.lastError.message || "无法查询所有标签页";
+        reject(new Error(message));
+        return;
+      }
+      resolve(tabs);
+    });
+  });
 export const createTab = (url, active) =>
   new Promise((resolve, reject) => {
     chrome.tabs.create({ url, active }, (tab) => {
@@ -71,7 +83,7 @@ export const sendMessageToTab = (tabId, payload) =>
   });
 export const waitForContentScript = async (tabId, timeoutMs = 10000) => {
   if (typeof tabId !== "number") {
-    throw new Error("tabId 必须是数字");
+    throw new Error("TabID 必须是数字");
   }
   const start = Date.now();
   let lastError = null;

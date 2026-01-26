@@ -13,11 +13,13 @@ import {
   validateGetPageMarkdownArgs,
   validateClosePageArgs,
   validateConsoleArgs,
+  validateListTabsArgs,
 } from "./definitions.js";
 import {
   createTab,
   closeTab,
   getActiveTab,
+  getAllTabs,
   sendMessageToTab,
   waitForContentScript,
 } from "../services/tabs.js";
@@ -49,13 +51,13 @@ const executeOpenBrowserPage = async (args) => {
   await waitForContentScript(tab.id);
   const pageData = await sendMessageToTab(tab.id, { type: "getPageContent" });
   const { title, content } = convertPageContentToMarkdown(pageData);
-  return `**成功**\ntabId: "${tab.id}"；\n标题：“${title}”；\n内容：\n${content}`;
+  return `**成功**\nTabID: "${tab.id}"；\n标题："${title}"；\n内容：\n${content}`;
 };
 const executeClickButton = async (args) => {
   const { id } = validateClickButtonArgs(args);
   const activeTab = await getActiveTab();
   if (typeof activeTab.id !== "number") {
-    throw new Error("活动标签页缺少 tabId");
+    throw new Error("活动标签页缺少 TabID");
   }
   const tabId = activeTab.id;
   const result = await sendMessageToTab(tabId, { type: "clickButton", id });
@@ -84,6 +86,18 @@ const executeRunConsoleCommand = async (args) => {
   }
   return result.output;
 };
+const executeListTabs = async (args) => {
+  validateListTabsArgs(args);
+  const tabs = await getAllTabs();
+  return tabs
+    .map((tab) => {
+      const title = tab.title || "无标题";
+      const url = tab.url || "无地址";
+      const id = tab.id;
+      return `标题: "${title}"\nURL: "${url}"\nTabID: "${id}"`;
+    })
+    .join("\n\n");
+};
 export const buildPageMarkdownToolOutput = async (tabId) =>
   executeGetPageMarkdown({ tabId });
 const executeToolCall = async (toolCall) => {
@@ -106,6 +120,9 @@ const executeToolCall = async (toolCall) => {
   }
   if (normalized.name === toolNames.runConsoleCommand) {
     return executeRunConsoleCommand(args);
+  }
+  if (normalized.name === toolNames.listTabs) {
+    return executeListTabs(args);
   }
   throw new Error(`未支持的工具：${normalized.name}`);
 };

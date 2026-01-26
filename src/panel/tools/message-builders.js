@@ -40,11 +40,11 @@ const extractOpenPageTabIdFromOutput = (content) => {
   }
   const match = trimmed.match(/tabId:\s*["'“”]?(\d+)["'“”]?/);
   if (!match) {
-    throw new Error("open_page 成功响应缺少 tabId");
+    throw new Error("open_page 成功响应缺少 TabID");
   }
   const tabId = Number(match[1]);
   if (!Number.isInteger(tabId) || tabId <= 0) {
-    throw new Error("open_page 响应 tabId 无效");
+    throw new Error("open_page 响应 TabID 无效");
   }
   return tabId;
 };
@@ -60,7 +60,7 @@ const collectPageReadDedupeSets = (messages) => {
       if (callInfoById.has(callId)) {
         const existing = callInfoById.get(callId);
         if (existing?.name !== name) {
-          throw new Error(`重复的工具调用 id：${callId}`);
+          throw new Error(`重复的工具调用 ID：${callId}`);
         }
         return;
       }

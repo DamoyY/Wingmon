@@ -71,7 +71,7 @@ const stopSending = () => {
 const prefillSharedPage = async () => {
   const activeTab = await getActiveTab();
   if (typeof activeTab.id !== "number") {
-    throw new Error("活动标签页缺少 tabId");
+    throw new Error("活动标签页缺少 TabID");
   }
   setText(statusEl, "读取页面中…");
   const callId = createRandomId("local");
