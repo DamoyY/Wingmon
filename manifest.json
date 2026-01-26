@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "LLM 侧边栏聊天",
+  "version": "1.0.0",
+  "description": "在 Chrome 侧边栏与 LLM 对话。",
+  "permissions": [
+    "storage",
+    "sidePanel",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "action": {
+    "default_title": "LLM 侧边栏"
+  },
+  "background": {
+    "service_worker": "src/background/index.js"
+  },
+  "side_panel": {
+    "default_path": "public/panel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/content/index.js"
+      ],
+      "run_at": "document_end"
+    }
+  ]
+}

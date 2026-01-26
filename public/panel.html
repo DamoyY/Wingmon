@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LLM 侧边栏</title>
+    <link rel="stylesheet" href="panel.css" />
+  </head>
+  <body>
+    <div id="app">
+      <section id="key-view" class="view">
+        <h1>设置连接信息</h1>
+        <p>首次使用需要输入 API Key、Base URL 和模型，仅保存在本地。</p>
+        <input
+          id="api-key-input"
+          type="text"
+          placeholder="API Key"
+          autocomplete="off"
+        />
+        <input
+          id="base-url-input"
+          type="text"
+          placeholder="Base URL（例如 https://api.openai.com/v1）"
+          autocomplete="off"
+        />
+        <input
+          id="model-input"
+          type="text"
+          placeholder="模型（例如 gpt-5.2）"
+          autocomplete="off"
+        />
+        <div class="field">
+          <span class="field-label">API 类型</span>
+          <select id="api-type-select">
+            <option value="chat">Chat Completion</option>
+            <option value="responses">Response</option>
+          </select>
+        </div>
+        <div class="field">
+          <span class="field-label">主题</span>
+          <select id="theme-select">
+            <option value="auto">自动</option>
+            <option value="light">亮色</option>
+            <option value="dark">暗色</option>
+          </select>
+        </div>
+        <div class="row">
+          <button id="save-key">保存</button>
+          <button id="cancel-settings" type="button">取消</button>
+        </div>
+        <div id="key-status" class="status"></div>
+      </section>
+      <section id="chat-view" class="view hidden">
+        <header class="header">
+          <div class="title">对话</div>
+          <button id="open-settings" title="设置">⚙️</button>
+        </header>
+        <div class="options">
+          <label class="toggle">
+            <input id="share-page" type="checkbox" />
+            共享当前页面
+          </label>
+        </div>
+        <div id="messages" class="messages"></div>
+        <div class="composer">
+          <textarea id="prompt" rows="3" placeholder="输入你的问题"></textarea>
+          <div class="row">
+            <button id="send">发送</button>
+            <button id="clear">清空</button>
+          </div>
+        </div>
+        <div id="status" class="status"></div>
+      </section>
+    </div>
+    <script src="vendor/turndown.js"></script>
+    <script src="vendor/markdown-it.min.js"></script>
+    <script type="module" src="../src/panel/index.js"></script>
+  </body>
+</html>
