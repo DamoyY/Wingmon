@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>LLM 侧边栏</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="panel.css" />
   </head>
   <body>
@@ -11,72 +15,104 @@
       <section id="key-view" class="view">
         <h1>设置连接信息</h1>
         <p>首次使用需要输入 API Key、Base URL 和模型，仅保存在本地。</p>
-        <input
+        <md-outlined-text-field
           id="api-key-input"
-          type="text"
-          placeholder="API Key"
+          label="API Key"
           autocomplete="off"
-        />
-        <input
+        ></md-outlined-text-field>
+        <md-outlined-text-field
           id="base-url-input"
-          type="text"
-          placeholder="Base URL（如 https://api.openai.com/v1）"
+          label="Base URL（如 https://api.openai.com/v1）"
           autocomplete="off"
-        />
-        <input
+        ></md-outlined-text-field>
+        <md-outlined-text-field
           id="model-input"
-          type="text"
-          placeholder="模型（如 gpt-5.2）"
+          label="模型（如 gpt-5.2）"
           autocomplete="off"
-        />
-        <div class="field">
-          <span class="field-label">API 类型</span>
-          <select id="api-type-select">
-            <option value="chat">Chat Completion</option>
-            <option value="responses">Response</option>
-          </select>
-        </div>
-        <div class="field">
-          <span class="field-label">主题</span>
-          <select id="theme-select">
-            <option value="auto">自动</option>
-            <option value="light">亮色</option>
-            <option value="dark">暗色</option>
-          </select>
-        </div>
+        ></md-outlined-text-field>
+        <md-outlined-select id="api-type-select" label="API 类型">
+          <md-select-option value="chat">
+            <div slot="headline">Chat Completion</div>
+          </md-select-option>
+          <md-select-option value="responses">
+            <div slot="headline">Response</div>
+          </md-select-option>
+        </md-outlined-select>
+        <md-outlined-select id="theme-select" label="主题">
+          <md-select-option value="auto">
+            <div slot="headline">自动</div>
+          </md-select-option>
+          <md-select-option value="light">
+            <div slot="headline">亮色</div>
+          </md-select-option>
+          <md-select-option value="dark">
+            <div slot="headline">暗色</div>
+          </md-select-option>
+        </md-outlined-select>
         <div class="row">
-          <button id="save-key">保存</button>
-          <button id="cancel-settings" type="button">取消</button>
+          <md-filled-button id="save-key">保存</md-filled-button>
+          <md-outlined-button id="cancel-settings" type="button"
+            >取消</md-outlined-button
+          >
         </div>
         <div id="key-status" class="status"></div>
       </section>
       <section id="chat-view" class="view hidden">
         <header class="header">
-          <button id="new-chat" title="新建对话">+</button>
+          <md-icon-button id="new-chat" title="新建对话">
+            <md-icon>add</md-icon>
+          </md-icon-button>
           <div class="title">对话</div>
           <div class="header-actions">
-            <button id="history" title="历史记录">📋</button>
-            <button id="open-settings" title="设置">⚙️</button>
+            <md-icon-button id="history" title="历史记录">
+              <md-icon>history</md-icon>
+            </md-icon-button>
+            <md-icon-button id="open-settings" title="设置">
+              <md-icon>settings</md-icon>
+            </md-icon-button>
           </div>
         </header>
         <div id="history-panel" class="history-panel hidden">
           <div class="history-header">历史记录</div>
-          <div id="history-list" class="history-list"></div>
+          <md-list id="history-list"></md-list>
         </div>
         <div id="messages" class="messages"></div>
         <div class="composer">
-          <textarea id="prompt" rows="3" placeholder="输入你的问题"></textarea>
+          <md-outlined-text-field
+            id="prompt"
+            type="textarea"
+            rows="3"
+            label="输入你的问题"
+          ></md-outlined-text-field>
           <div class="row">
-            <button id="send">发送</button>
-            <button id="send-with-page">携页面发送</button>
-            <button id="stop" class="hidden">停止</button>
+            <md-filled-button id="send">发送</md-filled-button>
+            <md-outlined-button id="send-with-page"
+              >携页面发送</md-outlined-button
+            >
+            <md-filled-button id="stop" class="hidden stop-button"
+              >停止</md-filled-button
+            >
           </div>
         </div>
         <div id="status" class="status"></div>
       </section>
     </div>
+    <md-dialog id="confirm-dialog">
+      <div slot="headline">确认</div>
+      <form slot="content" id="confirm-form" method="dialog">
+        <p id="confirm-message"></p>
+      </form>
+      <div slot="actions">
+        <md-text-button form="confirm-form" value="cancel"
+          >取消</md-text-button
+        >
+        <md-filled-button form="confirm-form" value="confirm"
+          >确定</md-filled-button
+        >
+      </div>
+    </md-dialog>
     <script src="../node_modules/turndown/dist/turndown.js"></script>
     <script src="../node_modules/markdown-it/dist/markdown-it.min.js"></script>
-    <script type="module" src="../src/panel/index.js"></script>
+    <script src="panel.bundle.js"></script>
   </body>
 </html>

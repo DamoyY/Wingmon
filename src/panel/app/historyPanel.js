@@ -1,4 +1,10 @@
-import { historyPanel, historyList, setText, statusEl } from "../ui/index.js";
+import {
+  historyPanel,
+  historyList,
+  setText,
+  statusEl,
+  showConfirmDialog,
+} from "../ui/index.js";
 import {
   loadConversationState,
   resetConversation,
@@ -18,59 +24,6 @@ const formatDateTime = (timestamp) => {
     date.getDate(),
   )} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
-
-const requestDeleteConfirmation = () =>
-  new Promise((resolve) => {
-    if (!document?.body) {
-      throw new Error("页面未就绪，无法展示确认框");
-    }
-    const overlay = document.createElement("div");
-    overlay.className = "confirm-overlay";
-    const dialog = document.createElement("div");
-    dialog.className = "confirm-dialog";
-    const message = document.createElement("div");
-    message.className = "confirm-message";
-    message.textContent = "确定要删除这条记录吗？";
-    const actions = document.createElement("div");
-    actions.className = "confirm-actions";
-    const cancelButton = document.createElement("button");
-    cancelButton.type = "button";
-    cancelButton.className = "confirm-cancel";
-    cancelButton.textContent = "取消";
-    const confirmButton = document.createElement("button");
-    confirmButton.type = "button";
-    confirmButton.className = "confirm-confirm";
-    confirmButton.textContent = "删除";
-    actions.append(cancelButton, confirmButton);
-    dialog.append(message, actions);
-    overlay.appendChild(dialog);
-    let cleanup = () => {};
-    const handleKeydown = (event) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        cleanup(false);
-      }
-      if (event.key === "Enter") {
-        event.preventDefault();
-        cleanup(true);
-      }
-    };
-    cleanup = (result) => {
-      window.removeEventListener("keydown", handleKeydown);
-      overlay.remove();
-      resolve(result);
-    };
-    cancelButton.addEventListener("click", () => cleanup(false));
-    confirmButton.addEventListener("click", () => cleanup(true));
-    overlay.addEventListener("click", (event) => {
-      if (event.target === overlay) {
-        cleanup(false);
-      }
-    });
-    window.addEventListener("keydown", handleKeydown);
-    document.body.appendChild(overlay);
-    confirmButton.focus();
-  });
 
 const handleLoadConversation = async (id) => {
   if (state.sending) {
@@ -100,23 +53,27 @@ export const renderHistoryList = async () => {
   }
   const sorted = [...history].sort((a, b) => b.updatedAt - a.updatedAt);
   sorted.forEach((item) => {
-    const el = document.createElement("div");
-    el.className = "history-item";
+    const listItem = document.createElement("md-list-item");
+    listItem.type = "button";
     if (item.id === state.conversationId) {
-      el.classList.add("active");
+      listItem.classList.add("active");
     }
 
-    const textSpan = document.createElement("span");
-    textSpan.textContent = formatDateTime(item.updatedAt);
-    el.appendChild(textSpan);
+    const headline = document.createElement("div");
+    headline.slot = "headline";
+    headline.textContent = formatDateTime(item.updatedAt);
+    listItem.appendChild(headline);
 
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "history-delete";
-    deleteBtn.innerHTML = "×";
+    const deleteBtn = document.createElement("md-icon-button");
+    deleteBtn.slot = "end";
+    deleteBtn.className = "delete-icon";
     deleteBtn.title = "删除";
+    const deleteIcon = document.createElement("md-icon");
+    deleteIcon.textContent = "delete";
+    deleteBtn.appendChild(deleteIcon);
     deleteBtn.addEventListener("click", async (event) => {
       event.stopPropagation();
-      const confirmed = await requestDeleteConfirmation();
+      const confirmed = await showConfirmDialog("确定要删除这条记录吗？");
       if (!confirmed) {
         return;
       }
@@ -128,11 +85,11 @@ export const renderHistoryList = async () => {
       }
       await renderHistoryList();
     });
-    el.appendChild(deleteBtn);
+    listItem.appendChild(deleteBtn);
 
-    el.dataset.id = item.id;
-    el.addEventListener("click", () => handleLoadConversation(item.id));
-    historyList.appendChild(el);
+    listItem.dataset.id = item.id;
+    listItem.addEventListener("click", () => handleLoadConversation(item.id));
+    historyList.appendChild(listItem);
   });
 };
 

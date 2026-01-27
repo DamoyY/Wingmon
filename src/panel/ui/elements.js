@@ -21,6 +21,8 @@ export const [
   historyButton,
   historyPanel,
   historyList,
+  confirmDialog,
+  confirmMessage,
 ] = [
   "key-view",
   "chat-view",
@@ -43,4 +45,6 @@ export const [
   "history",
   "history-panel",
   "history-list",
+  "confirm-dialog",
+  "confirm-message",
 ].map(byId);

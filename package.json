@@ -1,17 +1,20 @@
 {
   "main": "index.js",
   "scripts": {
+    "build": "node scripts/build-panel.mjs",
     "lint": "eslint . --fix"
   },
   "type": "commonjs",
   "dependencies": {
     "@eslint/eslintrc": "latest",
+    "@material/web": "latest",
     "eslint-plugin-prettier": "latest",
     "globals": "latest",
     "markdown-it": "latest",
     "turndown": "latest"
   },
   "devDependencies": {
+    "esbuild": "latest",
     "eslint": "latest",
     "eslint-config-airbnb-base": "latest",
     "eslint-config-prettier": "latest",

@@ -6,7 +6,14 @@ const compat = new FlatCompat({ baseDirectory: __dirname });
 const browserGlobals = { ...globals.browser, ...globals.webextensions };
 module.exports = [
   {
-    ignores: ["node_modules/**", "docs/**", "public/system_prompt.md"],
+    ignores: [
+      "node_modules/**",
+      "docs/**",
+      "public/system_prompt.md",
+      "public/panel.bundle.js",
+    ],
+  },
+  {
     linterOptions: { reportUnusedDisableDirectives: "warn" },
   },
   ...compat.extends("airbnb-base"),
@@ -14,6 +21,17 @@ module.exports = [
   {
     plugins: { prettier: prettierPlugin },
     rules: { "prettier/prettier": "error" },
+  },
+  {
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: globals.node,
+    },
+    rules: {
+      "import/no-extraneous-dependencies": ["error", { devDependencies: true }],
+    },
   },
   {
     files: ["src/**/*.js"],
@@ -26,11 +44,7 @@ module.exports = [
       "import/extensions": [
         "error",
         "ignorePackages",
-        {
-          js: "always",
-          mjs: "always",
-          cjs: "always",
-        },
+        { js: "always", mjs: "always", cjs: "always" },
       ],
     },
   },
@@ -42,10 +56,5 @@ module.exports = [
       globals: browserGlobals,
     },
   },
-  {
-    files: ["public/sandbox.js"],
-    rules: {
-      "no-eval": "off",
-    },
-  },
+  { files: ["public/sandbox.js"], rules: { "no-eval": "off" } },
 ];

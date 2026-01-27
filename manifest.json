@@ -25,6 +25,7 @@
     ]
   },
   "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval' http://localhost:* http://127.0.0.1:*; object-src 'self';",
     "sandbox": "sandbox allow-scripts; script-src 'self' 'unsafe-eval';"
   },
   "side_panel": {
@@ -45,8 +46,10 @@
     {
       "resources": [
         "src/content/messaging/listener.js",
+        "src/content/handlers/index.js",
         "src/content/handlers/getPageContent.js",
         "src/content/handlers/clickButton.js",
+        "src/content/dom/index.js",
         "src/content/dom/buttonIds.js",
         "src/content/dom/viewportMarker.js"
       ],
