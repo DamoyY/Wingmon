@@ -62,10 +62,11 @@ const setComposerSending = (sending) => {
 const ensureNotAborted = (signal) => {
   if (signal?.aborted) throw new Error("已停止");
 };
-const stopSending = () => {
+const stopSending = async () => {
   if (!activeAbortController) return;
   activeAbortController.abort();
   setText(statusEl, "已停止");
+  await saveCurrentConversation();
 };
 
 const prefillSharedPage = async () => {
@@ -137,6 +138,7 @@ const sendMessage = async ({ includePage = false } = {}) => {
   activeAbortController = abortController;
   setComposerSending(true);
   try {
+    await saveCurrentConversation();
     ensureNotAborted(abortController.signal);
     if (includePage) {
       await prefillSharedPage();
@@ -175,6 +177,7 @@ const sendMessage = async ({ includePage = false } = {}) => {
         setText(statusEl, "请求中…");
       }
     } while (pendingToolCalls.length);
+    await saveCurrentConversation();
     setText(statusEl, "");
   } catch (error) {
     if (error?.name === "AbortError" || error?.message === "已停止") {
@@ -258,7 +261,6 @@ const toggleHistoryPanel = async () => {
 
 const handleNewChat = async () => {
   if (state.sending) return;
-  await saveCurrentConversation();
   resetConversation();
   renderMessages();
   historyPanel.classList.add("hidden");
@@ -271,7 +273,6 @@ const handleLoadConversation = async (id) => {
     historyPanel.classList.add("hidden");
     return;
   }
-  await saveCurrentConversation();
   const conversation = await loadConversation(id);
   loadConversationState(
     conversation.id,
