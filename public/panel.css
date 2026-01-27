@@ -179,6 +179,8 @@ button#open-settings {
   max-width: 92%;
   white-space: normal;
   word-break: break-word;
+  position: relative;
+  padding-bottom: 30px;
 }
 
 .message p {
@@ -235,6 +237,48 @@ button#open-settings {
   align-self: flex-start;
   background: var(--color-assistant-bg);
   border: 1px solid var(--color-assistant-border);
+}
+
+.message-actions {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.message:hover .message-actions {
+  opacity: 1;
+}
+
+.message-action {
+  background: transparent;
+  border: none;
+  padding: 2px 6px;
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--color-secondary-text);
+}
+
+.message-action:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--color-primary);
+}
+
+.message-action.message-delete:hover {
+  color: var(--color-danger);
+}
+
+.message.user .message-action {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.message.user .message-action:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
 .status {

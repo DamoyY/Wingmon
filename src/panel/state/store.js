@@ -44,6 +44,12 @@ export const updateMessage = (index, patch) => {
   state.messages[index] = normalized;
   return normalized;
 };
+export const removeMessage = (index) => {
+  if (!Number.isInteger(index) || index < 0 || index >= state.messages.length) {
+    throw new Error("消息索引无效");
+  }
+  return state.messages.splice(index, 1)[0];
+};
 export const setMessages = (messages) => {
   if (!Array.isArray(messages)) {
     throw new Error("messages 必须是数组");
