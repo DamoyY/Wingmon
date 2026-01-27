@@ -28,13 +28,3 @@ export const handleClickButton = (message, sendResponse) => {
   target.click();
   sendResponse({ ok: true });
 };
-export const handleClickButton = (message, sendResponse) => {
-  const normalizedId = normalizeButtonId(message);
-  const target = findSingleButton(normalizedId);
-  if (!target) {
-    sendResponse({ ok: false, reason: "not_found" });
-    return;
-  }
-  target.click();
-  sendResponse({ ok: true });
-};

@@ -115,10 +115,10 @@ export const convertPageContentToMarkdown = (pageData) => {
   let sliced = content.slice(start, end);
   sliced = sliced.replace(viewportMarkerToken, "");
   if (hasLeadingCut) {
-    sliced = "[[TRUNCATED_START]]\n" + sliced;
+    sliced = `[[TRUNCATED_START]]\n${  sliced}`;
   }
   if (hasTrailingCut) {
-    sliced = sliced + "\n[[TRUNCATED_END]]";
+    sliced = `${sliced  }\n[[TRUNCATED_END]]`;
   }
   return {
     title: pageData.title || "",
