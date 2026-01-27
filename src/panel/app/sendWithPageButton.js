@@ -1,23 +1,7 @@
 import { sendWithPageButton, statusEl } from "../ui/elements.js";
 import { setText } from "../ui/text.js";
 import { getActiveTab } from "../services/tabs.js";
-import { normalizeUrl } from "../utils/url.js";
-const isNewTabUrl = (url) => {
-  const normalized = normalizeUrl(url);
-  return (
-    normalized === "chrome://newtab/" ||
-    normalized === "chrome://new-tab-page/" ||
-    normalized === "chrome://new-tab-page"
-  );
-};
-const isChromeInternalUrl = (url) => {
-  const normalized = normalizeUrl(url);
-  return (
-    normalized.startsWith("chrome://") ||
-    normalized.startsWith("https://chromewebstore.google.com") ||
-    normalized.startsWith("http://chromewebstore.google.com")
-  );
-};
+import { isInternalUrl } from "../utils/url.js";
 const disableSendWithPageButton = (reason) => {
   sendWithPageButton.disabled = true;
   sendWithPageButton.title = reason || "当前标签页不支持携页面发送";
@@ -31,12 +15,7 @@ export const updateSendWithPageButtonAvailability = async () => {
   if (!activeTab.url) {
     throw new Error("活动标签页缺少 URL");
   }
-  const normalizedUrl = normalizeUrl(activeTab.url);
-  if (isNewTabUrl(normalizedUrl)) {
-    disableSendWithPageButton("新标签页不支持携页面发送");
-    return;
-  }
-  if (isChromeInternalUrl(normalizedUrl)) {
+  if (isInternalUrl(activeTab.url)) {
     disableSendWithPageButton("内部页面不支持携页面发送");
     return;
   }
