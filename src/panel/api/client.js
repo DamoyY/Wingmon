@@ -1,5 +1,6 @@
-import { buildEndpoint } from "../services/settings.js";
-import { getApiStrategy } from "./strategies.js";
+import { buildEndpoint } from "../services/settings";
+import { getApiStrategy } from "./strategies";
+
 export const requestModel = async ({
   settings,
   systemPrompt,

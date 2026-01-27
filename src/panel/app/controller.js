@@ -17,12 +17,12 @@ import {
   historyButton,
   historyPanel,
   historyList,
-} from "../ui/elements.js";
-import { setText } from "../ui/text.js";
-import { showKeyView, showChatView } from "../ui/views.js";
-import { applyTheme } from "../ui/theme.js";
-import { fillSettingsForm } from "../ui/forms.js";
-import { renderMessages, appendAssistantDelta } from "../ui/messages.js";
+} from "../ui/elements";
+import { setText } from "../ui/text";
+import { showKeyView, showChatView } from "../ui/views";
+import { applyTheme } from "../ui/theme";
+import { fillSettingsForm } from "../ui/forms";
+import { renderMessages, appendAssistantDelta } from "../ui/messages";
 import {
   state,
   addMessage,
@@ -30,28 +30,25 @@ import {
   loadConversationState,
   touchUpdatedAt,
 } from "../state/store.js";
-import { normalizeTheme } from "../utils/theme.js";
-import { createRandomId } from "../utils/ids.js";
-import { getActiveTab } from "../services/tabs.js";
+import { normalizeTheme } from "../utils/theme";
+import { createRandomId } from "../utils/ids";
+import { getActiveTab } from "../services/tabs";
 import {
   getSettings,
   updateSettings,
   buildSystemPrompt,
-} from "../services/settings.js";
-import { getToolDefinitions, toolNames } from "../tools/definitions.js";
-import { attachToolCallsToAssistant } from "../tools/toolcalls.js";
-import {
-  buildPageMarkdownToolOutput,
-  handleToolCalls,
-} from "../tools/runtime.js";
-import { requestModel } from "../api/client.js";
-import { refreshSendWithPageButton } from "./sendWithPageButton.js";
+} from "../services/settings";
+import { getToolDefinitions, toolNames } from "../tools/definitions";
+import { attachToolCallsToAssistant } from "../tools/toolcalls";
+import { buildPageMarkdownToolOutput, handleToolCalls } from "../tools/runtime";
+import { requestModel } from "../api/client";
+import { refreshSendWithPageButton } from "./sendWithPageButton";
 import {
   getHistory,
   saveConversation,
   loadConversation,
   deleteConversation,
-} from "../services/history.js";
+} from "../services/history";
 
 let activeAbortController = null;
 const setComposerSending = (sending) => {
@@ -60,10 +57,78 @@ const setComposerSending = (sending) => {
   stopButton.classList.toggle("hidden", !sending);
 };
 const ensureNotAborted = (signal) => {
-  if (signal?.aborted) throw new Error("已停止");
+  if (signal?.aborted) {
+    throw new Error("已停止");
+  }
 };
+const formatDateTime = (timestamp) => {
+  const date = new Date(timestamp);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+const saveCurrentConversation = async () => {
+  if (!state.messages.length) {
+    return;
+  }
+  touchUpdatedAt();
+  await saveConversation(state.conversationId, state.messages, state.updatedAt);
+};
+const requestDeleteConfirmation = () =>
+  new Promise((resolve) => {
+    if (!document?.body) {
+      throw new Error("页面未就绪，无法展示确认框");
+    }
+    const overlay = document.createElement("div");
+    overlay.className = "confirm-overlay";
+    const dialog = document.createElement("div");
+    dialog.className = "confirm-dialog";
+    const message = document.createElement("div");
+    message.className = "confirm-message";
+    message.textContent = "确定要删除这条记录吗？";
+    const actions = document.createElement("div");
+    actions.className = "confirm-actions";
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "confirm-cancel";
+    cancelButton.textContent = "取消";
+    const confirmButton = document.createElement("button");
+    confirmButton.type = "button";
+    confirmButton.className = "confirm-confirm";
+    confirmButton.textContent = "删除";
+    actions.append(cancelButton, confirmButton);
+    dialog.append(message, actions);
+    overlay.appendChild(dialog);
+    let cleanup = () => {};
+    const handleKeydown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cleanup(false);
+      }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        cleanup(true);
+      }
+    };
+    cleanup = (result) => {
+      window.removeEventListener("keydown", handleKeydown);
+      overlay.remove();
+      resolve(result);
+    };
+    cancelButton.addEventListener("click", () => cleanup(false));
+    confirmButton.addEventListener("click", () => cleanup(true));
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) {
+        cleanup(false);
+      }
+    });
+    window.addEventListener("keydown", handleKeydown);
+    document.body.appendChild(overlay);
+    confirmButton.focus();
+  });
 const stopSending = async () => {
-  if (!activeAbortController) return;
+  if (!activeAbortController) {
+    return;
+  }
   activeAbortController.abort();
   setText(statusEl, "已停止");
   await saveCurrentConversation();
@@ -117,12 +182,18 @@ const handleNonStreamingResponse = (reply, toolCalls) => {
     attachToolCallsToAssistant(toolCalls);
     renderMessages();
   }
-  if (!reply && !toolCalls.length) throw new Error("未收到有效回复");
+  if (!reply && !toolCalls.length) {
+    throw new Error("未收到有效回复");
+  }
 };
 const sendMessage = async ({ includePage = false } = {}) => {
-  if (state.sending) return;
+  if (state.sending) {
+    return;
+  }
   const content = promptEl.value.trim();
-  if (!content) return;
+  if (!content) {
+    return;
+  }
   const settings = await getSettings();
   if (!settings.apiKey || !settings.baseUrl || !settings.model) {
     showKeyView();
@@ -192,28 +263,23 @@ const sendMessage = async ({ includePage = false } = {}) => {
   }
 };
 
-const formatDateTime = (timestamp) => {
-  const date = new Date(timestamp);
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-};
-
-const saveCurrentConversation = async () => {
-  if (!state.messages.length) return;
-  touchUpdatedAt();
-  await saveConversation(state.conversationId, state.messages, state.updatedAt);
-};
-
-const handleDeleteConversation = async (id) => {
-  if (confirm("确定要删除这条记录吗？")) {
-    await deleteConversation(id);
-    if (id === state.conversationId) {
-      resetConversation();
-      renderMessages();
-      setText(statusEl, "");
-    }
-    await renderHistoryList();
+const handleLoadConversation = async (id) => {
+  if (state.sending) {
+    return;
   }
+  if (id === state.conversationId) {
+    historyPanel.classList.add("hidden");
+    return;
+  }
+  const conversation = await loadConversation(id);
+  loadConversationState(
+    conversation.id,
+    conversation.messages,
+    conversation.updatedAt,
+  );
+  renderMessages();
+  historyPanel.classList.add("hidden");
+  setText(statusEl, "");
 };
 
 const renderHistoryList = async () => {
@@ -239,9 +305,19 @@ const renderHistoryList = async () => {
     deleteBtn.className = "history-delete";
     deleteBtn.innerHTML = "×";
     deleteBtn.title = "删除";
-    deleteBtn.addEventListener("click", (e) => {
+    deleteBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
-      handleDeleteConversation(item.id);
+      const confirmed = await requestDeleteConfirmation();
+      if (!confirmed) {
+        return;
+      }
+      await deleteConversation(item.id);
+      if (item.id === state.conversationId) {
+        resetConversation();
+        renderMessages();
+        setText(statusEl, "");
+      }
+      await renderHistoryList();
     });
     el.appendChild(deleteBtn);
 
@@ -260,25 +336,10 @@ const toggleHistoryPanel = async () => {
 };
 
 const handleNewChat = async () => {
-  if (state.sending) return;
-  resetConversation();
-  renderMessages();
-  historyPanel.classList.add("hidden");
-  setText(statusEl, "");
-};
-
-const handleLoadConversation = async (id) => {
-  if (state.sending) return;
-  if (id === state.conversationId) {
-    historyPanel.classList.add("hidden");
+  if (state.sending) {
     return;
   }
-  const conversation = await loadConversation(id);
-  loadConversationState(
-    conversation.id,
-    conversation.messages,
-    conversation.updatedAt,
-  );
+  resetConversation();
   renderMessages();
   historyPanel.classList.add("hidden");
   setText(statusEl, "");
@@ -309,7 +370,9 @@ export const bindEvents = () => {
     fillSettingsForm(settings);
     setText(keyStatus, "");
     applyTheme(settings.theme);
-    if (settings.apiKey && settings.baseUrl && settings.model) showChatView();
+    if (settings.apiKey && settings.baseUrl && settings.model) {
+      showChatView();
+    }
   });
   openSettings.addEventListener("click", async () => {
     const settings = await getSettings();
@@ -337,7 +400,9 @@ export const bindEvents = () => {
     refreshSendWithPageButton();
   });
   chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
-    if (!tab?.active) return;
+    if (!tab?.active) {
+      return;
+    }
     if (changeInfo.url || changeInfo.status === "complete") {
       refreshSendWithPageButton();
     }

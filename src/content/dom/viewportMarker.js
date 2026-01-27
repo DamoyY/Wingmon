@@ -14,7 +14,7 @@ export const insertViewportMarker = (root) => {
     return marker;
   }
   let insertionTarget = centerElement;
-  let parentNode = centerElement.parentNode;
+  let { parentNode } = centerElement;
   if (typeof centerElement.getRootNode === "function") {
     const rootNode = centerElement.getRootNode();
     if (rootNode && rootNode instanceof ShadowRoot && rootNode.host) {

@@ -7,7 +7,9 @@ export const getHistory = async () => {
 };
 
 export const saveConversation = async (id, messages, updatedAt) => {
-  if (!messages.length) return;
+  if (!messages.length) {
+    return;
+  }
   const history = await getHistory();
   const existingIndex = history.findIndex((item) => item.id === id);
   const conversation = { id, messages, updatedAt };

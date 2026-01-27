@@ -1,5 +1,6 @@
-import { normalizeTheme } from "../utils/theme.js";
-import { state } from "../state/store.js";
+import { normalizeTheme } from "../utils/theme";
+import { state } from "../state/store";
+
 const settingsKeys = {
   apiKey: "openai_api_key",
   baseUrl: "openai_base_url",
@@ -48,19 +49,21 @@ export const buildEndpoint = (baseUrl, apiType) => {
   const chatPath = "/chat/completions";
   const responsesPath = "/responses";
   if (normalized.endsWith(chatPath)) {
-    return apiType === "responses" ?
-        `${normalized.slice(0, -chatPath.length)}${responsesPath}`
+    return apiType === "responses"
+      ? `${normalized.slice(0, -chatPath.length)}${responsesPath}`
       : normalized;
   }
   if (normalized.endsWith(responsesPath)) {
-    return apiType === "chat" ?
-        `${normalized.slice(0, -responsesPath.length)}${chatPath}`
+    return apiType === "chat"
+      ? `${normalized.slice(0, -responsesPath.length)}${chatPath}`
       : normalized;
   }
   return `${normalized}${apiType === "responses" ? responsesPath : chatPath}`;
 };
 const loadSystemPrompt = async () => {
-  if (state.systemPrompt !== null) return state.systemPrompt;
+  if (state.systemPrompt !== null) {
+    return state.systemPrompt;
+  }
   const response = await fetch(
     chrome.runtime.getURL("public/system_prompt.md"),
   );
@@ -72,6 +75,8 @@ const loadSystemPrompt = async () => {
 };
 export const buildSystemPrompt = async () => {
   const raw = await loadSystemPrompt();
-  if (!raw) return "";
+  if (!raw) {
+    return "";
+  }
   return raw.trim();
 };

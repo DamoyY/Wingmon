@@ -1,5 +1,6 @@
-import { assignLlmIds } from "../dom/buttonIds.js";
-import { insertViewportMarker } from "../dom/viewportMarker.js";
+import { assignLlmIds } from "../dom/buttonIds";
+import { insertViewportMarker } from "../dom/viewportMarker";
+
 export const handleGetPageContent = (sendResponse) => {
   if (!document.body) {
     sendResponse({ error: "页面没有可用的 body" });

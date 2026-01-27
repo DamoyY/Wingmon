@@ -1,10 +1,17 @@
-import { normalizeUrl } from "../utils/url.js";
+import { normalizeUrl } from "../utils/url";
+
 export const isSafeUrl = (url) => {
   const normalized = normalizeUrl(url);
-  if (!normalized) return false;
-  if (normalized.startsWith("#")) return true;
+  if (!normalized) {
+    return false;
+  }
+  if (normalized.startsWith("#")) {
+    return true;
+  }
   const schemeMatch = normalized.match(/^[a-z0-9+.-]+:/);
-  if (!schemeMatch) return true;
+  if (!schemeMatch) {
+    return true;
+  }
   return (
     normalized.startsWith("http:") ||
     normalized.startsWith("https:") ||

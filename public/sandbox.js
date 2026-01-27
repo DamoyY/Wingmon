@@ -1,17 +1,21 @@
 const RESPONSE_TYPE = "runConsoleResult";
 const REQUEST_TYPE = "runConsoleCommand";
-
 const serializeConsoleResult = (result) => {
-  if (typeof result === "string") return result;
-  if (typeof result === "undefined") return "undefined";
-  if (result === null) return "null";
+  if (typeof result === "string") {
+    return result;
+  }
+  if (typeof result === "undefined") {
+    return "undefined";
+  }
+  if (result === null) {
+    return "null";
+  }
   const serialized = JSON.stringify(result);
   if (typeof serialized !== "string") {
     throw new Error("结果不可序列化");
   }
   return serialized;
 };
-
 const handleRunConsoleCommand = async (message, reply) => {
   const command =
     typeof message?.command === "string" ? message.command.trim() : "";
@@ -30,17 +34,14 @@ const handleRunConsoleCommand = async (message, reply) => {
     reply({ error: error?.message || "命令执行失败" });
   }
 };
-
 window.addEventListener("message", (event) => {
   const data = event.data || {};
-  if (data.type !== REQUEST_TYPE) return;
-  const requestId = data.requestId;
+  if (data.type !== REQUEST_TYPE) {
+    return;
+  }
+  const { requestId } = data;
   const reply = (payload) => {
-    const message = {
-      type: RESPONSE_TYPE,
-      requestId,
-      ...payload,
-    };
+    const message = { type: RESPONSE_TYPE, requestId, ...payload };
     event.source?.postMessage(message, "*");
   };
   if (!requestId) {

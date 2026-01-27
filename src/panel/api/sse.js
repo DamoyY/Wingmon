@@ -1,13 +1,18 @@
-import { parseJson } from "../utils/json.js";
+import { parseJson } from "../utils/json";
+
 export const streamSse = async (response, onPayload) => {
-  if (!response.body) throw new Error("无法读取流式响应");
+  if (!response.body) {
+    throw new Error("无法读取流式响应");
+  }
   const reader = response.body.getReader();
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
   let currentEvent = "";
   while (true) {
     const { value, done } = await reader.read();
-    if (done) break;
+    if (done) {
+      break;
+    }
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split(/\r?\n/);
     buffer = lines.pop() || "";
@@ -21,11 +26,17 @@ export const streamSse = async (response, onPayload) => {
         currentEvent = trimmed.replace(/^event:\s*/, "").trim();
         continue;
       }
-      if (!trimmed.startsWith("data:")) continue;
+      if (!trimmed.startsWith("data:")) {
+        continue;
+      }
       const data = trimmed.replace(/^data:\s*/, "");
-      if (data === "[DONE]") return;
+      if (data === "[DONE]") {
+        return;
+      }
       const payload = parseJson(data);
-      if (payload?.error?.message) throw new Error(payload.error.message);
+      if (payload?.error?.message) {
+        throw new Error(payload.error.message);
+      }
       onPayload(payload, currentEvent);
       currentEvent = "";
     }
@@ -49,7 +60,9 @@ const deltaFromResponses = (payload, eventType) => {
 export const streamChatCompletion = (response, { onDelta, onToolCallDelta }) =>
   streamSse(response, (payload) => {
     const delta = deltaFromChat(payload);
-    if (delta) onDelta(delta);
+    if (delta) {
+      onDelta(delta);
+    }
     const toolCalls = payload?.choices?.[0]?.delta?.tool_calls;
     if (Array.isArray(toolCalls) && onToolCallDelta) {
       onToolCallDelta(toolCalls);
@@ -58,15 +71,23 @@ export const streamChatCompletion = (response, { onDelta, onToolCallDelta }) =>
 export const streamResponses = (response, { onDelta, onToolCallEvent }) =>
   streamSse(response, (payload, eventType) => {
     const delta = deltaFromResponses(payload, eventType);
-    if (delta) onDelta(delta);
-    if (onToolCallEvent) onToolCallEvent(payload, eventType);
+    if (delta) {
+      onDelta(delta);
+    }
+    if (onToolCallEvent) {
+      onToolCallEvent(payload, eventType);
+    }
   });
 export const extractResponsesText = (data) => {
-  if (typeof data?.output_text === "string") return data.output_text.trim();
+  if (typeof data?.output_text === "string") {
+    return data.output_text.trim();
+  }
   const output = Array.isArray(data?.output) ? data.output : [];
   const texts = [];
   output.forEach((item) => {
-    if (item?.type !== "message" || !Array.isArray(item.content)) return;
+    if (item?.type !== "message" || !Array.isArray(item.content)) {
+      return;
+    }
     item.content.forEach((part) => {
       if (part?.type === "output_text" && typeof part.text === "string") {
         texts.push(part.text);

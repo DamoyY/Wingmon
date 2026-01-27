@@ -1,4 +1,5 @@
-import { state, addMessage, updateMessage } from "../state/store.js";
+import { state, addMessage, updateMessage } from "../state/store";
+
 const normalizeToolCall = ({
   id,
   callId,
@@ -6,7 +7,9 @@ const normalizeToolCall = ({
   argumentsText,
   defaultArguments,
 }) => {
-  if (!name) return null;
+  if (!name) {
+    return null;
+  }
   const resolvedId = callId || id;
   const resolvedArguments =
     typeof argumentsText === "string" ? argumentsText : defaultArguments;
@@ -29,8 +32,12 @@ export const addChatToolCallDelta = (collector, deltas) => {
         function: { name: delta.function?.name || "", arguments: "" },
       };
     }
-    if (delta.id) collector[index].id = delta.id;
-    if (delta.type) collector[index].type = delta.type;
+    if (delta.id) {
+      collector[index].id = delta.id;
+    }
+    if (delta.type) {
+      collector[index].type = delta.type;
+    }
     if (delta.function?.name) {
       collector[index].function.name = delta.function.name;
     }
@@ -62,14 +69,18 @@ export const addResponsesToolCallEvent = (collector, payload, eventType) => {
   }
   if (resolvedType === "response.function_call_arguments.delta") {
     const index = payload?.output_index;
-    if (typeof index !== "number" || !collector[index]) return;
+    if (typeof index !== "number" || !collector[index]) {
+      return;
+    }
     collector[index].arguments =
       `${collector[index].arguments || ""}${payload.delta || ""}`;
     return;
   }
   if (resolvedType === "response.function_call_arguments.done") {
     const index = payload?.output_index;
-    if (typeof index !== "number" || !collector[index]) return;
+    if (typeof index !== "number" || !collector[index]) {
+      return;
+    }
     if (typeof payload.arguments === "string") {
       collector[index].arguments = payload.arguments;
     }
@@ -85,7 +96,9 @@ export const finalizeResponsesToolCalls = (collector) =>
   }));
 export const extractChatToolCalls = (data) => {
   const message = data?.choices?.[0]?.message;
-  if (!message) return [];
+  if (!message) {
+    return [];
+  }
   if (Array.isArray(message.tool_calls)) {
     return normalizeToolCallList(message.tool_calls, (call) => ({
       id: call.id,
@@ -120,11 +133,13 @@ export const extractResponsesToolCalls = (data) => {
   );
 };
 export const attachToolCallsToAssistant = (toolCalls, assistantIndex) => {
-  if (!toolCalls.length) return;
+  if (!toolCalls.length) {
+    return;
+  }
   const index =
-    typeof assistantIndex === "number" ? assistantIndex : (
-      state.messages.length - 1
-    );
+    typeof assistantIndex === "number"
+      ? assistantIndex
+      : state.messages.length - 1;
   const target = state.messages[index];
   if (target && target.role === "assistant") {
     updateMessage(index, { tool_calls: toolCalls });

@@ -1,14 +1,13 @@
-import { messagesEl } from "./elements.js";
-import { renderMarkdown } from "../markdown/renderer.js";
-import {
-  state,
-  addMessage,
-  updateMessage,
-} from "../state/store.js";
+import { messagesEl } from "./elements";
+import { renderMarkdown } from "../markdown/renderer";
+import { state, addMessage, updateMessage } from "../state/store";
+
 export const renderMessages = () => {
   messagesEl.innerHTML = "";
   state.messages.forEach((msg) => {
-    if (msg.hidden) return;
+    if (msg.hidden) {
+      return;
+    }
     const node = document.createElement("div");
     node.className = `message ${msg.role}`;
     node.innerHTML = renderMarkdown(msg.content);
@@ -17,7 +16,9 @@ export const renderMessages = () => {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 };
 export const appendAssistantDelta = (delta) => {
-  if (!delta) return;
+  if (!delta) {
+    return;
+  }
   const lastIndex = state.messages.length - 1;
   const last = state.messages[lastIndex];
   if (!last || last.role !== "assistant") {

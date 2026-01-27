@@ -1,4 +1,5 @@
 import { parseJson } from "../utils/json.js";
+
 export const toolNames = {
   openBrowserPage: "open_page",
   clickButton: "click_button",
@@ -80,7 +81,7 @@ const toolDescriptors = [
 ];
 
 const buildToolDefinition = (tool, useResponsesFormat) => {
-  const description = tool.description;
+  const { description } = tool;
   if (!description) {
     throw new Error(`工具 ${tool.name} 缺少 description`);
   }
@@ -114,12 +115,16 @@ export const getToolCallArguments = (call) =>
   call?.function?.arguments ?? call?.arguments ?? "";
 export const getToolCallId = (call) => {
   const callId = call?.call_id || call?.id;
-  if (!callId) throw new Error("工具调用缺少 call_id");
+  if (!callId) {
+    throw new Error("工具调用缺少 call_id");
+  }
   return callId;
 };
 export const getToolCallName = (call) => {
   const name = call?.function?.name || call?.name;
-  if (!name) throw new Error("工具调用缺少 name");
+  if (!name) {
+    throw new Error("工具调用缺少 name");
+  }
   return name;
 };
 const validateTabIdArgs = (args) => {
@@ -140,9 +145,7 @@ const validateTabIdArgs = (args) => {
   throw new Error("tabId 必须是正整数");
 };
 export const validateGetPageMarkdownArgs = (args) => validateTabIdArgs(args);
-export const validateClosePageArgs = (args) => {
-  return validateTabIdArgs(args);
-};
+export const validateClosePageArgs = (args) => validateTabIdArgs(args);
 export const validateConsoleArgs = (args) => {
   if (!args || typeof args !== "object") {
     throw new Error("工具参数必须是对象");
@@ -165,7 +168,7 @@ export const validateOpenPageArgs = (args) => {
   let parsedUrl;
   try {
     parsedUrl = new URL(args.url);
-  } catch (error) {
+  } catch {
     throw new Error("url 格式不正确");
   }
   if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {

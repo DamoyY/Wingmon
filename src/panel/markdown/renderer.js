@@ -1,4 +1,5 @@
 import { sanitizeRenderedHtml } from "./sanitize.js";
+
 const markdown = window.markdownit({
   html: false,
   linkify: true,

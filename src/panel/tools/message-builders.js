@@ -1,4 +1,4 @@
-import { state } from "../state/store.js";
+import { state } from "../state/store";
 import {
   toolNames,
   parseToolArguments,
@@ -7,6 +7,7 @@ import {
   getToolCallName,
   validateGetPageMarkdownArgs,
 } from "./definitions.js";
+
 const toChatToolCallForRequest = (entry) => ({
   id: entry.callId,
   type: "function",
@@ -53,7 +54,9 @@ const isGetPageSuccessOutput = (content) =>
 const collectPageReadDedupeSets = (messages) => {
   const callInfoById = new Map();
   messages.forEach((msg) => {
-    if (!Array.isArray(msg.tool_calls)) return;
+    if (!Array.isArray(msg.tool_calls)) {
+      return;
+    }
     msg.tool_calls.forEach((call) => {
       const callId = getToolCallId(call);
       const name = getToolCallName(call);
@@ -73,27 +76,45 @@ const collectPageReadDedupeSets = (messages) => {
   });
   const readEvents = [];
   messages.forEach((msg, index) => {
-    if (msg.role !== "tool") return;
+    if (msg.role !== "tool") {
+      return;
+    }
     const callId = msg.tool_call_id;
-    if (!callId) throw new Error("工具响应缺少 tool_call_id");
+    if (!callId) {
+      throw new Error("工具响应缺少 tool_call_id");
+    }
     const info = callInfoById.get(callId);
     const name = msg.name || info?.name;
     if (!name) {
       throw new Error(`工具响应缺少 name：${callId}`);
     }
     if (name === toolNames.getPageMarkdown) {
-      if (!isGetPageSuccessOutput(msg.content)) return;
+      if (!isGetPageSuccessOutput(msg.content)) {
+        return;
+      }
       const tabId = info?.tabId;
       if (!tabId) {
         throw new Error(`get_page 工具响应缺少 tabId：${callId}`);
       }
-      readEvents.push({ tabId, type: name, callId, index });
+      readEvents.push({
+        tabId,
+        type: name,
+        callId,
+        index,
+      });
       return;
     }
     if (name === toolNames.openBrowserPage) {
       const tabId = extractOpenPageTabIdFromOutput(msg.content);
-      if (!tabId) return;
-      readEvents.push({ tabId, type: name, callId, index });
+      if (!tabId) {
+        return;
+      }
+      readEvents.push({
+        tabId,
+        type: name,
+        callId,
+        index,
+      });
     }
   });
   const latestByTabId = new Map();
@@ -107,7 +128,9 @@ const collectPageReadDedupeSets = (messages) => {
   const trimOpenPageResponseIds = new Set();
   readEvents.forEach((event) => {
     const latest = latestByTabId.get(event.tabId);
-    if (!latest || latest.callId === event.callId) return;
+    if (!latest || latest.callId === event.callId) {
+      return;
+    }
     if (event.type === toolNames.getPageMarkdown) {
       removeToolCallIds.add(event.callId);
       return;
@@ -121,13 +144,22 @@ const collectPageReadDedupeSets = (messages) => {
 const getToolOutputContent = (msg, trimOpenPageResponseIds) =>
   trimOpenPageResponseIds.has(msg.tool_call_id) ? "**成功**" : msg.content;
 const collectToolCallEntries = (toolCalls, removeToolCallIds) => {
-  if (!Array.isArray(toolCalls)) return [];
+  if (!Array.isArray(toolCalls)) {
+    return [];
+  }
   const entries = [];
   toolCalls.forEach((call) => {
     const callId = getToolCallId(call);
     const name = getToolCallName(call);
-    if (removeToolCallIds.has(callId)) return;
-    entries.push({ call, callId, name, arguments: getToolCallArguments(call) });
+    if (removeToolCallIds.has(callId)) {
+      return;
+    }
+    entries.push({
+      call,
+      callId,
+      name,
+      arguments: getToolCallArguments(call),
+    });
   });
   return entries;
 };
@@ -141,8 +173,12 @@ const buildStructuredMessages = ({ systemPrompt, format }) => {
   state.messages.forEach((msg) => {
     if (msg.role === "tool") {
       const callId = msg.tool_call_id;
-      if (!callId) throw new Error("工具响应缺少 tool_call_id");
-      if (removeToolCallIds.has(callId)) return;
+      if (!callId) {
+        throw new Error("工具响应缺少 tool_call_id");
+      }
+      if (removeToolCallIds.has(callId)) {
+        return;
+      }
       const content = getToolOutputContent(msg, trimOpenPageResponseIds);
       if (format === "chat") {
         output.push({ role: "tool", content, tool_call_id: callId });
@@ -164,7 +200,9 @@ const buildStructuredMessages = ({ systemPrompt, format }) => {
     }
     if (format === "chat") {
       const entry = { role: msg.role };
-      if (msg.content) entry.content = msg.content;
+      if (msg.content) {
+        entry.content = msg.content;
+      }
       const toolCallEntries = collectToolCallEntries(
         msg.tool_calls,
         removeToolCallIds,

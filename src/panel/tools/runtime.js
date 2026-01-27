@@ -1,8 +1,8 @@
-import { statusEl } from "../ui/elements.js";
-import { setText } from "../ui/text.js";
-import { addMessage } from "../state/store.js";
-import { convertPageContentToMarkdown } from "../markdown/converter.js";
-import { isInternalUrl } from "../utils/url.js";
+import { statusEl } from "../ui/elements";
+import { setText } from "../ui/text";
+import { addMessage } from "../state/store";
+import { convertPageContentToMarkdown } from "../markdown/converter";
+import { isInternalUrl } from "../utils/url";
 import {
   toolNames,
   parseToolArguments,
@@ -15,27 +15,39 @@ import {
   validateClosePageArgs,
   validateConsoleArgs,
   validateListTabsArgs,
-} from "./definitions.js";
+} from "./definitions";
 import {
   createTab,
   closeTab,
   getAllTabs,
   sendMessageToTab,
   waitForContentScript,
-} from "../services/tabs.js";
-import { sendMessageToSandbox } from "../services/sandbox.js";
+} from "../services/tabs";
+import { sendMessageToSandbox } from "../services/sandbox";
+
 const normalizeToolCall = (toolCall) => {
-  if (!toolCall) return null;
+  if (!toolCall) {
+    return null;
+  }
   if (toolCall.function) {
-    const id = toolCall.id;
+    const { id } = toolCall;
     const name = toolCall.function?.name;
     const args = getToolCallArguments(toolCall);
-    if (!id || !name) return null;
-    return { id, call_id: toolCall.call_id || id, name, arguments: args };
+    if (!id || !name) {
+      return null;
+    }
+    return {
+      id,
+      call_id: toolCall.call_id || id,
+      name,
+      arguments: args,
+    };
   }
   if (toolCall.name) {
     const callId = toolCall.call_id || toolCall.id;
-    if (!callId) return null;
+    if (!callId) {
+      return null;
+    }
     return {
       id: callId,
       call_id: callId,
@@ -166,7 +178,7 @@ const executeListTabs = async (args) => {
     .map((tab) => {
       const title = tab.title || "无标题";
       const url = tab.url || "无地址";
-      const id = tab.id;
+      const { id } = tab;
       return `标题: "${title}"\nURL: "${url}"\nTabID: "${id}"`;
     })
     .join("\n\n");
@@ -212,6 +224,11 @@ export const handleToolCalls = async (toolCalls) => {
       output =
         name === toolNames.closeBrowserPage ? "失败" : `失败: ${message}`;
     }
-    addMessage({ role: "tool", content: output, tool_call_id: callId, name });
+    addMessage({
+      role: "tool",
+      content: output,
+      tool_call_id: callId,
+      name,
+    });
   }
 };

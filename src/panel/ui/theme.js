@@ -1,4 +1,5 @@
-import { normalizeTheme } from "../utils/theme.js";
+import { normalizeTheme } from "../utils/theme";
+
 let autoThemeMedia = null;
 let autoThemeListener = null;
 const stopAutoThemeSync = () => {

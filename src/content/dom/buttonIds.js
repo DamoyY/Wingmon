@@ -27,7 +27,9 @@ export const assignLlmIds = (root) => {
         throw new Error("生成按钮 ID 失败：随机 ID 重复次数过多");
       }
       id = createRandomId();
-      if (!usedIds.has(id)) break;
+      if (!usedIds.has(id)) {
+        break;
+      }
     }
     usedIds.add(id);
     button.setAttribute("data-llm-id", id);

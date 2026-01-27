@@ -1,2 +1,3 @@
-import { initPanel } from "./app/init.js";
+import { initPanel } from "./app/init";
+
 initPanel();

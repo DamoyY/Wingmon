@@ -1,47 +1,19 @@
-const js = require("@eslint/js");
+const { FlatCompat } = require("@eslint/eslintrc");
 const globals = require("globals");
+const prettierPlugin = require("eslint-plugin-prettier");
 
-const baseRules = {
-  ...js.configs.recommended.rules,
-  "no-unused-vars": [
-    "error",
-    {
-      argsIgnorePattern: "^_",
-      varsIgnorePattern: "^_",
-    },
-  ],
-};
-
-const browserGlobals = {
-  ...globals.browser,
-  ...globals.webextensions,
-};
-
-const strictWarnRules = {
-  "consistent-return": "warn",
-  // curly: "warn",
-  "no-alert": "warn",
-  "no-console": "warn",
-  "no-implicit-globals": "warn",
-  "no-implied-eval": "warn",
-  "no-new-func": "warn",
-  "no-use-before-define": "warn",
-  "no-var": "warn",
-  "object-shorthand": "warn",
-  "prefer-const": "warn",
-  "prefer-template": "warn",
-};
-
+const compat = new FlatCompat({ baseDirectory: __dirname });
+const browserGlobals = { ...globals.browser, ...globals.webextensions };
 module.exports = [
   {
-    ignores: [
-      "node_modules/**",
-      "docs/**",
-      "public/system_prompt.md",
-    ],
-    linterOptions: {
-      reportUnusedDisableDirectives: "warn",
-    },
+    ignores: ["node_modules/**", "docs/**", "public/system_prompt.md"],
+    linterOptions: { reportUnusedDisableDirectives: "warn" },
+  },
+  ...compat.extends("airbnb-base"),
+  ...compat.extends("prettier"),
+  {
+    plugins: { prettier: prettierPlugin },
+    rules: { "prettier/prettier": "error" },
   },
   {
     files: ["src/**/*.js"],
@@ -50,10 +22,6 @@ module.exports = [
       sourceType: "module",
       globals: browserGlobals,
     },
-    rules: {
-      ...baseRules,
-      ...strictWarnRules,
-    },
   },
   {
     files: ["public/**/*.js"],
@@ -61,10 +29,6 @@ module.exports = [
       ecmaVersion: "latest",
       sourceType: "script",
       globals: browserGlobals,
-    },
-    rules: {
-      ...baseRules,
-      ...strictWarnRules,
     },
   },
 ];

@@ -90,7 +90,9 @@ export const waitForContentScript = async (tabId, timeoutMs = 10000) => {
   while (Date.now() - start < timeoutMs) {
     try {
       const response = await sendMessageToTab(tabId, { type: "ping" });
-      if (response?.ok) return;
+      if (response?.ok) {
+        return;
+      }
       throw new Error("页面未返回就绪信号");
     } catch (error) {
       lastError = error;

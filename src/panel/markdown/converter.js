@@ -1,10 +1,17 @@
-import { isDataUrl } from "./sanitize.js";
+import { isDataUrl } from "./sanitize";
+
+const TurndownService = window?.TurndownService;
+if (typeof TurndownService !== "function") {
+  throw new Error("TurndownService 未加载，无法转换页面内容");
+}
 export const turndown = new TurndownService({ codeBlockStyle: "fenced" });
 turndown.remove(["script", "style"]);
 turndown.addRule("image", {
   filter: "img",
   replacement: (_content, node) => {
-    if (!node || node.nodeName !== "IMG") return "";
+    if (!node || node.nodeName !== "IMG") {
+      return "";
+    }
     const src = node.getAttribute("src") || "";
     const alt = node.getAttribute("alt") || "";
     if (!src || isDataUrl(src)) {
@@ -46,9 +53,13 @@ export const convertPageContentToMarkdown = (pageData) => {
     const directText =
       button.tagName === "INPUT" ? button.value : button.textContent;
     const normalizedText = normalizeText(directText);
-    if (normalizedText) return normalizedText;
+    if (normalizedText) {
+      return normalizedText;
+    }
     const ariaLabel = normalizeText(button.getAttribute("aria-label"));
-    if (ariaLabel) return ariaLabel;
+    if (ariaLabel) {
+      return ariaLabel;
+    }
     const ariaLabelledby = normalizeText(
       button.getAttribute("aria-labelledby"),
     );
@@ -58,22 +69,32 @@ export const convertPageContentToMarkdown = (pageData) => {
         throw new Error("aria-labelledby 为空，无法解析按钮名称");
       }
       const labeledText = getLabelFromIds(ids);
-      if (labeledText) return labeledText;
+      if (labeledText) {
+        return labeledText;
+      }
     }
     const titleText = normalizeText(button.getAttribute("title"));
-    if (titleText) return titleText;
+    if (titleText) {
+      return titleText;
+    }
     const imgAlt = normalizeText(
       button.querySelector("img")?.getAttribute("alt"),
     );
-    if (imgAlt) return imgAlt;
+    if (imgAlt) {
+      return imgAlt;
+    }
     const svgTitle = normalizeText(
       button.querySelector("svg title")?.textContent,
     );
-    if (svgTitle) return svgTitle;
+    if (svgTitle) {
+      return svgTitle;
+    }
     const svgLabel = normalizeText(
       button.querySelector("svg")?.getAttribute("aria-label"),
     );
-    if (svgLabel) return svgLabel;
+    if (svgLabel) {
+      return svgLabel;
+    }
     return "未命名按钮";
   };
   const buttons = documentResult.body.querySelectorAll("[data-llm-id]");
@@ -115,10 +136,10 @@ export const convertPageContentToMarkdown = (pageData) => {
   let sliced = content.slice(start, end);
   sliced = sliced.replace(viewportMarkerToken, "");
   if (hasLeadingCut) {
-    sliced = `[[TRUNCATED_START]]\n${  sliced}`;
+    sliced = `[[TRUNCATED_START]]\n${sliced}`;
   }
   if (hasTrailingCut) {
-    sliced = `${sliced  }\n[[TRUNCATED_END]]`;
+    sliced = `${sliced}\n[[TRUNCATED_END]]`;
   }
   return {
     title: pageData.title || "",

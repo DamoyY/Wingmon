@@ -1,4 +1,4 @@
-import { createRandomId } from "../utils/ids.js";
+import { createRandomId } from "../utils/ids";
 
 export const state = {
   conversationId: createRandomId("conv"),
@@ -10,7 +10,9 @@ export const state = {
 const hasMessageContent = (content) =>
   typeof content === "string" && Boolean(content.trim());
 const resolveMessageHidden = (message) => {
-  if (message?.role === "tool") return true;
+  if (message?.role === "tool") {
+    return true;
+  }
   if (message?.role === "assistant" && !hasMessageContent(message.content)) {
     return true;
   }
@@ -35,9 +37,9 @@ export const updateMessage = (index, patch) => {
   }
   const current = state.messages[index];
   const next =
-    typeof patch === "function" ?
-      patch({ ...current })
-    : { ...current, ...patch };
+    typeof patch === "function"
+      ? patch({ ...current })
+      : { ...current, ...patch };
   const normalized = normalizeMessage(next);
   state.messages[index] = normalized;
   return normalized;

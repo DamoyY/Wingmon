@@ -1,11 +1,6 @@
-import {
-  keyView,
-  chatView,
-  keyStatus,
-  statusEl,
-  promptEl,
-} from "./elements.js";
-import { setText } from "./text.js";
+import { keyView, chatView, keyStatus, statusEl, promptEl } from "./elements";
+import { setText } from "./text";
+
 export const showKeyView = () => {
   keyView.classList.remove("hidden");
   chatView.classList.add("hidden");

@@ -1,6 +1,20 @@
 const normalizeUrlBase = (url) => (url || "").trim().toLowerCase();
+const stripControlAndWhitespace = (value) => {
+  let result = "";
+  for (const char of value) {
+    const code = char.codePointAt(0);
+    if (code <= 31 || code === 127) {
+      continue;
+    }
+    if (char.trim() === "") {
+      continue;
+    }
+    result += char;
+  }
+  return result;
+};
 export const normalizeUrl = (url) =>
-  normalizeUrlBase(url).replace(/[\u0000-\u001F\u007F\s]+/g, "");
+  stripControlAndWhitespace(normalizeUrlBase(url));
 export const isInternalUrl = (url) => {
   const normalized = normalizeUrl(url);
   return (

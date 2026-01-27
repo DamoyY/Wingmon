@@ -1,1 +1,1 @@
-export * from "./services/settings.js";
+export * from "./services/settings";

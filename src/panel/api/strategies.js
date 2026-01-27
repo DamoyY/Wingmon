@@ -1,7 +1,7 @@
 import {
   buildChatMessages,
   buildResponsesInput,
-} from "../tools/message-builders.js";
+} from "../tools/message-builders";
 import {
   addChatToolCallDelta,
   finalizeChatToolCalls,
@@ -9,12 +9,13 @@ import {
   finalizeResponsesToolCalls,
   extractChatToolCalls,
   extractResponsesToolCalls,
-} from "../tools/toolcalls.js";
+} from "../tools/toolcalls";
 import {
   streamChatCompletion,
   streamResponses,
   extractResponsesText,
-} from "./sse.js";
+} from "./sse";
+
 const apiStrategies = {
   chat: {
     buildRequestBody: (settings, systemPrompt, tools) => ({
@@ -57,6 +58,8 @@ const apiStrategies = {
 };
 export const getApiStrategy = (apiType) => {
   const strategy = apiStrategies[apiType];
-  if (!strategy) throw new Error(`不支持的 API 类型: ${apiType}`);
+  if (!strategy) {
+    throw new Error(`不支持的 API 类型: ${apiType}`);
+  }
   return strategy;
 };

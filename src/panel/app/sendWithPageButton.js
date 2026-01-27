@@ -1,7 +1,8 @@
-import { sendWithPageButton, statusEl } from "../ui/elements.js";
-import { setText } from "../ui/text.js";
-import { getActiveTab } from "../services/tabs.js";
-import { isInternalUrl } from "../utils/url.js";
+import { sendWithPageButton, statusEl } from "../ui/elements";
+import { setText } from "../ui/text";
+import { getActiveTab } from "../services/tabs";
+import { isInternalUrl } from "../utils/url";
+
 const disableSendWithPageButton = (reason) => {
   sendWithPageButton.disabled = true;
   sendWithPageButton.title = reason || "当前标签页不支持携页面发送";
