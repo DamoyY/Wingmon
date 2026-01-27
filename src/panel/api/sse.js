@@ -1,4 +1,4 @@
-import parseJson from "../utils/json.js";
+import { parseJson } from "../utils/index.js";
 
 export const streamSse = async (response, onPayload) => {
   if (!response.body) {

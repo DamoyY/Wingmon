@@ -5,7 +5,7 @@ import {
   apiTypeSelect,
   themeSelect,
 } from "./elements.js";
-import normalizeTheme from "../utils/theme.js";
+import { normalizeTheme } from "../utils/index.js";
 
 const fillSettingsForm = (settings) => {
   keyInput.value = settings.apiKey || "";

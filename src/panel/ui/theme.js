@@ -1,4 +1,4 @@
-import normalizeTheme from "../utils/theme.js";
+import { normalizeTheme } from "../utils/index.js";
 
 let autoThemeMedia = null;
 let autoThemeListener = null;

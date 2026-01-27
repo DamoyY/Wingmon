@@ -1,7 +1,6 @@
-import { sendWithPageButton, statusEl } from "../ui/elements.js";
-import setText from "../ui/text.js";
-import { getActiveTab } from "../services/tabs.js";
-import { isInternalUrl } from "../utils/url.js";
+import { sendWithPageButton, setText, statusEl } from "../ui/index.js";
+import { getActiveTab } from "../services/index.js";
+import { isInternalUrl } from "../utils/index.js";
 
 const disableSendWithPageButton = (reason) => {
   sendWithPageButton.disabled = true;

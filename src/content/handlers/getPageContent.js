@@ -1,5 +1,4 @@
-import assignLlmIds from "../dom/buttonIds.js";
-import insertViewportMarker from "../dom/viewportMarker.js";
+import { assignLlmIds, insertViewportMarker } from "../dom/index.js";
 
 const handleGetPageContent = (sendResponse) => {
   if (!document.body) {

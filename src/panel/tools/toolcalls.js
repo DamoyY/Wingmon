@@ -1,4 +1,4 @@
-import { state, addMessage, updateMessage } from "../state/store.js";
+import { addMessage, state, updateMessage } from "../state/index.js";
 
 const normalizeToolCall = ({
   id,

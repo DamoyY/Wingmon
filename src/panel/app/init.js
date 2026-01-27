@@ -1,7 +1,10 @@
-import { getSettings } from "../services/settings.js";
-import fillSettingsForm from "../ui/forms.js";
-import applyTheme from "../ui/theme.js";
-import { showChatView, showKeyView } from "../ui/views.js";
+import { getSettings } from "../services/index.js";
+import {
+  applyTheme,
+  fillSettingsForm,
+  showChatView,
+  showKeyView,
+} from "../ui/index.js";
 import bindEvents from "./controller.js";
 import { refreshSendWithPageButton } from "./sendWithPageButton.js";
 

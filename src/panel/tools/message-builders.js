@@ -1,4 +1,4 @@
-import { state } from "../state/store.js";
+import { state } from "../state/index.js";
 import {
   toolNames,
   parseToolArguments,

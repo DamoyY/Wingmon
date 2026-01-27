@@ -1,15 +1,13 @@
 import {
+  addChatToolCallDelta,
+  addResponsesToolCallEvent,
   buildChatMessages,
   buildResponsesInput,
-} from "../tools/message-builders.js";
-import {
-  addChatToolCallDelta,
-  finalizeChatToolCalls,
-  addResponsesToolCallEvent,
-  finalizeResponsesToolCalls,
   extractChatToolCalls,
   extractResponsesToolCalls,
-} from "../tools/toolcalls.js";
+  finalizeChatToolCalls,
+  finalizeResponsesToolCalls,
+} from "../tools/index.js";
 import {
   streamChatCompletion,
   streamResponses,

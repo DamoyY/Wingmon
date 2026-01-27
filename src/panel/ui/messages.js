@@ -1,69 +1,19 @@
-import { messagesEl, statusEl } from "./elements.js";
-import setText from "./text.js";
-import renderMarkdown from "../markdown/renderer.js";
-import {
-  state,
-  addMessage,
-  updateMessage,
-  removeMessage,
-  touchUpdatedAt,
-} from "../state/store.js";
-import { saveConversation, deleteConversation } from "../services/history.js";
+import { messagesEl } from "./elements.js";
+import { renderMarkdown } from "../markdown/index.js";
 
-const setStatus = (text) => {
-  if (!statusEl) {
-    return;
+const ensureHandler = (handler, label) => {
+  if (typeof handler !== "function") {
+    throw new Error(`消息操作处理器缺失：${label}`);
   }
-  setText(statusEl, text);
+  return handler;
 };
 
-const clearStatusLater = (text) => {
-  window.setTimeout(() => {
-    if (state.sending) {
-      return;
-    }
-    if (statusEl?.textContent === text) {
-      setStatus("");
-    }
-  }, 1500);
-};
-
-const persistConversation = async () => {
-  if (!state.messages.length) {
-    await deleteConversation(state.conversationId);
-    return;
+const runAction = async (handler, index, onError) => {
+  try {
+    await handler(index);
+  } catch (error) {
+    onError(error);
   }
-  touchUpdatedAt();
-  await saveConversation(state.conversationId, state.messages, state.updatedAt);
-};
-
-const handleCopyMessage = async (index) => {
-  const message = state.messages[index];
-  if (!message) {
-    throw new Error("消息索引无效");
-  }
-  if (typeof navigator?.clipboard?.writeText !== "function") {
-    throw new Error("当前环境不支持复制");
-  }
-  await navigator.clipboard.writeText(message.content || "");
-  if (!state.sending) {
-    setStatus("已复制");
-    clearStatusLater("已复制");
-  }
-};
-
-const handleDeleteMessage = async (index, refreshMessages) => {
-  if (state.sending) {
-    throw new Error("回复中，暂时无法删除消息");
-  }
-  removeMessage(index);
-  refreshMessages();
-  await persistConversation();
-};
-
-const reportActionError = (error) => {
-  const message = error?.message || "操作失败";
-  setStatus(message);
 };
 
 const createActionButton = ({ label, className, title, onClick }) => {
@@ -74,29 +24,28 @@ const createActionButton = ({ label, className, title, onClick }) => {
   button.title = title;
   button.addEventListener("click", async (event) => {
     event.stopPropagation();
-    try {
-      await onClick();
-    } catch (error) {
-      reportActionError(error);
-    }
+    await onClick();
   });
   return button;
 };
 
-const createMessageActions = (index, refreshMessages) => {
+const createMessageActions = (index, handlers) => {
+  const onCopy = ensureHandler(handlers?.onCopy, "复制");
+  const onDelete = ensureHandler(handlers?.onDelete, "删除");
+  const onError = ensureHandler(handlers?.onError, "错误处理");
   const actions = document.createElement("div");
   actions.className = "message-actions";
   const copyButton = createActionButton({
     label: "复制",
     className: "message-action message-copy",
     title: "复制",
-    onClick: () => handleCopyMessage(index),
+    onClick: () => runAction(onCopy, index, onError),
   });
   const deleteButton = createActionButton({
     label: "删除",
     className: "message-action message-delete",
     title: "删除",
-    onClick: () => handleDeleteMessage(index, refreshMessages),
+    onClick: () => runAction(onDelete, index, onError),
   });
   actions.append(copyButton, deleteButton);
   return actions;
@@ -109,44 +58,37 @@ const createMessageContent = (content) => {
   return body;
 };
 
-export function renderMessages() {
+export const renderMessages = (messages, handlers) => {
+  if (!Array.isArray(messages)) {
+    throw new Error("messages 必须是数组");
+  }
+  if (!handlers || typeof handlers !== "object") {
+    throw new Error("消息操作处理器缺失");
+  }
   messagesEl.innerHTML = "";
-  state.messages.forEach((msg, index) => {
+  messages.forEach((msg, index) => {
     if (msg.hidden) {
       return;
     }
     const node = document.createElement("div");
     node.className = `message ${msg.role}`;
     node.appendChild(createMessageContent(msg.content));
-    node.appendChild(createMessageActions(index, renderMessages));
+    node.appendChild(createMessageActions(index, handlers));
     messagesEl.appendChild(node);
   });
   messagesEl.scrollTop = messagesEl.scrollHeight;
-}
-export const appendAssistantDelta = (delta) => {
-  if (!delta) {
-    return;
-  }
-  const lastIndex = state.messages.length - 1;
-  const last = state.messages[lastIndex];
-  if (!last || last.role !== "assistant") {
-    addMessage({ role: "assistant", content: delta });
-    renderMessages();
-    return;
-  }
-  const updated = updateMessage(lastIndex, {
-    content: `${last.content || ""}${delta}`,
-  });
+};
+
+export const updateLastAssistantMessage = (content) => {
   const lastEl = messagesEl.lastElementChild;
-  if (lastEl && lastEl.classList.contains("assistant") && !updated.hidden) {
-    const contentEl = lastEl.querySelector(".message-content");
-    if (!contentEl) {
-      renderMessages();
-      return;
-    }
-    contentEl.innerHTML = renderMarkdown(updated.content);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-    return;
+  if (!lastEl || !lastEl.classList.contains("assistant")) {
+    return false;
   }
-  renderMessages();
+  const contentEl = lastEl.querySelector(".message-content");
+  if (!contentEl) {
+    return false;
+  }
+  contentEl.innerHTML = renderMarkdown(content);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return true;
 };
