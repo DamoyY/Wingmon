@@ -38,7 +38,7 @@ const extractOpenPageTabIdFromOutput = (content) => {
   if (trimmed === "**成功**") {
     return null;
   }
-  const match = trimmed.match(/tabId:\s*["'“”]?(\d+)["'“”]?/);
+  const match = trimmed.match(/TabID:\s*["'“”]?(\d+)["'“”]?/);
   if (!match) {
     throw new Error("open_page 成功响应缺少 TabID");
   }

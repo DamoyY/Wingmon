@@ -1,7 +1,7 @@
 import { parseJson } from "../utils/json.js";
 export const toolNames = {
   openBrowserPage: "open_page",
-  clickButton: "clickButton",
+  clickButton: "click_button",
   getPageMarkdown: "get_page",
   closeBrowserPage: "close_page",
   runConsoleCommand: "run_console",
@@ -74,7 +74,7 @@ const toolDescriptors = [
   },
   {
     name: toolNames.listTabs,
-    description: "列出当前浏览器中打开的所有标签页的标题、URL 和 TabID",
+    description: "列出所有当前已打开的标签页的标题、URL 和 TabID",
     parameters: listTabsToolSchema,
   },
 ];

@@ -47,6 +47,24 @@ const normalizeToolCall = (toolCall) => {
 };
 const executeOpenBrowserPage = async (args) => {
   const { url, focus } = validateOpenPageArgs(args);
+  const tabs = await getAllTabs();
+  let matchedTab = null;
+  for (const tab of tabs) {
+    if (typeof tab.url !== "string" || !tab.url.trim()) {
+      throw new Error("标签页缺少 URL");
+    }
+    const tabUrl = new URL(tab.url).toString();
+    if (tabUrl === url) {
+      matchedTab = tab;
+      break;
+    }
+  }
+  if (matchedTab) {
+    if (typeof matchedTab.id !== "number") {
+      throw new Error("标签页缺少 TabID");
+    }
+    return `失败，浏览器中已存在相同页面，TabID："${matchedTab.id}"`;
+  }
   const tab = await createTab(url, focus);
   await waitForContentScript(tab.id);
   const pageData = await sendMessageToTab(tab.id, { type: "getPageContent" });
