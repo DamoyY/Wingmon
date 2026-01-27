@@ -1,4 +1,4 @@
-import { createRandomId } from "../utils/ids.js";
+import createRandomId from "../utils/ids";
 
 const SANDBOX_FRAME_ID = "llm-sandbox-frame";
 const SANDBOX_RESPONSE_TYPE = "runConsoleResult";
@@ -47,7 +47,7 @@ const getSandboxWindow = async () => {
   }
   return sandboxReadyPromise;
 };
-export const sendMessageToSandbox = async (payload, timeoutMs = 5000) => {
+const sendMessageToSandbox = async (payload, timeoutMs = 5000) => {
   const targetWindow = await getSandboxWindow();
   if (!targetWindow) {
     throw new Error("sandbox 窗口不可用");
@@ -85,3 +85,4 @@ export const sendMessageToSandbox = async (payload, timeoutMs = 5000) => {
     );
   });
 };
+export default sendMessageToSandbox;

@@ -98,7 +98,8 @@ export const convertPageContentToMarkdown = (pageData) => {
     return "未命名按钮";
   };
   const buttons = documentResult.body.querySelectorAll("[data-llm-id]");
-  buttons.forEach((button) => {
+  buttons.forEach((buttonNode) => {
+    const button = buttonNode;
     const id = normalizeText(button.getAttribute("data-llm-id"));
     if (!id) {
       throw new Error("按钮缺少 data-llm-id");

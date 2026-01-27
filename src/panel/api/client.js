@@ -1,7 +1,7 @@
 import { buildEndpoint } from "../services/settings";
-import { getApiStrategy } from "./strategies";
+import getApiStrategy from "./strategies";
 
-export const requestModel = async ({
+const requestModel = async ({
   settings,
   systemPrompt,
   tools,
@@ -40,3 +40,4 @@ export const requestModel = async ({
   const reply = strategy.extractReply(data);
   return { toolCalls, reply, streamed: false };
 };
+export default requestModel;

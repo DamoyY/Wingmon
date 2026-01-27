@@ -1,4 +1,4 @@
-import { normalizeTheme } from "../utils/theme";
+import normalizeTheme from "../utils/theme";
 import { state } from "../state/store";
 
 const settingsKeys = {
@@ -16,13 +16,13 @@ const toSettings = (data) => ({
   theme: normalizeTheme(data?.[settingsKeys.theme] || "auto"),
 });
 export const getSettings = () =>
-  new Promise((resolve) =>
-    chrome.storage.local.get(Object.values(settingsKeys), (result) =>
-      resolve(toSettings(result || {})),
-    ),
-  );
+  new Promise((resolve) => {
+    chrome.storage.local.get(Object.values(settingsKeys), (result) => {
+      resolve(toSettings(result || {}));
+    });
+  });
 const setSettings = (settings) =>
-  new Promise((resolve) =>
+  new Promise((resolve) => {
     chrome.storage.local.set(
       {
         [settingsKeys.apiKey]: settings.apiKey,
@@ -32,8 +32,8 @@ const setSettings = (settings) =>
         [settingsKeys.theme]: normalizeTheme(settings.theme),
       },
       resolve,
-    ),
-  );
+    );
+  });
 export const updateSettings = async (patch) => {
   const current = await getSettings();
   const next = {

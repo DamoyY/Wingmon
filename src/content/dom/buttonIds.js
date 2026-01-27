@@ -7,31 +7,29 @@ const createRandomId = () => {
   }
   const bytes = new Uint8Array(ID_LENGTH);
   globalThis.crypto.getRandomValues(bytes);
-  let id = "";
-  for (const value of bytes) {
-    id += ID_ALPHABET[value % ID_ALPHABET.length];
-  }
-  return id;
+  return Array.from(bytes)
+    .map((value) => ID_ALPHABET[value % ID_ALPHABET.length])
+    .join("");
 };
-export const assignLlmIds = (root) => {
+const assignLlmIds = (root) => {
   const buttons = root.querySelectorAll(
     'button, input[type="button"], input[type="submit"]',
   );
   const usedIds = new Set();
   buttons.forEach((button) => {
-    let id = "";
-    let attempts = 0;
-    while (true) {
-      attempts += 1;
-      if (attempts > MAX_RETRY) {
-        throw new Error("生成按钮 ID 失败：随机 ID 重复次数过多");
-      }
-      id = createRandomId();
-      if (!usedIds.has(id)) {
+    let resolvedId = "";
+    for (let attempt = 0; attempt < MAX_RETRY; attempt += 1) {
+      const candidate = createRandomId();
+      if (!usedIds.has(candidate)) {
+        resolvedId = candidate;
+        usedIds.add(candidate);
         break;
       }
     }
-    usedIds.add(id);
-    button.setAttribute("data-llm-id", id);
+    if (!resolvedId) {
+      throw new Error("生成按钮 ID 失败：随机 ID 重复次数过多");
+    }
+    button.setAttribute("data-llm-id", resolvedId);
   });
 };
+export default assignLlmIds;

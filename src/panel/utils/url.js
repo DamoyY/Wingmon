@@ -1,18 +1,15 @@
 const normalizeUrlBase = (url) => (url || "").trim().toLowerCase();
-const stripControlAndWhitespace = (value) => {
-  let result = "";
-  for (const char of value) {
+const stripControlAndWhitespace = (value) =>
+  Array.from(value).reduce((result, char) => {
     const code = char.codePointAt(0);
     if (code <= 31 || code === 127) {
-      continue;
+      return result;
     }
     if (char.trim() === "") {
-      continue;
+      return result;
     }
-    result += char;
-  }
-  return result;
-};
+    return `${result}${char}`;
+  }, "");
 export const normalizeUrl = (url) =>
   stripControlAndWhitespace(normalizeUrlBase(url));
 export const isInternalUrl = (url) => {

@@ -16,6 +16,7 @@ const serializeConsoleResult = (result) => {
   }
   return serialized;
 };
+const runConsoleCommand = (command) => eval(command);
 const handleRunConsoleCommand = async (message, reply) => {
   const command =
     typeof message?.command === "string" ? message.command.trim() : "";
@@ -24,7 +25,7 @@ const handleRunConsoleCommand = async (message, reply) => {
     return;
   }
   try {
-    let result = eval(command);
+    let result = runConsoleCommand(command);
     if (result instanceof Promise) {
       result = await result;
     }

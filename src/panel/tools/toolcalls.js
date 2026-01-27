@@ -23,28 +23,32 @@ const normalizeToolCall = ({
 const normalizeToolCallList = (items, mapper) =>
   items.map((item) => normalizeToolCall(mapper(item))).filter(Boolean);
 export const addChatToolCallDelta = (collector, deltas) => {
+  const next = { ...collector };
   deltas.forEach((delta) => {
     const index = typeof delta.index === "number" ? delta.index : 0;
-    if (!collector[index]) {
-      collector[index] = {
-        id: delta.id,
-        type: delta.type || "function",
-        function: { name: delta.function?.name || "", arguments: "" },
-      };
-    }
+    const existing = next[index] || {
+      id: delta.id,
+      type: delta.type || "function",
+      function: { name: delta.function?.name || "", arguments: "" },
+    };
+    const updated = { ...existing, function: { ...existing.function } };
     if (delta.id) {
-      collector[index].id = delta.id;
+      updated.id = delta.id;
     }
     if (delta.type) {
-      collector[index].type = delta.type;
+      updated.type = delta.type;
     }
     if (delta.function?.name) {
-      collector[index].function.name = delta.function.name;
+      updated.function.name = delta.function.name;
     }
     if (typeof delta.function?.arguments === "string") {
-      collector[index].function.arguments += delta.function.arguments;
+      updated.function.arguments = `${updated.function.arguments || ""}${
+        delta.function.arguments
+      }`;
     }
+    next[index] = updated;
   });
+  return next;
 };
 export const finalizeChatToolCalls = (collector) =>
   normalizeToolCallList(Object.values(collector), (call) => ({
@@ -54,37 +58,42 @@ export const finalizeChatToolCalls = (collector) =>
     argumentsText: call.function?.arguments,
   }));
 export const addResponsesToolCallEvent = (collector, payload, eventType) => {
+  const next = { ...collector };
   const resolvedType = payload?.type || eventType;
   if (resolvedType === "response.output_item.added") {
     if (payload?.item?.type === "function_call") {
-      collector[payload.output_index] = { ...payload.item };
+      next[payload.output_index] = { ...payload.item };
     }
-    return;
+    return next;
   }
   if (resolvedType === "response.output_item.done") {
     if (payload?.item?.type === "function_call") {
-      collector[payload.output_index] = { ...payload.item };
+      next[payload.output_index] = { ...payload.item };
     }
-    return;
+    return next;
   }
   if (resolvedType === "response.function_call_arguments.delta") {
     const index = payload?.output_index;
-    if (typeof index !== "number" || !collector[index]) {
-      return;
+    if (typeof index !== "number" || !next[index]) {
+      return next;
     }
-    collector[index].arguments =
-      `${collector[index].arguments || ""}${payload.delta || ""}`;
-    return;
+    const current = next[index];
+    next[index] = {
+      ...current,
+      arguments: `${current.arguments || ""}${payload.delta || ""}`,
+    };
+    return next;
   }
   if (resolvedType === "response.function_call_arguments.done") {
     const index = payload?.output_index;
-    if (typeof index !== "number" || !collector[index]) {
-      return;
+    if (typeof index !== "number" || !next[index]) {
+      return next;
     }
     if (typeof payload.arguments === "string") {
-      collector[index].arguments = payload.arguments;
+      next[index] = { ...next[index], arguments: payload.arguments };
     }
   }
+  return next;
 };
 export const finalizeResponsesToolCalls = (collector) =>
   normalizeToolCallList(Object.values(collector), (call) => ({

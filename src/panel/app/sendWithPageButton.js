@@ -1,5 +1,5 @@
 import { sendWithPageButton, statusEl } from "../ui/elements";
-import { setText } from "../ui/text";
+import setText from "../ui/text";
 import { getActiveTab } from "../services/tabs";
 import { isInternalUrl } from "../utils/url";
 

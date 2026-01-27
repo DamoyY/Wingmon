@@ -1,5 +1,5 @@
 import { statusEl } from "../ui/elements";
-import { setText } from "../ui/text";
+import setText from "../ui/text";
 import { addMessage } from "../state/store";
 import { convertPageContentToMarkdown } from "../markdown/converter";
 import { isInternalUrl } from "../utils/url";
@@ -23,7 +23,7 @@ import {
   sendMessageToTab,
   waitForContentScript,
 } from "../services/tabs";
-import { sendMessageToSandbox } from "../services/sandbox";
+import sendMessageToSandbox from "../services/sandbox";
 
 const normalizeToolCall = (toolCall) => {
   if (!toolCall) {
@@ -60,17 +60,13 @@ const normalizeToolCall = (toolCall) => {
 const executeOpenBrowserPage = async (args) => {
   const { url, focus } = validateOpenPageArgs(args);
   const tabs = await getAllTabs();
-  let matchedTab = null;
-  for (const tab of tabs) {
+  const normalizedTabs = tabs.map((tab) => {
     if (typeof tab.url !== "string" || !tab.url.trim()) {
       throw new Error("标签页缺少 URL");
     }
-    const tabUrl = new URL(tab.url).toString();
-    if (tabUrl === url) {
-      matchedTab = tab;
-      break;
-    }
-  }
+    return { ...tab, normalizedUrl: new URL(tab.url).toString() };
+  });
+  const matchedTab = normalizedTabs.find((tab) => tab.normalizedUrl === url);
   if (matchedTab) {
     if (typeof matchedTab.id !== "number") {
       throw new Error("标签页缺少 TabID");
@@ -100,12 +96,22 @@ const executeClickButton = async (args) => {
   if (!tabs.length) {
     throw new Error("未找到可用标签页");
   }
-  const errors = [];
-  let notFoundCount = 0;
-  for (const tab of tabs) {
+  const initialState = {
+    errors: [],
+    notFoundCount: 0,
+    done: false,
+    result: "",
+  };
+  const finalState = await tabs.reduce(async (promise, tab) => {
+    const state = await promise;
+    if (state.done) {
+      return state;
+    }
     if (typeof tab.id !== "number") {
-      errors.push("标签页缺少 TabID");
-      continue;
+      return {
+        ...state,
+        errors: [...state.errors, "标签页缺少 TabID"],
+      };
     }
     try {
       await waitForContentScript(tab.id, 3000);
@@ -114,25 +120,33 @@ const executeClickButton = async (args) => {
         id,
       });
       if (result?.ok) {
-        return "成功";
+        return { ...state, done: true, result: "成功" };
       }
       if (result?.ok === false && result.reason === "not_found") {
-        notFoundCount += 1;
-        continue;
+        return {
+          ...state,
+          notFoundCount: state.notFoundCount + 1,
+        };
       }
       throw new Error("按钮点击返回结果异常");
     } catch (error) {
       const message = error?.message || "点击失败";
-      errors.push(`TabID ${tab.id}: ${message}`);
+      return {
+        ...state,
+        errors: [...state.errors, `TabID ${tab.id}: ${message}`],
+      };
     }
+  }, Promise.resolve(initialState));
+  if (finalState.done) {
+    return finalState.result;
   }
-  if (errors.length) {
-    if (notFoundCount) {
+  if (finalState.errors.length) {
+    if (finalState.notFoundCount) {
       throw new Error(
-        `未在任何标签页找到 id 为 ${id} 的按钮，且部分标签页发生错误：${errors.join("；")}`,
+        `未在任何标签页找到 id 为 ${id} 的按钮，且部分标签页发生错误：${finalState.errors.join("；")}`,
       );
     }
-    throw new Error(`所有标签页点击失败：${errors.join("；")}`);
+    throw new Error(`所有标签页点击失败：${finalState.errors.join("；")}`);
   }
   throw new Error(`未找到 id 为 ${id} 的按钮`);
 };
@@ -212,7 +226,8 @@ const executeToolCall = async (toolCall) => {
   throw new Error(`未支持的工具：${normalized.name}`);
 };
 export const handleToolCalls = async (toolCalls) => {
-  for (const call of toolCalls) {
+  await toolCalls.reduce(async (promise, call) => {
+    await promise;
     const callId = getToolCallId(call);
     const name = getToolCallName(call);
     let output = "成功";
@@ -230,5 +245,5 @@ export const handleToolCalls = async (toolCalls) => {
       tool_call_id: callId,
       name,
     });
-  }
+  }, Promise.resolve());
 };

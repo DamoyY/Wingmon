@@ -1,11 +1,11 @@
 import { getSettings } from "../services/settings";
-import { fillSettingsForm } from "../ui/forms";
-import { applyTheme } from "../ui/theme";
+import fillSettingsForm from "../ui/forms";
+import applyTheme from "../ui/theme";
 import { showChatView, showKeyView } from "../ui/views";
-import { bindEvents } from "./controller";
+import bindEvents from "./controller";
 import { refreshSendWithPageButton } from "./sendWithPageButton";
 
-export const initPanel = async () => {
+const initPanel = async () => {
   const settings = await getSettings();
   fillSettingsForm(settings);
   applyTheme(settings.theme);
@@ -17,3 +17,4 @@ export const initPanel = async () => {
   bindEvents();
   await refreshSendWithPageButton();
 };
+export default initPanel;

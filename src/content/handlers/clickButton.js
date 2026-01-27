@@ -18,7 +18,7 @@ const findSingleButton = (normalizedId) => {
   }
   return matches[0];
 };
-export const handleClickButton = (message, sendResponse) => {
+const handleClickButton = (message, sendResponse) => {
   const normalizedId = normalizeButtonId(message);
   const target = findSingleButton(normalizedId);
   if (!target) {
@@ -28,3 +28,4 @@ export const handleClickButton = (message, sendResponse) => {
   target.click();
   sendResponse({ ok: true });
 };
+export default handleClickButton;

@@ -6,7 +6,7 @@ import {
   getToolCallId,
   getToolCallName,
   validateGetPageMarkdownArgs,
-} from "./definitions.js";
+} from "./definitions";
 
 const toChatToolCallForRequest = (entry) => ({
   id: entry.callId,

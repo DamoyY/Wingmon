@@ -1,5 +1,5 @@
 const VIEWPORT_MARKER_ATTR = "data-llm-viewport-center";
-export const insertViewportMarker = (root) => {
+const insertViewportMarker = (root) => {
   if (!root) {
     throw new Error("页面没有可用的 body");
   }
@@ -36,3 +36,4 @@ export const insertViewportMarker = (root) => {
   parentNode.insertBefore(marker, insertionTarget);
   return marker;
 };
+export default insertViewportMarker;

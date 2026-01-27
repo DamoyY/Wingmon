@@ -1,7 +1,7 @@
-import { handleGetPageContent } from "../handlers/getPageContent";
-import { handleClickButton } from "../handlers/clickButton";
+import handleGetPageContent from "../handlers/getPageContent";
+import handleClickButton from "../handlers/clickButton";
 
-export const registerMessageListener = () => {
+const registerMessageListener = () => {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     try {
       if (message?.type === "ping") {
@@ -28,3 +28,4 @@ export const registerMessageListener = () => {
     }
   });
 };
+export default registerMessageListener;

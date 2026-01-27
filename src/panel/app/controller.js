@@ -18,10 +18,10 @@ import {
   historyPanel,
   historyList,
 } from "../ui/elements";
-import { setText } from "../ui/text";
+import setText from "../ui/text";
 import { showKeyView, showChatView } from "../ui/views";
-import { applyTheme } from "../ui/theme";
-import { fillSettingsForm } from "../ui/forms";
+import applyTheme from "../ui/theme";
+import fillSettingsForm from "../ui/forms";
 import { renderMessages, appendAssistantDelta } from "../ui/messages";
 import {
   state,
@@ -29,9 +29,9 @@ import {
   resetConversation,
   loadConversationState,
   touchUpdatedAt,
-} from "../state/store.js";
-import { normalizeTheme } from "../utils/theme";
-import { createRandomId } from "../utils/ids";
+} from "../state/store";
+import normalizeTheme from "../utils/theme";
+import createRandomId from "../utils/ids";
 import { getActiveTab } from "../services/tabs";
 import {
   getSettings,
@@ -41,7 +41,7 @@ import {
 import { getToolDefinitions, toolNames } from "../tools/definitions";
 import { attachToolCallsToAssistant } from "../tools/toolcalls";
 import { buildPageMarkdownToolOutput, handleToolCalls } from "../tools/runtime";
-import { requestModel } from "../api/client";
+import requestModel from "../api/client";
 import { refreshSendWithPageButton } from "./sendWithPageButton";
 import {
   getHistory,
@@ -216,8 +216,7 @@ const sendMessage = async ({ includePage = false } = {}) => {
     }
     ensureNotAborted(abortController.signal);
     setText(statusEl, "请求中…");
-    let pendingToolCalls = [];
-    do {
+    const runRequestCycle = async () => {
       ensureNotAborted(abortController.signal);
       let assistantIndex = null;
       const onStreamStart = () => {
@@ -236,18 +235,21 @@ const sendMessage = async ({ includePage = false } = {}) => {
         onStreamStart,
         signal: abortController.signal,
       });
-      pendingToolCalls = toolCalls || [];
+      const pendingToolCalls = toolCalls || [];
       if (streamed) {
         handleStreamingResponse(pendingToolCalls, assistantIndex);
       } else {
         handleNonStreamingResponse(reply, pendingToolCalls);
       }
-      if (pendingToolCalls.length) {
-        await handleToolCalls(pendingToolCalls);
-        ensureNotAborted(abortController.signal);
-        setText(statusEl, "请求中…");
+      if (!pendingToolCalls.length) {
+        return;
       }
-    } while (pendingToolCalls.length);
+      await handleToolCalls(pendingToolCalls);
+      ensureNotAborted(abortController.signal);
+      setText(statusEl, "请求中…");
+      await runRequestCycle();
+    };
+    await runRequestCycle();
     await saveCurrentConversation();
     setText(statusEl, "");
   } catch (error) {
@@ -345,7 +347,7 @@ const handleNewChat = async () => {
   setText(statusEl, "");
 };
 
-export const bindEvents = () => {
+const bindEvents = () => {
   saveKey.addEventListener("click", async () => {
     const apiKey = keyInput.value.trim();
     const baseUrl = baseUrlInput.value.trim();
@@ -408,3 +410,4 @@ export const bindEvents = () => {
     }
   });
 };
+export default bindEvents;

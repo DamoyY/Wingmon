@@ -1,5 +1,5 @@
 import { messagesEl } from "./elements";
-import { renderMarkdown } from "../markdown/renderer";
+import renderMarkdown from "../markdown/renderer";
 import { state, addMessage, updateMessage } from "../state/store";
 
 export const renderMessages = () => {

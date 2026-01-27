@@ -1,4 +1,4 @@
-import { parseJson } from "../utils/json";
+import parseJson from "../utils/json";
 
 export const streamSse = async (response, onPayload) => {
   if (!response.body) {
@@ -8,39 +8,50 @@ export const streamSse = async (response, onPayload) => {
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
   let currentEvent = "";
-  while (true) {
+  let shouldStop = false;
+  const handleLine = (line) => {
+    if (shouldStop) {
+      return;
+    }
+    const trimmed = line.trim();
+    if (!trimmed) {
+      currentEvent = "";
+      return;
+    }
+    if (trimmed.startsWith("event:")) {
+      currentEvent = trimmed.replace(/^event:\s*/, "").trim();
+      return;
+    }
+    if (!trimmed.startsWith("data:")) {
+      return;
+    }
+    const data = trimmed.replace(/^data:\s*/, "");
+    if (data === "[DONE]") {
+      shouldStop = true;
+      return;
+    }
+    const payload = parseJson(data);
+    if (payload?.error?.message) {
+      throw new Error(payload.error.message);
+    }
+    onPayload(payload, currentEvent);
+    currentEvent = "";
+  };
+  const readChunk = async () => {
     const { value, done } = await reader.read();
-    if (done) {
-      break;
+    if (done || shouldStop) {
+      return;
     }
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split(/\r?\n/);
     buffer = lines.pop() || "";
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) {
-        currentEvent = "";
-        continue;
-      }
-      if (trimmed.startsWith("event:")) {
-        currentEvent = trimmed.replace(/^event:\s*/, "").trim();
-        continue;
-      }
-      if (!trimmed.startsWith("data:")) {
-        continue;
-      }
-      const data = trimmed.replace(/^data:\s*/, "");
-      if (data === "[DONE]") {
-        return;
-      }
-      const payload = parseJson(data);
-      if (payload?.error?.message) {
-        throw new Error(payload.error.message);
-      }
-      onPayload(payload, currentEvent);
-      currentEvent = "";
+    lines.forEach(handleLine);
+    if (shouldStop) {
+      return;
     }
-  }
+    await readChunk();
+  };
+  await readChunk();
 };
 const deltaFromChat = (payload) =>
   payload?.choices?.[0]?.delta?.content ||

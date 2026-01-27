@@ -1,4 +1,4 @@
-import { normalizeTheme } from "../utils/theme";
+import normalizeTheme from "../utils/theme";
 
 let autoThemeMedia = null;
 let autoThemeListener = null;
@@ -40,7 +40,7 @@ const startAutoThemeSync = () => {
   autoThemeMedia = media;
   autoThemeListener = applySystemTheme;
 };
-export const applyTheme = (theme) => {
+const applyTheme = (theme) => {
   const normalized = normalizeTheme(theme);
   stopAutoThemeSync();
   if (normalized === "auto") {
@@ -50,3 +50,4 @@ export const applyTheme = (theme) => {
   document.documentElement.setAttribute("data-theme", normalized);
   return normalized;
 };
+export default applyTheme;

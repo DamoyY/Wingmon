@@ -1,9 +1,10 @@
-import { sanitizeRenderedHtml } from "./sanitize.js";
+import { sanitizeRenderedHtml } from "./sanitize";
 
 const markdown = window.markdownit({
   html: false,
   linkify: true,
   breaks: true,
 });
-export const renderMarkdown = (content) =>
+const renderMarkdown = (content) =>
   sanitizeRenderedHtml(markdown.render(content || ""));
+export default renderMarkdown;

@@ -1,7 +1,7 @@
-import { assignLlmIds } from "../dom/buttonIds";
-import { insertViewportMarker } from "../dom/viewportMarker";
+import assignLlmIds from "../dom/buttonIds";
+import insertViewportMarker from "../dom/viewportMarker";
 
-export const handleGetPageContent = (sendResponse) => {
+const handleGetPageContent = (sendResponse) => {
   if (!document.body) {
     sendResponse({ error: "页面没有可用的 body" });
     return;
@@ -14,7 +14,7 @@ export const handleGetPageContent = (sendResponse) => {
     sendResponse({
       html,
       title: document.title || "",
-      url: location.href || "",
+      url: window.location?.href || "",
     });
   } finally {
     if (marker && marker.parentNode) {
@@ -22,3 +22,4 @@ export const handleGetPageContent = (sendResponse) => {
     }
   }
 };
+export default handleGetPageContent;

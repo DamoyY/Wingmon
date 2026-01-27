@@ -31,4 +31,10 @@ module.exports = [
       globals: browserGlobals,
     },
   },
+  {
+    files: ["public/sandbox.js"],
+    rules: {
+      "no-eval": "off",
+    },
+  },
 ];

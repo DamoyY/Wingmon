@@ -25,10 +25,12 @@ const apiStrategies = {
       tools,
     }),
     stream: async (response, { onDelta }) => {
-      const collector = {};
+      let collector = {};
       await streamChatCompletion(response, {
         onDelta,
-        onToolCallDelta: (deltas) => addChatToolCallDelta(collector, deltas),
+        onToolCallDelta: (deltas) => {
+          collector = addChatToolCallDelta(collector, deltas);
+        },
       });
       return finalizeChatToolCalls(collector);
     },
@@ -44,11 +46,12 @@ const apiStrategies = {
       ...(systemPrompt ? { instructions: systemPrompt } : {}),
     }),
     stream: async (response, { onDelta }) => {
-      const collector = {};
+      let collector = {};
       await streamResponses(response, {
         onDelta,
-        onToolCallEvent: (payload, eventType) =>
-          addResponsesToolCallEvent(collector, payload, eventType),
+        onToolCallEvent: (payload, eventType) => {
+          collector = addResponsesToolCallEvent(collector, payload, eventType);
+        },
       });
       return finalizeResponsesToolCalls(collector);
     },
@@ -56,10 +59,11 @@ const apiStrategies = {
     extractReply: (data) => extractResponsesText(data),
   },
 };
-export const getApiStrategy = (apiType) => {
+const getApiStrategy = (apiType) => {
   const strategy = apiStrategies[apiType];
   if (!strategy) {
     throw new Error(`不支持的 API 类型: ${apiType}`);
   }
   return strategy;
 };
+export default getApiStrategy;

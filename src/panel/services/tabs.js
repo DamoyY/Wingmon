@@ -87,7 +87,11 @@ export const waitForContentScript = async (tabId, timeoutMs = 10000) => {
   }
   const start = Date.now();
   let lastError = null;
-  while (Date.now() - start < timeoutMs) {
+  const poll = async () => {
+    if (Date.now() - start >= timeoutMs) {
+      const tail = lastError?.message ? `，最后错误：${lastError.message}` : "";
+      throw new Error(`等待页面内容脚本就绪超时（${timeoutMs}ms${tail}）`);
+    }
     try {
       const response = await sendMessageToTab(tabId, { type: "ping" });
       if (response?.ok) {
@@ -97,8 +101,8 @@ export const waitForContentScript = async (tabId, timeoutMs = 10000) => {
     } catch (error) {
       lastError = error;
       await delay(1000);
+      await poll();
     }
-  }
-  const tail = lastError?.message ? `，最后错误：${lastError.message}` : "";
-  throw new Error(`等待页面内容脚本就绪超时（${timeoutMs}ms${tail}）`);
+  };
+  await poll();
 };
