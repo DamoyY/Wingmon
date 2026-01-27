@@ -1,5 +1,5 @@
-import normalizeTheme from "../utils/theme";
-import { state } from "../state/store";
+import normalizeTheme from "../utils/theme.js";
+import { state } from "../state/store.js";
 
 const settingsKeys = {
   apiKey: "openai_api_key",

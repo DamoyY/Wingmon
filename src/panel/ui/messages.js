@@ -1,6 +1,6 @@
-import { messagesEl } from "./elements";
-import renderMarkdown from "../markdown/renderer";
-import { state, addMessage, updateMessage } from "../state/store";
+import { messagesEl } from "./elements.js";
+import renderMarkdown from "../markdown/renderer.js";
+import { state, addMessage, updateMessage } from "../state/store.js";
 
 export const renderMessages = () => {
   messagesEl.innerHTML = "";

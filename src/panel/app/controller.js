@@ -17,38 +17,41 @@ import {
   historyButton,
   historyPanel,
   historyList,
-} from "../ui/elements";
-import setText from "../ui/text";
-import { showKeyView, showChatView } from "../ui/views";
-import applyTheme from "../ui/theme";
-import fillSettingsForm from "../ui/forms";
-import { renderMessages, appendAssistantDelta } from "../ui/messages";
+} from "../ui/elements.js";
+import setText from "../ui/text.js";
+import { showKeyView, showChatView } from "../ui/views.js";
+import applyTheme from "../ui/theme.js";
+import fillSettingsForm from "../ui/forms.js";
+import { renderMessages, appendAssistantDelta } from "../ui/messages.js";
 import {
   state,
   addMessage,
   resetConversation,
   loadConversationState,
   touchUpdatedAt,
-} from "../state/store";
-import normalizeTheme from "../utils/theme";
-import createRandomId from "../utils/ids";
-import { getActiveTab } from "../services/tabs";
+} from "../state/store.js";
+import normalizeTheme from "../utils/theme.js";
+import createRandomId from "../utils/ids.js";
+import { getActiveTab } from "../services/tabs.js";
 import {
   getSettings,
   updateSettings,
   buildSystemPrompt,
-} from "../services/settings";
-import { getToolDefinitions, toolNames } from "../tools/definitions";
-import { attachToolCallsToAssistant } from "../tools/toolcalls";
-import { buildPageMarkdownToolOutput, handleToolCalls } from "../tools/runtime";
-import requestModel from "../api/client";
-import { refreshSendWithPageButton } from "./sendWithPageButton";
+} from "../services/settings.js";
+import { getToolDefinitions, toolNames } from "../tools/definitions.js";
+import { attachToolCallsToAssistant } from "../tools/toolcalls.js";
+import {
+  buildPageMarkdownToolOutput,
+  handleToolCalls,
+} from "../tools/runtime.js";
+import requestModel from "../api/client.js";
+import { refreshSendWithPageButton } from "./sendWithPageButton.js";
 import {
   getHistory,
   saveConversation,
   loadConversation,
   deleteConversation,
-} from "../services/history";
+} from "../services/history.js";
 
 let activeAbortController = null;
 const setComposerSending = (sending) => {

@@ -1,8 +1,8 @@
-import { statusEl } from "../ui/elements";
-import setText from "../ui/text";
-import { addMessage } from "../state/store";
-import { convertPageContentToMarkdown } from "../markdown/converter";
-import { isInternalUrl } from "../utils/url";
+import { statusEl } from "../ui/elements.js";
+import setText from "../ui/text.js";
+import { addMessage } from "../state/store.js";
+import { convertPageContentToMarkdown } from "../markdown/converter.js";
+import { isInternalUrl } from "../utils/url.js";
 import {
   toolNames,
   parseToolArguments,
@@ -15,15 +15,15 @@ import {
   validateClosePageArgs,
   validateConsoleArgs,
   validateListTabsArgs,
-} from "./definitions";
+} from "./definitions.js";
 import {
   createTab,
   closeTab,
   getAllTabs,
   sendMessageToTab,
   waitForContentScript,
-} from "../services/tabs";
-import sendMessageToSandbox from "../services/sandbox";
+} from "../services/tabs.js";
+import sendMessageToSandbox from "../services/sandbox.js";
 
 const normalizeToolCall = (toolCall) => {
   if (!toolCall) {

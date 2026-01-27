@@ -1,7 +1,7 @@
 import {
   buildChatMessages,
   buildResponsesInput,
-} from "../tools/message-builders";
+} from "../tools/message-builders.js";
 import {
   addChatToolCallDelta,
   finalizeChatToolCalls,
@@ -9,12 +9,12 @@ import {
   finalizeResponsesToolCalls,
   extractChatToolCalls,
   extractResponsesToolCalls,
-} from "../tools/toolcalls";
+} from "../tools/toolcalls.js";
 import {
   streamChatCompletion,
   streamResponses,
   extractResponsesText,
-} from "./sse";
+} from "./sse.js";
 
 const apiStrategies = {
   chat: {

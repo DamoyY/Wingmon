@@ -22,6 +22,17 @@ module.exports = [
       sourceType: "module",
       globals: browserGlobals,
     },
+    rules: {
+      "import/extensions": [
+        "error",
+        "ignorePackages",
+        {
+          js: "always",
+          mjs: "always",
+          cjs: "always",
+        },
+      ],
+    },
   },
   {
     files: ["public/**/*.js"],

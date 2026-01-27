@@ -1,9 +1,9 @@
-import { getSettings } from "../services/settings";
-import fillSettingsForm from "../ui/forms";
-import applyTheme from "../ui/theme";
-import { showChatView, showKeyView } from "../ui/views";
-import bindEvents from "./controller";
-import { refreshSendWithPageButton } from "./sendWithPageButton";
+import { getSettings } from "../services/settings.js";
+import fillSettingsForm from "../ui/forms.js";
+import applyTheme from "../ui/theme.js";
+import { showChatView, showKeyView } from "../ui/views.js";
+import bindEvents from "./controller.js";
+import { refreshSendWithPageButton } from "./sendWithPageButton.js";
 
 const initPanel = async () => {
   const settings = await getSettings();

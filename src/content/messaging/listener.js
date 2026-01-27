@@ -1,5 +1,5 @@
-import handleGetPageContent from "../handlers/getPageContent";
-import handleClickButton from "../handlers/clickButton";
+import handleGetPageContent from "../handlers/getPageContent.js";
+import handleClickButton from "../handlers/clickButton.js";
 
 const registerMessageListener = () => {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

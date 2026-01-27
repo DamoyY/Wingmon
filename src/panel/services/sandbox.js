@@ -1,4 +1,4 @@
-import createRandomId from "../utils/ids";
+import createRandomId from "../utils/ids.js";
 
 const SANDBOX_FRAME_ID = "llm-sandbox-frame";
 const SANDBOX_RESPONSE_TYPE = "runConsoleResult";

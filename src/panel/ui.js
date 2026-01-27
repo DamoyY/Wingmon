@@ -1,8 +1,8 @@
-export * from "./ui/elements";
-export * from "./ui/views";
-export * from "./ui/messages";
-export * from "./markdown/converter";
-export { default as setText } from "./ui/text";
-export { default as applyTheme } from "./ui/theme";
-export { default as fillSettingsForm } from "./ui/forms";
-export { default as renderMarkdown } from "./markdown/renderer";
+export * from "./ui/elements.js";
+export * from "./ui/views.js";
+export * from "./ui/messages.js";
+export * from "./markdown/converter.js";
+export { default as setText } from "./ui/text.js";
+export { default as applyTheme } from "./ui/theme.js";
+export { default as fillSettingsForm } from "./ui/forms.js";
+export { default as renderMarkdown } from "./markdown/renderer.js";

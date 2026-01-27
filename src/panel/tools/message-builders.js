@@ -1,4 +1,4 @@
-import { state } from "../state/store";
+import { state } from "../state/store.js";
 import {
   toolNames,
   parseToolArguments,
@@ -6,7 +6,7 @@ import {
   getToolCallId,
   getToolCallName,
   validateGetPageMarkdownArgs,
-} from "./definitions";
+} from "./definitions.js";
 
 const toChatToolCallForRequest = (entry) => ({
   id: entry.callId,

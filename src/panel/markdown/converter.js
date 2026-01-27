@@ -1,4 +1,4 @@
-import { isDataUrl } from "./sanitize";
+import { isDataUrl } from "./sanitize.js";
 
 const TurndownService = window?.TurndownService;
 if (typeof TurndownService !== "function") {

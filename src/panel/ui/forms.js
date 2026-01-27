@@ -4,8 +4,8 @@ import {
   modelInput,
   apiTypeSelect,
   themeSelect,
-} from "./elements";
-import normalizeTheme from "../utils/theme";
+} from "./elements.js";
+import normalizeTheme from "../utils/theme.js";
 
 const fillSettingsForm = (settings) => {
   keyInput.value = settings.apiKey || "";

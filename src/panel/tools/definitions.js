@@ -1,4 +1,4 @@
-import parseJson from "../utils/json";
+import parseJson from "../utils/json.js";
 
 export const toolNames = {
   openBrowserPage: "open_page",
