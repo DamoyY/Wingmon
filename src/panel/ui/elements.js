@@ -2,6 +2,8 @@ const byId = (id) => document.getElementById(id);
 export const [
   keyView,
   chatView,
+  topBar,
+  bottomBar,
   keyInput,
   baseUrlInput,
   modelInput,
@@ -27,6 +29,8 @@ export const [
 ] = [
   "key-view",
   "chat-view",
+  "top-bar",
+  "bottom-bar",
   "api-key-input",
   "base-url-input",
   "model-input",

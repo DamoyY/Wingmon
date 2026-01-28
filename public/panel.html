@@ -33,7 +33,8 @@
           ></md-filled-text-field>
           <md-filled-text-field
             id="base-url-input"
-            label="Base URL（如 https://api.openai.com/v1）"
+            label="Base URL"
+            placeholder="https://api.openai.com/v1"
             autocomplete="off"
           ></md-filled-text-field>
           <md-filled-text-field
@@ -65,45 +66,49 @@
         </div>
       </section>
       <section id="chat-view" class="view hidden">
-        <header class="header">
-          <md-icon-button id="new-chat" title="新建对话" class="hidden">
-            <md-icon>add</md-icon>
-          </md-icon-button>
-          <div class="title">Wingmon</div>
-          <div class="header-actions">
-            <md-icon-button id="history" title="历史记录">
-              <md-icon>history</md-icon>
+        <div id="top-bar" class="top-bar">
+          <header class="header">
+            <md-icon-button id="new-chat" title="新建对话" class="hidden">
+              <md-icon>add</md-icon>
             </md-icon-button>
-            <md-icon-button id="open-settings" title="设置">
-              <md-icon>settings</md-icon>
-            </md-icon-button>
+            <div class="title">Wingmon</div>
+            <div class="header-actions">
+              <md-icon-button id="history" title="历史记录">
+                <md-icon>history</md-icon>
+              </md-icon-button>
+              <md-icon-button id="open-settings" title="设置">
+                <md-icon>settings</md-icon>
+              </md-icon-button>
+            </div>
+          </header>
+          <div id="history-panel" class="history-panel hidden">
+            <div class="history-header">历史记录</div>
+            <md-list id="history-list"></md-list>
           </div>
-        </header>
-        <div id="history-panel" class="history-panel hidden">
-          <div class="history-header">历史记录</div>
-          <md-list id="history-list"></md-list>
         </div>
         <div id="messages" class="messages"></div>
-        <div class="composer">
-          <div id="status" class="status"></div>
-          <div class="row composer-actions">
-            <md-filled-button id="send-with-page"
-              ><md-icon slot="icon">tab</md-icon>携页面发送</md-filled-button
-            >
-            <md-filled-button id="send">
-              <md-icon slot="icon">send</md-icon>
-              发送
-            </md-filled-button>
-            <md-filled-button id="stop" class="hidden stop-button"
-              >停止</md-filled-button
-            >
+        <div id="bottom-bar" class="bottom-bar">
+          <div class="composer">
+            <div id="status" class="status"></div>
+            <div class="row composer-actions">
+              <md-filled-button id="send-with-page"
+                ><md-icon slot="icon">tab</md-icon>携页面发送</md-filled-button
+              >
+              <md-filled-button id="send">
+                <md-icon slot="icon">send</md-icon>
+                发送
+              </md-filled-button>
+              <md-filled-button id="stop" class="hidden stop-button"
+                >停止</md-filled-button
+              >
+            </div>
+            <md-filled-text-field
+              id="prompt"
+              type="textarea"
+              rows="4"
+              placeholder="输入要发送的内容"
+            ></md-filled-text-field>
           </div>
-          <md-filled-text-field
-            id="prompt"
-            type="textarea"
-            rows="4"
-            placeholder="输入要发送的内容"
-          ></md-filled-text-field>
         </div>
       </section>
     </div>

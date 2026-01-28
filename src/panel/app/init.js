@@ -3,6 +3,7 @@ import { initMarkdownRenderer } from "../markdown/index.js";
 import {
   applyTheme,
   fillSettingsForm,
+  setupChatLayout,
   showChatView,
   showKeyView,
 } from "../ui/index.js";
@@ -18,6 +19,7 @@ const initPanel = async () => {
   fillSettingsForm(settings);
   applyTheme(settings.theme);
   syncSettingsSnapshot(settings);
+  setupChatLayout();
   if (settings.apiKey && settings.baseUrl && settings.model) {
     showChatView();
   } else {

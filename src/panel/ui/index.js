@@ -5,3 +5,4 @@ export { default as setText } from "./text.js";
 export { default as applyTheme } from "./theme.js";
 export * from "./views.js";
 export { default as showConfirmDialog } from "./dialog.js";
+export { default as setupChatLayout } from "./layout.js";

@@ -81,7 +81,7 @@ export const sendMessageToTab = (tabId, payload) =>
       resolve(response);
     });
   });
-export const waitForContentScript = async (tabId, timeoutMs = 10000) => {
+export const waitForContentScript = async (tabId, timeoutMs = 30000) => {
   if (typeof tabId !== "number") {
     throw new Error("TabID 必须是数字");
   }
