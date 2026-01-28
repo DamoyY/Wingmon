@@ -1,7 +1,7 @@
 import { messagesEl, newChatButton } from "./elements.js";
 import { renderMarkdown } from "../markdown/index.js";
 
-const FADE_OUT_DURATION = 60;
+const FADE_OUT_DURATION = 100;
 const FADE_OUT_EASING = "cubic-bezier(0.2, 0, 0, 1)";
 let fadePromise = null;
 let activeAnimation = null;

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "侧边栏智能助手",
+  "name": "Wingmon",
   "version": "1.0.0",
-  "description": "在浏览器侧边栏与 Agent 对话。",
+  "description": "在浏览器侧边栏与 Wingmon 对话。",
   "permissions": [
     "storage",
     "sidePanel",
@@ -13,7 +13,7 @@
     "http://*/*"
   ],
   "action": {
-    "default_title": "侧边栏智能助手"
+    "default_title": "Wingmon"
   },
   "background": {
     "service_worker": "src/background/index.js",
