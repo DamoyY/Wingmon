@@ -25,13 +25,18 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  background: var(--md-sys-color-surface);
+  background: linear-gradient(
+    to bottom,
+    var(--md-sys-color-surface-container),
+    var(--md-sys-color-surface-dim)
+  );
   color: var(--md-sys-color-on-surface);
 }
 
 #app {
   height: 100vh;
   position: relative;
+  overflow: hidden;
 }
 
 .view {
@@ -42,6 +47,10 @@ body {
   height: 100%;
   position: absolute;
   inset: 0;
+  transform: translateX(0);
+  opacity: 1;
+  transition: transform 0.28s ease, opacity 0.28s ease;
+  z-index: 0;
 }
 
 .hidden {
@@ -49,14 +58,58 @@ body {
   pointer-events: none !important;
 }
 
+.view-front {
+  z-index: 2;
+}
+
+.view-layer-top {
+  z-index: 2;
+}
+
+.view-layer-bottom {
+  z-index: 1;
+}
+
+.view-animating {
+  pointer-events: none;
+}
+
+.view-enter-left {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.view-enter-right {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.view-exit-right {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.view-exit-left {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view {
+    transition: none;
+  }
+}
+
 .header {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
 }
 
 .title {
   font-weight: 600;
+  justify-self: center;
+  text-align: center;
 }
 
 md-outlined-text-field,
@@ -66,9 +119,9 @@ md-filled-text-field {
 
 #prompt {
   resize: none;
-  --md-outlined-text-field-container-shape: var(
-    --md-filled-button-container-shape,
-    var(--md-sys-shape-corner-full)
+  --md-filled-text-field-container-shape: var(--md-sys-shape-corner-full);
+  --md-filled-text-field-container-color: var(
+    --md-sys-color-surface-container-high
   );
 }
 
@@ -246,11 +299,20 @@ md-filled-select {
 }
 
 .history-panel {
+  position: absolute;
+  top: 56px;
+  left: 16px;
+  right: 16px;
+  z-index: 2;
   border: 1px solid var(--md-sys-color-outline);
   border-radius: 10px;
   background: var(--md-sys-color-surface-container);
   max-height: 200px;
   overflow-y: auto;
+}
+
+.history-panel.hidden {
+  display: none !important;
 }
 
 .history-header {
@@ -287,6 +349,33 @@ md-list-item:hover .delete-icon {
 .stop-button {
   --md-filled-button-container-color: var(--md-sys-color-error);
   --md-filled-button-label-text-color: var(--md-sys-color-on-error);
+  --md-filled-button-hover-container-color: var(--md-sys-color-error);
+  --md-filled-button-hover-label-text-color: var(--md-sys-color-on-error);
+  --md-filled-button-hover-icon-color: var(--md-sys-color-on-error);
+}
+
+#send {
+  --md-filled-button-container-color: var(--md-sys-color-primary);
+  --md-filled-button-label-text-color: var(--md-sys-color-on-primary);
+  --md-filled-button-icon-color: var(--md-sys-color-on-primary);
+  --md-filled-button-hover-container-color: var(--md-sys-color-primary);
+  --md-filled-button-hover-label-text-color: var(--md-sys-color-on-primary);
+  --md-filled-button-hover-icon-color: var(--md-sys-color-on-primary);
+}
+
+#send-with-page {
+--md-filled-button-container-color: var(--md-sys-color-tertiary-container);
+--md-filled-button-label-text-color: var(
+--md-sys-color-on-tertiary-container
+);
+--md-filled-button-icon-color: var(--md-sys-color-on-tertiary-container);
+--md-filled-button-hover-container-color: var(
+--md-sys-color-tertiary-container
+);
+--md-filled-button-hover-label-text-color: var(
+--md-sys-color-on-tertiary-container
+);
+--md-filled-button-hover-icon-color: var(--md-sys-color-on-tertiary-container);
 }
 
 .composer {

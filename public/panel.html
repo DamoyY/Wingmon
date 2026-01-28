@@ -64,7 +64,7 @@
       </section>
       <section id="chat-view" class="view hidden">
         <header class="header">
-          <md-icon-button id="new-chat" title="新建对话">
+          <md-icon-button id="new-chat" title="新建对话" class="hidden">
             <md-icon>add</md-icon>
           </md-icon-button>
           <div class="title">对话</div>
@@ -85,8 +85,8 @@
         <div class="composer">
           <div id="status" class="status"></div>
           <div class="row composer-actions">
-            <md-outlined-button id="send-with-page"
-              ><md-icon slot="icon">tab</md-icon>携页面发送</md-outlined-button
+            <md-filled-button id="send-with-page"
+              ><md-icon slot="icon">tab</md-icon>携页面发送</md-filled-button
             >
             <md-filled-button id="send">
               <md-icon slot="icon">send</md-icon>
@@ -96,12 +96,12 @@
               >停止</md-filled-button
             >
           </div>
-          <md-outlined-text-field
+          <md-filled-text-field
             id="prompt"
             type="textarea"
             rows="4"
             placeholder="输入要发送的内容"
-          ></md-outlined-text-field>
+          ></md-filled-text-field>
         </div>
       </section>
     </div>

@@ -1,5 +1,12 @@
-import { messagesEl } from "./elements.js";
+import { messagesEl, newChatButton } from "./elements.js";
 import { renderMarkdown } from "../markdown/index.js";
+
+const ensureNewChatButton = () => {
+  if (!newChatButton) {
+    throw new Error("新建对话按钮未找到");
+  }
+  return newChatButton;
+};
 
 const ensureHandler = (handler, label) => {
   if (typeof handler !== "function") {
@@ -67,11 +74,13 @@ export const renderMessages = (messages, handlers) => {
   if (!handlers || typeof handlers !== "object") {
     throw new Error("消息操作处理器缺失");
   }
+  let hasVisibleMessages = false;
   messagesEl.innerHTML = "";
   messages.forEach((msg, index) => {
     if (msg.hidden) {
       return;
     }
+    hasVisibleMessages = true;
     const row = document.createElement("div");
     row.className = `message-row ${msg.role}`;
     const node = document.createElement("div");
@@ -82,6 +91,8 @@ export const renderMessages = (messages, handlers) => {
     messagesEl.appendChild(row);
   });
   messagesEl.scrollTop = messagesEl.scrollHeight;
+  const button = ensureNewChatButton();
+  button.classList.toggle("hidden", !hasVisibleMessages);
 };
 
 export const updateLastAssistantMessage = (content) => {

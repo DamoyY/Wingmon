@@ -23,7 +23,11 @@ import {
   stopSending,
   handlePromptKeydown,
 } from "./messageSender.js";
-import { handleNewChat, toggleHistoryPanel } from "./historyPanel.js";
+import {
+  bindHistoryPanelOutsideClose,
+  handleNewChat,
+  toggleHistoryPanel,
+} from "./historyPanel.js";
 
 const bindEvents = () => {
   saveKey.addEventListener("click", handleSaveSettings);
@@ -36,6 +40,7 @@ const bindEvents = () => {
   newChatButton.addEventListener("click", handleNewChat);
   historyButton.addEventListener("click", toggleHistoryPanel);
   themeSelect.addEventListener("change", handleThemeChange);
+  bindHistoryPanelOutsideClose();
   chrome.tabs.onActivated.addListener(() => {
     refreshSendWithPageButton();
   });

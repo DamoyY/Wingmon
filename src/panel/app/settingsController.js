@@ -31,7 +31,7 @@ export const handleSaveSettings = async () => {
     theme: normalizeTheme(themeSelect.value),
   });
   applyTheme(next.theme);
-  showChatView();
+  await showChatView({ animate: true });
 };
 
 export const handleCancelSettings = async () => {
@@ -40,13 +40,13 @@ export const handleCancelSettings = async () => {
   setText(keyStatus, "");
   applyTheme(settings.theme);
   if (settings.apiKey && settings.baseUrl && settings.model) {
-    showChatView();
+    await showChatView({ animate: true });
   }
 };
 
 export const handleOpenSettings = async () => {
   const settings = await getSettings();
-  showKeyView({ isFirstUse: false });
+  await showKeyView({ isFirstUse: false, animate: true });
   fillSettingsForm(settings);
 };
 

@@ -14,6 +14,7 @@ const sassResult = sass.compile(
   {
     loadPaths: [path.join(rootDir, "node_modules")],
     style: "expanded",
+    quietDeps: true,
   },
 );
 

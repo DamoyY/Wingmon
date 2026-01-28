@@ -1,6 +1,7 @@
 import {
   historyPanel,
   historyList,
+  historyButton,
   setText,
   statusEl,
   showConfirmDialog,
@@ -99,6 +100,25 @@ export const toggleHistoryPanel = async () => {
     await renderHistoryList();
   }
   historyPanel.classList.toggle("hidden");
+};
+
+const closeHistoryPanel = () => {
+  historyPanel.classList.add("hidden");
+};
+
+export const bindHistoryPanelOutsideClose = () => {
+  document.addEventListener("click", (event) => {
+    if (historyPanel.classList.contains("hidden")) {
+      return;
+    }
+    if (historyPanel.contains(event.target)) {
+      return;
+    }
+    if (historyButton.contains(event.target)) {
+      return;
+    }
+    closeHistoryPanel();
+  });
 };
 
 export const handleNewChat = async () => {
