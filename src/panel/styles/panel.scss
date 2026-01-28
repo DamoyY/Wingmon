@@ -102,7 +102,7 @@ body {
 
 .header {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
 }
 
@@ -110,6 +110,14 @@ body {
   font-weight: 600;
   justify-self: center;
   text-align: center;
+}
+
+#new-chat {
+  justify-self: start;
+}
+
+.header-actions {
+  justify-self: end;
 }
 
 md-outlined-text-field,
@@ -144,6 +152,28 @@ md-filled-select {
 }
 
 .key-content .hidden {
+  display: none !important;
+}
+
+.key-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.key-title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.key-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.key-actions .hidden {
   display: none !important;
 }
 
@@ -204,7 +234,7 @@ md-filled-select {
   border-radius: 10px;
   overflow-x: auto;
   margin: 8px 0;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .message code {
@@ -212,7 +242,7 @@ md-filled-select {
   padding: 2px 4px;
   border-radius: 6px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .message pre code {
@@ -272,14 +302,6 @@ md-filled-select {
   --md-icon-button-pressed-state-layer-color: var(--md-sys-color-error);
 }
 
-.message-row.user .message-action {
-  --md-icon-button-icon-color: var(--md-sys-color-on-primary);
-  --md-icon-button-hover-icon-color: var(--md-sys-color-on-primary);
-  --md-icon-button-hover-state-layer-color: var(--md-sys-color-on-primary);
-  --md-icon-button-pressed-icon-color: var(--md-sys-color-on-primary);
-  --md-icon-button-pressed-state-layer-color: var(--md-sys-color-on-primary);
-}
-
 .message-row.user .message-actions {
   align-self: flex-end;
 }
@@ -289,7 +311,7 @@ md-filled-select {
 }
 
 .status {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--md-sys-color-on-surface-variant);
 }
 
@@ -318,7 +340,7 @@ md-filled-select {
 .history-header {
   padding: 10px 12px;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 0.8125rem;
   border-bottom: 1px solid var(--md-sys-color-outline);
 }
 
@@ -333,6 +355,10 @@ md-list-item {
 md-list-item .delete-icon {
   opacity: 0;
   transition: opacity 0.2s;
+  --md-icon-button-hover-icon-color: var(--md-sys-color-error);
+  --md-icon-button-hover-state-layer-color: var(--md-sys-color-error);
+  --md-icon-button-pressed-icon-color: var(--md-sys-color-error);
+  --md-icon-button-pressed-state-layer-color: var(--md-sys-color-error);
 }
 
 md-list-item:hover .delete-icon {
@@ -341,7 +367,7 @@ md-list-item:hover .delete-icon {
 
 .history-empty {
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--md-sys-color-on-surface-variant);
   text-align: center;
 }

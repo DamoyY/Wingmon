@@ -5,6 +5,10 @@ import {
   sendButton,
   sendWithPageButton,
   stopButton,
+  keyInput,
+  baseUrlInput,
+  modelInput,
+  apiTypeSelect,
   promptEl,
   newChatButton,
   historyButton,
@@ -15,6 +19,7 @@ import {
   handleSaveSettings,
   handleCancelSettings,
   handleOpenSettings,
+  handleSettingsFieldChange,
   handleThemeChange,
 } from "./settingsController.js";
 import {
@@ -22,6 +27,7 @@ import {
   sendMessageWithPage,
   stopSending,
   handlePromptKeydown,
+  handlePromptInput,
 } from "./messageSender.js";
 import {
   bindHistoryPanelOutsideClose,
@@ -33,10 +39,15 @@ const bindEvents = () => {
   saveKey.addEventListener("click", handleSaveSettings);
   cancelSettings.addEventListener("click", handleCancelSettings);
   openSettings.addEventListener("click", handleOpenSettings);
+  keyInput.addEventListener("input", handleSettingsFieldChange);
+  baseUrlInput.addEventListener("input", handleSettingsFieldChange);
+  modelInput.addEventListener("input", handleSettingsFieldChange);
+  apiTypeSelect.addEventListener("change", handleSettingsFieldChange);
   sendButton.addEventListener("click", sendMessage);
   sendWithPageButton.addEventListener("click", sendMessageWithPage);
   stopButton.addEventListener("click", stopSending);
   promptEl.addEventListener("keydown", handlePromptKeydown);
+  promptEl.addEventListener("input", handlePromptInput);
   newChatButton.addEventListener("click", handleNewChat);
   historyButton.addEventListener("click", toggleHistoryPanel);
   themeSelect.addEventListener("change", handleThemeChange);

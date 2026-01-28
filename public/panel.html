@@ -13,7 +13,15 @@
   <body>
     <div id="app">
       <section id="key-view" class="view">
-        <h1>设置连接信息</h1>
+        <header class="key-header">
+          <h1 class="key-title">设置</h1>
+          <div class="key-actions">
+            <md-filled-button id="save-key">保存</md-filled-button>
+            <md-outlined-button id="cancel-settings" type="button"
+              >取消</md-outlined-button
+            >
+          </div>
+        </header>
         <div class="key-content">
           <p id="settings-hint">
             首次使用需要输入 API Key、Base URL 和模型，仅保存在本地。
@@ -53,12 +61,6 @@
               <div slot="headline">暗色</div>
             </md-select-option>
           </md-filled-select>
-          <div class="row">
-            <md-filled-button id="save-key">保存</md-filled-button>
-            <md-outlined-button id="cancel-settings" type="button"
-              >取消</md-outlined-button
-            >
-          </div>
           <div id="key-status" class="status"></div>
         </div>
       </section>

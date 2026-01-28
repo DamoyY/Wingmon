@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "LLM 侧边栏聊天",
+  "name": "侧边栏智能助手",
   "version": "1.0.0",
-  "description": "在 Chrome 侧边栏与 LLM 对话。",
+  "description": "在浏览器侧边栏与 Agent 对话。",
   "permissions": [
     "storage",
     "sidePanel",
@@ -13,7 +13,7 @@
     "http://*/*"
   ],
   "action": {
-    "default_title": "LLM 侧边栏"
+    "default_title": "侧边栏智能助手"
   },
   "background": {
     "service_worker": "src/background/index.js",

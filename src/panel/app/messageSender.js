@@ -34,8 +34,26 @@ import {
   renderMessagesView,
   appendAssistantDelta,
 } from "./messagePresenter.js";
+import { setSendWithPagePromptReady } from "./sendWithPageButton.js";
 
 let activeAbortController = null;
+
+const hasPromptContent = (value) => {
+  if (typeof value !== "string") {
+    throw new Error("输入内容格式无效");
+  }
+  return Boolean(value.trim());
+};
+
+export const updateComposerButtonsState = () => {
+  const hasContent = hasPromptContent(promptEl.value);
+  sendButton.disabled = !hasContent;
+  setSendWithPagePromptReady(hasContent);
+};
+
+export const handlePromptInput = () => {
+  updateComposerButtonsState();
+};
 
 const setComposerSending = (sending) => {
   sendButton.classList.toggle("hidden", sending);
@@ -141,6 +159,7 @@ export const sendMessage = async ({ includePage = false } = {}) => {
   }
   addMessage({ role: "user", content });
   promptEl.value = "";
+  updateComposerButtonsState();
   renderMessagesView();
   state.sending = true;
   const abortController = new AbortController();
