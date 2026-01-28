@@ -10,7 +10,7 @@
     "@material/web": "latest",
     "eslint-plugin-prettier": "latest",
     "globals": "latest",
-    "markdown-it": "latest",
+    "md4w": "latest",
     "turndown": "latest"
   },
   "devDependencies": {

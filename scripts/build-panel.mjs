@@ -1,5 +1,5 @@
 import path from "node:path";
-import { writeFile } from "node:fs/promises";
+import { copyFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import * as sass from "sass";
@@ -30,3 +30,8 @@ await build({
   outfile: path.join(rootDir, "public/panel.bundle.js"),
   legalComments: "none",
 });
+
+await copyFile(
+  path.join(rootDir, "node_modules/md4w/js/md4w-fast.wasm"),
+  path.join(rootDir, "public/md4w-fast.wasm"),
+);

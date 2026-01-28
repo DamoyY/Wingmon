@@ -74,26 +74,6 @@ body {
   pointer-events: none;
 }
 
-.view-enter-left {
-  transform: translateX(-100%);
-  opacity: 0;
-}
-
-.view-enter-right {
-  transform: translateX(100%);
-  opacity: 0;
-}
-
-.view-exit-right {
-  transform: translateX(100%);
-  opacity: 0;
-}
-
-.view-exit-left {
-  transform: translateX(-100%);
-  opacity: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .view {
     transition: none;

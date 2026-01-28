@@ -1,4 +1,5 @@
 import { getSettings } from "../services/index.js";
+import { initMarkdownRenderer } from "../markdown/index.js";
 import {
   applyTheme,
   fillSettingsForm,
@@ -11,7 +12,9 @@ import { refreshSendWithPageButton } from "./sendWithPageButton.js";
 import { updateComposerButtonsState } from "./messageSender.js";
 
 const initPanel = async () => {
-  const settings = await getSettings();
+  const settingsPromise = getSettings();
+  await initMarkdownRenderer();
+  const settings = await settingsPromise;
   fillSettingsForm(settings);
   applyTheme(settings.theme);
   syncSettingsSnapshot(settings);

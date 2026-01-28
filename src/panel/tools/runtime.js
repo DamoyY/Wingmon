@@ -35,12 +35,7 @@ const normalizeToolCall = (toolCall) => {
     if (!id || !name) {
       return null;
     }
-    return {
-      id,
-      call_id: toolCall.call_id || id,
-      name,
-      arguments: args,
-    };
+    return { id, call_id: toolCall.call_id || id, name, arguments: args };
   }
   if (toolCall.name) {
     const callId = toolCall.call_id || toolCall.id;
@@ -55,6 +50,23 @@ const normalizeToolCall = (toolCall) => {
     };
   }
   return null;
+};
+const fetchPageMarkdownData = async (tabId) => {
+  await waitForContentScript(tabId);
+  const pageData = await sendMessageToTab(tabId, { type: "getPageContent" });
+  return convertPageContentToMarkdown(pageData);
+};
+const formatPageReadResult = ({
+  headerLines,
+  contentLabel,
+  content,
+  internalUrl,
+}) => {
+  const header = headerLines.join("\n");
+  if (isInternalUrl(internalUrl)) {
+    return `${header}\n**读取失败：**\n该页面为浏览器内部页面，无法读取。`;
+  }
+  return `${header}\n${contentLabel}\n${content}`;
 };
 const executeOpenBrowserPage = async (args) => {
   const { url, focus } = validateOpenPageArgs(args);
@@ -75,19 +87,15 @@ const executeOpenBrowserPage = async (args) => {
   const tab = await createTab(url, focus);
   if (isInternalUrl(url)) {
     const title = tab.title || "";
-    return `**打开成功**\nTabID: "${tab.id}"；\n标题："${title}"；\n**读取失败：**\n该页面为浏览器内部页面，无法读取。`;
+    return `**打开成功**\n标题："${title}"；\nTabID: "${tab.id}"；\n**读取失败：**\n该页面为浏览器内部页面，无法读取。`;
   }
-  await waitForContentScript(tab.id);
-  const pageData = await sendMessageToTab(tab.id, { type: "getPageContent" });
-  const {
-    title,
-    url: pageUrl,
+  const { title, url: pageUrl, content } = await fetchPageMarkdownData(tab.id);
+  return formatPageReadResult({
+    headerLines: ["**打开成功**", `标题："${title}"；`, `TabID: "${tab.id}"；`],
+    contentLabel: "内容：",
     content,
-  } = convertPageContentToMarkdown(pageData);
-  if (isInternalUrl(pageUrl || url)) {
-    return `**打开成功**\nTabID: "${tab.id}"；\n标题："${title}"；\n**读取失败：**\n该页面为浏览器内部页面，无法读取。`;
-  }
-  return `**打开成功**\nTabID: "${tab.id}"；\n标题："${title}"；\n内容：\n${content}`;
+    internalUrl: pageUrl || url,
+  });
 };
 const executeClickButton = async (args) => {
   const { id } = validateClickButtonArgs(args);
@@ -107,10 +115,7 @@ const executeClickButton = async (args) => {
       return state;
     }
     if (typeof tab.id !== "number") {
-      return {
-        ...state,
-        errors: [...state.errors, "标签页缺少 TabID"],
-      };
+      return { ...state, errors: [...state.errors, "标签页缺少 TabID"] };
     }
     try {
       await waitForContentScript(tab.id, 3000);
@@ -122,10 +127,7 @@ const executeClickButton = async (args) => {
         return { ...state, done: true, result: "成功" };
       }
       if (result?.ok === false && result.reason === "not_found") {
-        return {
-          ...state,
-          notFoundCount: state.notFoundCount + 1,
-        };
+        return { ...state, notFoundCount: state.notFoundCount + 1 };
       }
       throw new Error("按钮点击返回结果异常");
     } catch (error) {
@@ -163,13 +165,13 @@ const executeGetPageMarkdown = async (args) => {
     const title = targetTab.title || "";
     return `**标题：**\n${title}\n**URL：**\n${targetTab.url}\n**读取失败：**\n该页面为浏览器内部页面，无法读取。`;
   }
-  await waitForContentScript(tabId);
-  const pageData = await sendMessageToTab(tabId, { type: "getPageContent" });
-  const { title, url, content } = convertPageContentToMarkdown(pageData);
-  if (isInternalUrl(url)) {
-    return `**标题：**\n${title}\n**URL：**\n${url}\n**读取失败：**\n该页面为浏览器内部页面，无法读取。`;
-  }
-  return `**标题：**\n${title}\n**URL：**\n${url}\n**内容：**\n${content}`;
+  const { title, url, content } = await fetchPageMarkdownData(tabId);
+  return formatPageReadResult({
+    headerLines: ["**标题：**", title, "**URL：**", url],
+    contentLabel: "**内容：**",
+    content,
+    internalUrl: url,
+  });
 };
 const executeCloseBrowserPage = async (args) => {
   const { tabId } = validateClosePageArgs(args);
@@ -238,11 +240,6 @@ export const handleToolCalls = async (toolCalls) => {
       output =
         name === toolNames.closeBrowserPage ? "失败" : `失败: ${message}`;
     }
-    addMessage({
-      role: "tool",
-      content: output,
-      tool_call_id: callId,
-      name,
-    });
+    addMessage({ role: "tool", content: output, tool_call_id: callId, name });
   }, Promise.resolve());
 };

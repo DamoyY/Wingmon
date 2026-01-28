@@ -1,3 +1,3 @@
 export * from "./converter.js";
-export { default as renderMarkdown } from "./renderer.js";
+export { default as renderMarkdown, initMarkdownRenderer } from "./renderer.js";
 export * from "./sanitize.js";

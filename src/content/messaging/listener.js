@@ -17,10 +17,6 @@ const registerMessageListener = () => {
       }
       if (message?.type === "clickButton") {
         handleClickButton(message, sendResponse);
-        return;
-      }
-      if (message?.type === "ClickButton") {
-        handleClickButton(message, sendResponse);
       }
     } catch (error) {
       sendResponse({ error: error?.message || "未知错误" });
