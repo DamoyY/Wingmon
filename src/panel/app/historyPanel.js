@@ -5,6 +5,8 @@ import {
   setText,
   statusEl,
   showConfirmDialog,
+  fadeOutMessages,
+  resetMessagesFade,
 } from "../ui/index.js";
 import {
   loadConversationState,
@@ -125,8 +127,10 @@ export const handleNewChat = async () => {
   if (state.sending) {
     return;
   }
+  await fadeOutMessages();
   resetConversation();
   renderMessagesView();
+  resetMessagesFade();
   historyPanel.classList.add("hidden");
   setText(statusEl, "");
 };

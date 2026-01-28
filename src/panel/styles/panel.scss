@@ -146,9 +146,14 @@ md-filled-select {
 .key-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 24px;
   flex: 1;
   justify-content: center;
+}
+
+.key-content md-filled-text-field,
+.key-content md-filled-select {
+  min-height: 64px;
 }
 
 .key-content .hidden {
@@ -201,7 +206,7 @@ md-filled-select {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-width: 92%;
+  max-width: 85%;
 }
 
 .message-row.user {

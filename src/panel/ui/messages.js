@@ -1,6 +1,18 @@
 import { messagesEl, newChatButton } from "./elements.js";
 import { renderMarkdown } from "../markdown/index.js";
 
+const FADE_OUT_DURATION = 60;
+const FADE_OUT_EASING = "cubic-bezier(0.2, 0, 0, 1)";
+let fadePromise = null;
+let activeAnimation = null;
+
+const ensureMessagesElement = () => {
+  if (!messagesEl) {
+    throw new Error("消息容器未找到");
+  }
+  return messagesEl;
+};
+
 const ensureNewChatButton = () => {
   if (!newChatButton) {
     throw new Error("新建对话按钮未找到");
@@ -65,6 +77,51 @@ const createMessageContent = (content) => {
   body.className = "message-content";
   body.innerHTML = renderMarkdown(content);
   return body;
+};
+
+const prefersReducedMotion = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+export const fadeOutMessages = async () => {
+  const container = ensureMessagesElement();
+  const hasMessages = Boolean(container.querySelector(".message-row"));
+  if (!hasMessages) {
+    return false;
+  }
+  if (prefersReducedMotion()) {
+    return true;
+  }
+  if (fadePromise) {
+    await fadePromise;
+    return true;
+  }
+  activeAnimation = container.animate([{ opacity: 1 }, { opacity: 0 }], {
+    duration: FADE_OUT_DURATION,
+    easing: FADE_OUT_EASING,
+    fill: "both",
+  });
+  fadePromise = (async () => {
+    try {
+      await activeAnimation.finished;
+    } finally {
+      container.style.opacity = "0";
+      activeAnimation.cancel();
+      activeAnimation = null;
+      fadePromise = null;
+    }
+  })();
+  await fadePromise;
+  return true;
+};
+
+export const resetMessagesFade = () => {
+  const container = ensureMessagesElement();
+  if (activeAnimation) {
+    activeAnimation.cancel();
+    activeAnimation = null;
+    fadePromise = null;
+  }
+  container.style.opacity = "";
 };
 
 export const renderMessages = (messages, handlers) => {
