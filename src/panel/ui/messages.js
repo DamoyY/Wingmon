@@ -16,12 +16,14 @@ const runAction = async (handler, index, onError) => {
   }
 };
 
-const createActionButton = ({ label, className, title, onClick }) => {
-  const button = document.createElement("button");
-  button.type = "button";
+const createActionButton = ({ icon, className, title, onClick }) => {
+  const button = document.createElement("md-icon-button");
   button.className = className;
-  button.textContent = label;
   button.title = title;
+  button.setAttribute("aria-label", title);
+  const iconEl = document.createElement("md-icon");
+  iconEl.textContent = icon;
+  button.appendChild(iconEl);
   button.addEventListener("click", async (event) => {
     event.stopPropagation();
     await onClick();
@@ -36,13 +38,13 @@ const createMessageActions = (index, handlers) => {
   const actions = document.createElement("div");
   actions.className = "message-actions";
   const copyButton = createActionButton({
-    label: "复制",
+    icon: "content_copy",
     className: "message-action message-copy",
     title: "复制",
     onClick: () => runAction(onCopy, index, onError),
   });
   const deleteButton = createActionButton({
-    label: "删除",
+    icon: "delete",
     className: "message-action message-delete",
     title: "删除",
     onClick: () => runAction(onDelete, index, onError),
@@ -70,11 +72,14 @@ export const renderMessages = (messages, handlers) => {
     if (msg.hidden) {
       return;
     }
+    const row = document.createElement("div");
+    row.className = `message-row ${msg.role}`;
     const node = document.createElement("div");
     node.className = `message ${msg.role}`;
     node.appendChild(createMessageContent(msg.content));
-    node.appendChild(createMessageActions(index, handlers));
-    messagesEl.appendChild(node);
+    row.appendChild(node);
+    row.appendChild(createMessageActions(index, handlers));
+    messagesEl.appendChild(row);
   });
   messagesEl.scrollTop = messagesEl.scrollHeight;
 };

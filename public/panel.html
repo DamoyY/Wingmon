@@ -14,48 +14,53 @@
     <div id="app">
       <section id="key-view" class="view">
         <h1>设置连接信息</h1>
-        <p>首次使用需要输入 API Key、Base URL 和模型，仅保存在本地。</p>
-        <md-outlined-text-field
-          id="api-key-input"
-          label="API Key"
-          autocomplete="off"
-        ></md-outlined-text-field>
-        <md-outlined-text-field
-          id="base-url-input"
-          label="Base URL（如 https://api.openai.com/v1）"
-          autocomplete="off"
-        ></md-outlined-text-field>
-        <md-outlined-text-field
-          id="model-input"
-          label="模型（如 gpt-5.2）"
-          autocomplete="off"
-        ></md-outlined-text-field>
-        <md-outlined-select id="api-type-select" label="API 类型">
-          <md-select-option value="chat">
-            <div slot="headline">Chat Completion</div>
-          </md-select-option>
-          <md-select-option value="responses">
-            <div slot="headline">Response</div>
-          </md-select-option>
-        </md-outlined-select>
-        <md-outlined-select id="theme-select" label="主题">
-          <md-select-option value="auto">
-            <div slot="headline">自动</div>
-          </md-select-option>
-          <md-select-option value="light">
-            <div slot="headline">亮色</div>
-          </md-select-option>
-          <md-select-option value="dark">
-            <div slot="headline">暗色</div>
-          </md-select-option>
-        </md-outlined-select>
-        <div class="row">
-          <md-filled-button id="save-key">保存</md-filled-button>
-          <md-outlined-button id="cancel-settings" type="button"
-            >取消</md-outlined-button
-          >
+        <div class="key-content">
+          <p id="settings-hint">
+            首次使用需要输入 API Key、Base URL 和模型，仅保存在本地。
+          </p>
+          <md-filled-text-field
+            id="api-key-input"
+            label="API Key"
+            autocomplete="off"
+          ></md-filled-text-field>
+          <md-filled-text-field
+            id="base-url-input"
+            label="Base URL（如 https://api.openai.com/v1）"
+            autocomplete="off"
+          ></md-filled-text-field>
+          <md-filled-text-field
+            id="model-input"
+            label="模型"
+            placeholder="gpt-5"
+            autocomplete="off"
+          ></md-filled-text-field>
+          <md-filled-select id="api-type-select" label="API 类型">
+            <md-select-option value="chat">
+              <div slot="headline">Chat Completion</div>
+            </md-select-option>
+            <md-select-option value="responses">
+              <div slot="headline">Response</div>
+            </md-select-option>
+          </md-filled-select>
+          <md-filled-select id="theme-select" label="主题">
+            <md-select-option value="auto">
+              <div slot="headline">自动</div>
+            </md-select-option>
+            <md-select-option value="light">
+              <div slot="headline">亮色</div>
+            </md-select-option>
+            <md-select-option value="dark">
+              <div slot="headline">暗色</div>
+            </md-select-option>
+          </md-filled-select>
+          <div class="row">
+            <md-filled-button id="save-key">保存</md-filled-button>
+            <md-outlined-button id="cancel-settings" type="button"
+              >取消</md-outlined-button
+            >
+          </div>
+          <div id="key-status" class="status"></div>
         </div>
-        <div id="key-status" class="status"></div>
       </section>
       <section id="chat-view" class="view hidden">
         <header class="header">
@@ -78,23 +83,26 @@
         </div>
         <div id="messages" class="messages"></div>
         <div class="composer">
-          <md-outlined-text-field
-            id="prompt"
-            type="textarea"
-            rows="3"
-            label="输入你的问题"
-          ></md-outlined-text-field>
-          <div class="row">
-            <md-filled-button id="send">发送</md-filled-button>
+          <div id="status" class="status"></div>
+          <div class="row composer-actions">
             <md-outlined-button id="send-with-page"
-              >携页面发送</md-outlined-button
+              ><md-icon slot="icon">tab</md-icon>携页面发送</md-outlined-button
             >
+            <md-filled-button id="send">
+              <md-icon slot="icon">send</md-icon>
+              发送
+            </md-filled-button>
             <md-filled-button id="stop" class="hidden stop-button"
               >停止</md-filled-button
             >
           </div>
+          <md-outlined-text-field
+            id="prompt"
+            type="textarea"
+            rows="4"
+            placeholder="输入要发送的内容"
+          ></md-outlined-text-field>
         </div>
-        <div id="status" class="status"></div>
       </section>
     </div>
     <md-dialog id="confirm-dialog">
@@ -103,9 +111,7 @@
         <p id="confirm-message"></p>
       </form>
       <div slot="actions">
-        <md-text-button form="confirm-form" value="cancel"
-          >取消</md-text-button
-        >
+        <md-text-button form="confirm-form" value="cancel">取消</md-text-button>
         <md-filled-button form="confirm-form" value="confirm"
           >确定</md-filled-button
         >

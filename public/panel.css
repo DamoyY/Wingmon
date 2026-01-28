@@ -2,6 +2,16 @@
   box-sizing: border-box;
 }
 
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 :root {
   --md-sys-color-surface: #f7f7fb;
   --md-sys-color-on-surface: #1f1f1f;
@@ -52,8 +62,7 @@ body {
 
 #app {
   height: 100vh;
-  display: flex;
-  flex-direction: column;
+  position: relative;
 }
 
 .view {
@@ -62,10 +71,13 @@ body {
   flex-direction: column;
   gap: 12px;
   height: 100%;
+  position: absolute;
+  inset: 0;
 }
 
 .hidden {
-  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .header {
@@ -78,17 +90,50 @@ body {
   font-weight: 600;
 }
 
-md-outlined-text-field {
+md-outlined-text-field,
+md-filled-text-field {
   width: 100%;
 }
 
-md-outlined-select {
+#prompt {
+  resize: none;
+  --md-outlined-text-field-container-shape: var(
+    --md-filled-button-container-shape,
+    var(--md-sys-shape-corner-full)
+  );
+}
+
+md-outlined-select,
+md-filled-select {
   width: 100%;
 }
 
 .row {
   display: flex;
   gap: 8px;
+}
+
+.key-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  justify-content: center;
+}
+
+.key-content .hidden {
+  display: none !important;
+}
+
+.composer-actions {
+  justify-content: flex-end;
+  align-self: flex-end;
+  margin-left: auto;
+  width: fit-content;
+}
+
+.composer-actions .hidden {
+  display: none !important;
 }
 
 .messages {
@@ -100,14 +145,26 @@ md-outlined-select {
   padding-right: 4px;
 }
 
+.message-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 92%;
+}
+
+.message-row.user {
+  align-self: flex-end;
+}
+
+.message-row.assistant {
+  align-self: flex-start;
+}
+
 .message {
   padding: 10px 12px;
   border-radius: 12px;
-  max-width: 92%;
   white-space: normal;
   word-break: break-word;
-  position: relative;
-  padding-bottom: 30px;
 }
 
 .message p {
@@ -155,57 +212,58 @@ md-outlined-select {
 }
 
 .message.user {
-  align-self: flex-end;
   background: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
 }
 
 .message.assistant {
-  align-self: flex-start;
   background: var(--md-sys-color-surface-container-high);
   border: 1px solid var(--md-sys-color-surface-container-highest);
 }
 
 .message-actions {
-  position: absolute;
-  right: 8px;
-  bottom: 6px;
   display: flex;
   gap: 6px;
   opacity: 0;
   transition: opacity 0.2s;
 }
 
-.message:hover .message-actions {
+.message-row:hover .message-actions {
   opacity: 1;
 }
 
 .message-action {
-  background: transparent;
-  border: none;
-  padding: 2px 6px;
-  font-size: 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: var(--md-sys-color-secondary);
+  --md-icon-button-state-layer-width: 28px;
+  --md-icon-button-state-layer-height: 28px;
+  --md-icon-button-icon-size: 18px;
+  --md-icon-button-icon-color: var(--md-sys-color-secondary);
+  --md-icon-button-hover-icon-color: var(--md-sys-color-primary);
+  --md-icon-button-hover-state-layer-color: var(--md-sys-color-primary);
+  --md-icon-button-pressed-icon-color: var(--md-sys-color-primary);
+  --md-icon-button-pressed-state-layer-color: var(--md-sys-color-primary);
 }
 
-.message-action:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--md-sys-color-primary);
+.message-action.message-delete {
+  --md-icon-button-hover-icon-color: var(--md-sys-color-error);
+  --md-icon-button-hover-state-layer-color: var(--md-sys-color-error);
+  --md-icon-button-pressed-icon-color: var(--md-sys-color-error);
+  --md-icon-button-pressed-state-layer-color: var(--md-sys-color-error);
 }
 
-.message-action.message-delete:hover {
-  color: var(--md-sys-color-error);
+.message-row.user .message-action {
+  --md-icon-button-icon-color: rgba(255, 255, 255, 0.85);
+  --md-icon-button-hover-icon-color: #ffffff;
+  --md-icon-button-hover-state-layer-color: #ffffff;
+  --md-icon-button-pressed-icon-color: #ffffff;
+  --md-icon-button-pressed-state-layer-color: #ffffff;
 }
 
-.message.user .message-action {
-  color: rgba(255, 255, 255, 0.85);
+.message-row.user .message-actions {
+  align-self: flex-end;
 }
 
-.message.user .message-action:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+.message-row.assistant .message-actions {
+  align-self: flex-start;
 }
 
 .status {

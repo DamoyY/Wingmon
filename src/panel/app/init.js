@@ -15,7 +15,7 @@ const initPanel = async () => {
   if (settings.apiKey && settings.baseUrl && settings.model) {
     showChatView();
   } else {
-    showKeyView();
+    showKeyView({ isFirstUse: true });
   }
   bindEvents();
   await refreshSendWithPageButton();

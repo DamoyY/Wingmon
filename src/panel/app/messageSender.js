@@ -134,7 +134,7 @@ export const sendMessage = async ({ includePage = false } = {}) => {
   }
   const settings = await getSettings();
   if (!settings.apiKey || !settings.baseUrl || !settings.model) {
-    showKeyView();
+    showKeyView({ isFirstUse: true });
     fillSettingsForm(settings);
     setText(keyStatus, "请先补全 API Key、Base URL 和模型");
     return;

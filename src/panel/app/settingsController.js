@@ -46,7 +46,7 @@ export const handleCancelSettings = async () => {
 
 export const handleOpenSettings = async () => {
   const settings = await getSettings();
-  showKeyView();
+  showKeyView({ isFirstUse: false });
   fillSettingsForm(settings);
 };
 
