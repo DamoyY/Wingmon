@@ -173,38 +173,58 @@ export const sendMessage = async ({ includePage = false } = {}) => {
     }
     ensureNotAborted(abortController.signal);
     setText(statusEl, "请求中…");
-    const runRequestCycle = async () => {
-      ensureNotAborted(abortController.signal);
-      let assistantIndex = null;
-      const onStreamStart = () => {
-        assistantIndex = state.messages.length;
-        addMessage({ role: "assistant", content: "" });
-        renderMessagesView();
-        setText(statusEl, "回复中…");
+    const createResponseStream = async function* createResponseStream() {
+      const requestNext = async function* requestNext() {
+        ensureNotAborted(abortController.signal);
+        let assistantIndex = null;
+        const onStreamStart = () => {
+          assistantIndex = state.messages.length;
+          addMessage({ role: "assistant", content: "" });
+          renderMessagesView();
+          setText(statusEl, "回复中…");
+        };
+        const systemPrompt = await buildSystemPrompt();
+        const tools = getToolDefinitions(settings.apiType);
+        const { toolCalls, reply, streamed } = await requestModel({
+          settings,
+          systemPrompt,
+          tools,
+          onDelta: appendAssistantDelta,
+          onStreamStart,
+          signal: abortController.signal,
+        });
+        const pendingToolCalls = toolCalls || [];
+        yield {
+          toolCalls: pendingToolCalls,
+          reply,
+          streamed,
+          assistantIndex,
+        };
+        if (!pendingToolCalls.length) {
+          return;
+        }
+        await handleToolCalls(pendingToolCalls);
+        ensureNotAborted(abortController.signal);
+        setText(statusEl, "请求中…");
+        yield* requestNext();
       };
-      const systemPrompt = await buildSystemPrompt();
-      const tools = getToolDefinitions(settings.apiType);
-      const { toolCalls, reply, streamed } = await requestModel({
-        settings,
-        systemPrompt,
-        tools,
-        onDelta: appendAssistantDelta,
-        onStreamStart,
-        signal: abortController.signal,
-      });
-      const pendingToolCalls = toolCalls || [];
-      if (streamed) {
-        handleStreamingResponse(pendingToolCalls, assistantIndex);
-      } else {
-        handleNonStreamingResponse(reply, pendingToolCalls);
-      }
-      if (!pendingToolCalls.length) {
-        return;
-      }
-      await handleToolCalls(pendingToolCalls);
-      ensureNotAborted(abortController.signal);
-      setText(statusEl, "请求中…");
-      await runRequestCycle();
+      yield* requestNext();
+    };
+    const runRequestCycle = async () => {
+      const responseStream = createResponseStream();
+      const consumeResponses = async () => {
+        const { value, done } = await responseStream.next();
+        if (done) {
+          return;
+        }
+        if (value.streamed) {
+          handleStreamingResponse(value.toolCalls, value.assistantIndex);
+        } else {
+          handleNonStreamingResponse(value.reply, value.toolCalls);
+        }
+        await consumeResponses();
+      };
+      await consumeResponses();
     };
     await runRequestCycle();
     await saveCurrentConversation();

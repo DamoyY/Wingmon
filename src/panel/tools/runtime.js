@@ -120,7 +120,7 @@ const executeClickButton = async (args) => {
     try {
       await waitForContentScript(tab.id, 3000);
       const result = await sendMessageToTab(tab.id, {
-        type: "ClickButton",
+        type: "clickButton",
         id,
       });
       if (result?.ok) {
@@ -200,31 +200,29 @@ const executeListTabs = async (args) => {
 };
 export const buildPageMarkdownToolOutput = async (tabId) =>
   executeGetPageMarkdown({ tabId });
+const toolStrategies = new Map([
+  [toolNames.openBrowserPage, executeOpenBrowserPage],
+  [toolNames.clickButton, executeClickButton],
+  [toolNames.getPageMarkdown, executeGetPageMarkdown],
+  [toolNames.closeBrowserPage, executeCloseBrowserPage],
+  [toolNames.runConsoleCommand, executeRunConsoleCommand],
+  [toolNames.listTabs, executeListTabs],
+]);
+const getToolStrategy = (name) => {
+  const strategy = toolStrategies.get(name);
+  if (!strategy) {
+    throw new Error(`未支持的工具：${name}`);
+  }
+  return strategy;
+};
 const executeToolCall = async (toolCall) => {
   const normalized = normalizeToolCall(toolCall);
   if (!normalized) {
     throw new Error("工具调用格式不正确");
   }
   const args = parseToolArguments(normalized.arguments || "{}");
-  if (normalized.name === toolNames.openBrowserPage) {
-    return executeOpenBrowserPage(args);
-  }
-  if (normalized.name === toolNames.clickButton) {
-    return executeClickButton(args);
-  }
-  if (normalized.name === toolNames.getPageMarkdown) {
-    return executeGetPageMarkdown(args);
-  }
-  if (normalized.name === toolNames.closeBrowserPage) {
-    return executeCloseBrowserPage(args);
-  }
-  if (normalized.name === toolNames.runConsoleCommand) {
-    return executeRunConsoleCommand(args);
-  }
-  if (normalized.name === toolNames.listTabs) {
-    return executeListTabs(args);
-  }
-  throw new Error(`未支持的工具：${normalized.name}`);
+  const strategy = getToolStrategy(normalized.name);
+  return strategy(args);
 };
 export const handleToolCalls = async (toolCalls) => {
   await toolCalls.reduce(async (promise, call) => {
