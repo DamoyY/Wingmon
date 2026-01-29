@@ -2,8 +2,6 @@ import {
   historyPanel,
   historyList,
   historyButton,
-  setText,
-  statusEl,
   showConfirmDialog,
   fadeOutMessages,
   resetMessagesFade,
@@ -44,7 +42,6 @@ const handleLoadConversation = async (id) => {
   );
   renderMessagesView();
   historyPanel.classList.add("hidden");
-  setText(statusEl, "");
 };
 
 export const renderHistoryList = async () => {
@@ -86,7 +83,6 @@ export const renderHistoryList = async () => {
       if (item.id === state.conversationId) {
         resetConversation();
         renderMessagesView();
-        setText(statusEl, "");
       }
       await renderHistoryList();
     });
@@ -134,5 +130,4 @@ export const handleNewChat = async () => {
   renderMessagesView();
   resetMessagesFade();
   historyPanel.classList.add("hidden");
-  setText(statusEl, "");
 };

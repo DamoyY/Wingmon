@@ -93,18 +93,23 @@
         <div id="messages" class="messages"></div>
         <div id="bottom-bar" class="bottom-bar">
           <div class="composer">
-            <div id="status" class="status md-typescale-label-small"></div>
-            <div class="row composer-actions">
-              <md-filled-button id="send-with-page"
-                ><md-icon slot="icon">tab</md-icon>携页面发送</md-filled-button
-              >
-              <md-filled-button id="send">
-                <md-icon slot="icon">send</md-icon>
-                发送
-              </md-filled-button>
-              <md-filled-button id="stop" class="hidden stop-button"
-                >停止</md-filled-button
-              >
+            <div class="row composer-header">
+              <div class="follow-mode">
+                <span class="md-typescale-label-medium">跟随模式</span>
+                <md-switch id="follow-mode" aria-label="跟随模式"></md-switch>
+              </div>
+              <div class="row composer-actions">
+                <md-filled-button id="send-with-page"
+                  ><md-icon slot="icon">tab</md-icon>携页面发送</md-filled-button
+                >
+                <md-filled-button id="send">
+                  <md-icon slot="icon">send</md-icon>
+                  发送
+                </md-filled-button>
+                <md-filled-button id="stop" class="hidden stop-button"
+                  >停止</md-filled-button
+                >
+              </div>
             </div>
             <md-filled-text-field
               id="prompt"

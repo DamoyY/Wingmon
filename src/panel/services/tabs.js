@@ -61,6 +61,45 @@ export const closeTab = (tabId) =>
       resolve();
     });
   });
+export const focusTab = (tabId) =>
+  new Promise((resolve, reject) => {
+    if (typeof tabId !== "number") {
+      reject(new Error("TabID 必须是数字"));
+      return;
+    }
+    chrome.tabs.get(tabId, (tab) => {
+      if (chrome.runtime.lastError) {
+        const message = chrome.runtime.lastError.message || "无法获取标签页";
+        reject(new Error(message));
+        return;
+      }
+      if (!tab) {
+        reject(new Error("未找到标签页"));
+        return;
+      }
+      if (typeof tab.windowId !== "number") {
+        reject(new Error("标签页缺少窗口 ID"));
+        return;
+      }
+      chrome.windows.update(tab.windowId, { focused: true }, () => {
+        if (chrome.runtime.lastError) {
+          const message =
+            chrome.runtime.lastError.message || "无法聚焦标签页窗口";
+          reject(new Error(message));
+          return;
+        }
+        chrome.tabs.update(tabId, { active: true }, () => {
+          if (chrome.runtime.lastError) {
+            const message =
+              chrome.runtime.lastError.message || "无法激活标签页";
+            reject(new Error(message));
+            return;
+          }
+          resolve();
+        });
+      });
+    });
+  });
 export const sendMessageToTab = (tabId, payload) =>
   new Promise((resolve, reject) => {
     chrome.tabs.sendMessage(tabId, payload, (response) => {

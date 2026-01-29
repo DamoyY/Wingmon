@@ -4,7 +4,6 @@ import {
   keyStatus,
   settingsHint,
   cancelSettings,
-  statusEl,
   promptEl,
 } from "./elements.js";
 import setText from "./text.js";
@@ -118,7 +117,6 @@ export const showKeyView = ({ isFirstUse = false, animate = false } = {}) => {
 };
 
 export const showChatView = ({ animate = false } = {}) => {
-  setText(statusEl, "");
   if (animate) {
     return animateSwap({
       incoming: chatView,

@@ -13,8 +13,10 @@ import {
   newChatButton,
   historyButton,
   themeSelect,
+  followModeSwitch,
 } from "../ui/index.js";
 import { refreshSendWithPageButton } from "./sendWithPageButton.js";
+import { updateSettings } from "../services/index.js";
 import {
   handleSaveSettings,
   handleCancelSettings,
@@ -51,6 +53,9 @@ const bindEvents = () => {
   newChatButton.addEventListener("click", handleNewChat);
   historyButton.addEventListener("click", toggleHistoryPanel);
   themeSelect.addEventListener("change", handleThemeChange);
+  followModeSwitch.addEventListener("change", async () => {
+    await updateSettings({ followMode: Boolean(followModeSwitch.selected) });
+  });
   bindHistoryPanelOutsideClose();
   chrome.tabs.onActivated.addListener(() => {
     refreshSendWithPageButton();

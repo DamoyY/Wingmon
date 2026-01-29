@@ -4,6 +4,7 @@ import {
   applyTheme,
   applyTypography,
   fillSettingsForm,
+  followModeSwitch,
   setupChatLayout,
   showChatView,
   showKeyView,
@@ -20,6 +21,7 @@ const initPanel = async () => {
   const settings = await settingsPromise;
   fillSettingsForm(settings);
   applyTheme(settings.theme);
+  followModeSwitch.selected = Boolean(settings.followMode);
   syncSettingsSnapshot(settings);
   setupChatLayout();
   if (settings.apiKey && settings.baseUrl && settings.model) {

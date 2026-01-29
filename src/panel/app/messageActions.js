@@ -1,23 +1,9 @@
-import { setText, statusEl } from "../ui/index.js";
+import { reportStatus } from "../ui/index.js";
 import { removeMessage, state, touchUpdatedAt } from "../state/index.js";
 import { deleteConversation, saveConversation } from "../services/index.js";
 
 const setStatus = (text) => {
-  if (!statusEl) {
-    return;
-  }
-  setText(statusEl, text);
-};
-
-const clearStatusLater = (text) => {
-  window.setTimeout(() => {
-    if (state.sending) {
-      return;
-    }
-    if (statusEl?.textContent === text) {
-      setStatus("");
-    }
-  }, 1500);
+  reportStatus(text);
 };
 
 const persistConversation = async () => {
@@ -40,7 +26,6 @@ const handleCopyMessage = async (index) => {
   await navigator.clipboard.writeText(message.content || "");
   if (!state.sending) {
     setStatus("已复制");
-    clearStatusLater("已复制");
   }
 };
 

@@ -6,6 +6,7 @@ const settingsKeys = {
   model: "openai_model",
   apiType: "openai_api_type",
   theme: "openai_theme",
+  followMode: "openai_follow_mode",
 };
 const toSettings = (data) => ({
   apiKey: data?.[settingsKeys.apiKey] || "",
@@ -13,6 +14,10 @@ const toSettings = (data) => ({
   model: data?.[settingsKeys.model] || "",
   apiType: data?.[settingsKeys.apiType] || "chat",
   theme: normalizeTheme(data?.[settingsKeys.theme] || "auto"),
+  followMode:
+    data?.[settingsKeys.followMode] === undefined
+      ? true
+      : Boolean(data?.[settingsKeys.followMode]),
 });
 export const getSettings = () =>
   new Promise((resolve) => {
@@ -29,6 +34,7 @@ const setSettings = (settings) =>
         [settingsKeys.model]: settings.model,
         [settingsKeys.apiType]: settings.apiType,
         [settingsKeys.theme]: normalizeTheme(settings.theme),
+        [settingsKeys.followMode]: Boolean(settings.followMode),
       },
       resolve,
     );

@@ -1,4 +1,4 @@
-import { setText, statusEl } from "../ui/index.js";
+import { reportStatus } from "../ui/index.js";
 import { addMessage } from "../state/index.js";
 import { isInternalUrl } from "../utils/index.js";
 import {
@@ -18,6 +18,8 @@ import {
   closeTab,
   createTab,
   getAllTabs,
+  getSettings,
+  focusTab,
   sendMessageToSandbox,
   sendMessageToTab,
   waitForContentScript,
@@ -74,8 +76,14 @@ const formatPageReadResult = ({
   }
   return `${header}\n${contentLabel}\n${content}`;
 };
+const shouldFollowMode = async () => {
+  const settings = await getSettings();
+  return Boolean(settings.followMode);
+};
 const executeOpenBrowserPage = async (args) => {
   const { url, focus } = validateOpenPageArgs(args);
+  const followMode = await shouldFollowMode();
+  const shouldFocus = followMode || focus;
   const tabs = await getAllTabs();
   const normalizedTabs = tabs.map((tab) => {
     if (typeof tab.url !== "string" || !tab.url.trim()) {
@@ -88,9 +96,15 @@ const executeOpenBrowserPage = async (args) => {
     if (typeof matchedTab.id !== "number") {
       throw new Error("标签页缺少 TabID");
     }
+    if (shouldFocus) {
+      await focusTab(matchedTab.id);
+    }
     return `失败，浏览器中已存在相同页面，TabID："${matchedTab.id}"`;
   }
-  const tab = await createTab(url, focus);
+  const tab = await createTab(url, shouldFocus);
+  if (shouldFocus) {
+    await focusTab(tab.id);
+  }
   if (isInternalUrl(url)) {
     const title = tab.title || "";
     return `**打开成功**\n标题："${title}"；\nTabID: "${tab.id}"；\n**读取失败：**\n该页面为浏览器内部页面，无法读取。`;
@@ -167,6 +181,9 @@ const executeGetPageMarkdown = async (args) => {
   if (typeof targetTab.url !== "string" || !targetTab.url.trim()) {
     throw new Error("标签页缺少 URL");
   }
+  if (await shouldFollowMode()) {
+    await focusTab(tabId);
+  }
   if (isInternalUrl(targetTab.url)) {
     const title = targetTab.title || "";
     return `**标题：**\n${title}\n**URL：**\n${targetTab.url}\n**读取失败：**\n该页面为浏览器内部页面，无法读取。`;
@@ -240,7 +257,7 @@ export const handleToolCalls = async (toolCalls) => {
       output = await executeToolCall(call);
     } catch (error) {
       const message = error?.message || "工具调用失败";
-      setText(statusEl, message);
+      reportStatus(message);
       output =
         name === toolNames.closeBrowserPage ? "失败" : `失败: ${message}`;
     }

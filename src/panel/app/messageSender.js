@@ -2,11 +2,11 @@ import {
   fillSettingsForm,
   keyStatus,
   promptEl,
+  reportStatus,
   sendButton,
   sendWithPageButton,
   setText,
   showKeyView,
-  statusEl,
   stopButton,
 } from "../ui/index.js";
 import {
@@ -80,7 +80,7 @@ const prefillSharedPage = async () => {
   if (typeof activeTab.id !== "number") {
     throw new Error("活动标签页缺少 TabID");
   }
-  setText(statusEl, "读取页面中…");
+  reportStatus("读取页面中…");
   const callId = createRandomId("local");
   const args = { tabId: activeTab.id };
   const output = await buildPageMarkdownToolOutput(activeTab.id);
@@ -138,7 +138,7 @@ export const stopSending = async () => {
     return;
   }
   activeAbortController.abort();
-  setText(statusEl, "已停止");
+  reportStatus("已停止");
   await saveCurrentConversation();
 };
 
@@ -172,7 +172,7 @@ export const sendMessage = async ({ includePage = false } = {}) => {
       await prefillSharedPage();
     }
     ensureNotAborted(abortController.signal);
-    setText(statusEl, "请求中…");
+    reportStatus("请求中…");
     const createResponseStream = async function* createResponseStream() {
       const requestNext = async function* requestNext() {
         ensureNotAborted(abortController.signal);
@@ -181,7 +181,7 @@ export const sendMessage = async ({ includePage = false } = {}) => {
           assistantIndex = state.messages.length;
           addMessage({ role: "assistant", content: "" });
           renderMessagesView();
-          setText(statusEl, "回复中…");
+          reportStatus("回复中…");
         };
         const systemPrompt = await buildSystemPrompt();
         const tools = getToolDefinitions(settings.apiType);
@@ -205,7 +205,7 @@ export const sendMessage = async ({ includePage = false } = {}) => {
         }
         await handleToolCalls(pendingToolCalls);
         ensureNotAborted(abortController.signal);
-        setText(statusEl, "请求中…");
+        reportStatus("请求中…");
         yield* requestNext();
       };
       yield* requestNext();
@@ -228,13 +228,13 @@ export const sendMessage = async ({ includePage = false } = {}) => {
     };
     await runRequestCycle();
     await saveCurrentConversation();
-    setText(statusEl, "");
+    reportStatus("");
   } catch (error) {
     if (error?.name === "AbortError" || error?.message === "已停止") {
-      setText(statusEl, "已停止");
+      reportStatus("已停止");
       return;
     }
-    setText(statusEl, `${error.message}`);
+    reportStatus(`${error.message}`);
   } finally {
     state.sending = false;
     activeAbortController = null;

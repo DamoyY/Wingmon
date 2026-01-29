@@ -1,4 +1,4 @@
-import { sendWithPageButton, setText, statusEl } from "../ui/index.js";
+import { reportStatus, sendWithPageButton } from "../ui/index.js";
 import { getActiveTab } from "../services/index.js";
 import { isInternalUrl } from "../utils/index.js";
 
@@ -58,6 +58,6 @@ export const refreshSendWithPageButton = async () => {
   } catch (error) {
     const message = error?.message || "无法读取活动标签页";
     disableSendWithPageButtonForPage(message);
-    setText(statusEl, message);
+    reportStatus(message);
   }
 };
