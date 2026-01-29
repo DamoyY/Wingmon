@@ -1,4 +1,5 @@
 import { state } from "../state/index.js";
+import { getActiveTab } from "./tabs.js";
 
 const loadSystemPrompt = async () => {
   if (state.systemPrompt !== null) {
@@ -14,12 +15,62 @@ const loadSystemPrompt = async () => {
   return state.systemPrompt;
 };
 
+const formatTime = (date) => {
+  if (!(date instanceof Date)) {
+    throw new Error("时间格式化失败：无效的日期对象");
+  }
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("时间格式化失败：日期无效");
+  }
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hour = date.getHours();
+  const minute = date.getMinutes();
+  return `${year}年${month}月${day}日${hour}时${minute}分`;
+};
+
+const resolveUserAgent = () => {
+  const ua = navigator?.userAgent;
+  if (typeof ua !== "string" || !ua.trim()) {
+    throw new Error("无法获取 User Agent");
+  }
+  return ua;
+};
+
+const resolveFocusTabId = async () => {
+  const activeTab = await getActiveTab();
+  if (!activeTab || typeof activeTab.id !== "number") {
+    throw new Error("无法获取当前标签页 TabID");
+  }
+  return String(activeTab.id);
+};
+
+const applyDynamicTags = async (template) => {
+  let output = template;
+  if (output.includes("{time}")) {
+    output = output.replaceAll("{time}", formatTime(new Date()));
+  }
+  if (output.includes("{user-agent}")) {
+    output = output.replaceAll("{user-agent}", resolveUserAgent());
+  }
+  if (output.includes("{focus-tabid}")) {
+    const tabId = await resolveFocusTabId();
+    output = output.replaceAll("{focus-tabid}", tabId);
+  }
+  return output;
+};
+
 const buildSystemPrompt = async () => {
   const raw = await loadSystemPrompt();
   if (!raw) {
     return "";
   }
-  return raw.trim();
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return "";
+  }
+  return applyDynamicTags(trimmed);
 };
 
 export default buildSystemPrompt;

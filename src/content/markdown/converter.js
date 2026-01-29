@@ -18,6 +18,7 @@ const stripControlAndWhitespace = (value) =>
   }, "");
 const normalizeUrl = (url) => stripControlAndWhitespace(normalizeUrlBase(url));
 const isDataUrl = (url) => normalizeUrl(url).startsWith("data:");
+const isSvgUrl = (url) => /\.svg([?#]|$)/i.test(normalizeUrl(url));
 
 const turndown = new TurndownService({ codeBlockStyle: "fenced" });
 turndown.remove(["script", "style"]);
@@ -31,6 +32,9 @@ turndown.addRule("image", {
     const alt = node.getAttribute("alt") || "";
     if (!src || isDataUrl(src)) {
       return turndown.escape(alt);
+    }
+    if (isSvgUrl(src)) {
+      return `![${turndown.escape(alt)}]()`;
     }
     const title = node.getAttribute("title");
     const titlePart = title ? ` "${turndown.escape(title)}"` : "";

@@ -13,7 +13,7 @@ const openPageToolSchema = {
   type: "object",
   properties: {
     url: { type: "string" },
-    focus: { type: "boolean", description: "是否切换浏览器焦点到新页面" },
+    focus: { type: "boolean", description: "是否将浏览器焦点切换至此页面" },
   },
   required: ["url", "focus"],
   additionalProperties: false,
