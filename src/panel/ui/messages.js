@@ -1,5 +1,6 @@
 import { messagesEl, newChatButton } from "./elements.js";
 import { renderMarkdown } from "../markdown/index.js";
+import { combineMessageContents } from "../utils/index.js";
 
 const FADE_OUT_DURATION = 100;
 const FADE_OUT_EASING = "cubic-bezier(0.2, 0, 0, 1)";
@@ -27,9 +28,9 @@ const ensureHandler = (handler, label) => {
   return handler;
 };
 
-const runAction = async (handler, index, onError) => {
+const runAction = async (handler, indices, onError) => {
   try {
-    await handler(index);
+    await handler(indices);
   } catch (error) {
     onError(error);
   }
@@ -50,7 +51,10 @@ const createActionButton = ({ icon, className, title, onClick }) => {
   return button;
 };
 
-const createMessageActions = (index, handlers) => {
+const createMessageActions = (indices, handlers) => {
+  if (!Array.isArray(indices) || indices.length === 0) {
+    throw new Error("消息索引无效");
+  }
   const onCopy = ensureHandler(handlers?.onCopy, "复制");
   const onDelete = ensureHandler(handlers?.onDelete, "删除");
   const onError = ensureHandler(handlers?.onError, "错误处理");
@@ -60,23 +64,80 @@ const createMessageActions = (index, handlers) => {
     icon: "content_copy",
     className: "message-action message-copy",
     title: "复制",
-    onClick: () => runAction(onCopy, index, onError),
+    onClick: () => runAction(onCopy, indices, onError),
   });
   const deleteButton = createActionButton({
     icon: "delete",
     className: "message-action message-delete",
     title: "删除",
-    onClick: () => runAction(onDelete, index, onError),
+    onClick: () => runAction(onDelete, indices, onError),
   });
   actions.append(copyButton, deleteButton);
   return actions;
 };
 
 const createMessageContent = (content) => {
+  if (typeof content !== "string") {
+    throw new Error("消息内容格式无效");
+  }
   const body = document.createElement("div");
   body.className = "message-content md-typescale-body-medium";
   body.innerHTML = renderMarkdown(content);
   return body;
+};
+
+const resolveMessageContent = (content, role) => {
+  if (content === null || content === undefined) {
+    return "";
+  }
+  if (typeof content !== "string") {
+    const label = role ? `：${role}` : "";
+    throw new Error(`消息内容格式无效${label}`);
+  }
+  return content;
+};
+
+const buildDisplayMessages = (messages) => {
+  if (!Array.isArray(messages)) {
+    throw new Error("messages 必须是数组");
+  }
+  const entries = [];
+  let assistantGroup = null;
+  const flushAssistantGroup = () => {
+    if (!assistantGroup) {
+      return;
+    }
+    const content = combineMessageContents(assistantGroup.contents);
+    if (content) {
+      entries.push({
+        role: "assistant",
+        content,
+        indices: assistantGroup.indices,
+      });
+    }
+    assistantGroup = null;
+  };
+  messages.forEach((msg, index) => {
+    if (!msg || typeof msg !== "object") {
+      throw new Error("消息格式无效");
+    }
+    if (msg.hidden) {
+      return;
+    }
+    const content = resolveMessageContent(msg.content, msg.role);
+    if (msg.role === "assistant") {
+      if (!assistantGroup) {
+        assistantGroup = { contents: [], indices: [] };
+      }
+      assistantGroup.contents.push(content);
+      assistantGroup.indices.push(index);
+      return;
+    }
+    flushAssistantGroup();
+    entries.push({ role: msg.role, content, indices: [index] });
+  });
+  flushAssistantGroup();
+  return entries;
 };
 
 const prefersReducedMotion = () =>
@@ -125,18 +186,13 @@ export const resetMessagesFade = () => {
 };
 
 export const renderMessages = (messages, handlers) => {
-  if (!Array.isArray(messages)) {
-    throw new Error("messages 必须是数组");
-  }
   if (!handlers || typeof handlers !== "object") {
     throw new Error("消息操作处理器缺失");
   }
   let hasVisibleMessages = false;
+  const displayMessages = buildDisplayMessages(messages);
   messagesEl.innerHTML = "";
-  messages.forEach((msg, index) => {
-    if (msg.hidden) {
-      return;
-    }
+  displayMessages.forEach((msg) => {
     hasVisibleMessages = true;
     const row = document.createElement("div");
     row.className = `message-row ${msg.role}`;
@@ -144,7 +200,7 @@ export const renderMessages = (messages, handlers) => {
     node.className = `message ${msg.role}`;
     node.appendChild(createMessageContent(msg.content));
     row.appendChild(node);
-    row.appendChild(createMessageActions(index, handlers));
+    row.appendChild(createMessageActions(msg.indices, handlers));
     messagesEl.appendChild(row);
   });
   messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -152,7 +208,12 @@ export const renderMessages = (messages, handlers) => {
   button.classList.toggle("hidden", !hasVisibleMessages);
 };
 
-export const updateLastAssistantMessage = (content) => {
+export const updateLastAssistantMessage = (messages) => {
+  const displayMessages = buildDisplayMessages(messages);
+  const lastEntry = displayMessages[displayMessages.length - 1];
+  if (!lastEntry || lastEntry.role !== "assistant") {
+    return false;
+  }
   const lastEl = messagesEl.lastElementChild;
   if (!lastEl || !lastEl.classList.contains("assistant")) {
     return false;
@@ -161,7 +222,7 @@ export const updateLastAssistantMessage = (content) => {
   if (!contentEl) {
     return false;
   }
-  contentEl.innerHTML = renderMarkdown(content);
+  contentEl.innerHTML = renderMarkdown(lastEntry.content);
   messagesEl.scrollTop = messagesEl.scrollHeight;
   return true;
 };

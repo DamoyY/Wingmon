@@ -37,7 +37,7 @@ export const appendAssistantDelta = (delta) => {
     content: `${last.content || ""}${delta}`,
   });
   const updatedView =
-    !updated.hidden && updateLastAssistantMessage(updated.content);
+    !updated.hidden && updateLastAssistantMessage(state.messages);
   if (!updatedView) {
     renderMessagesView();
   }
