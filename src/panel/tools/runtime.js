@@ -1,6 +1,5 @@
 import { setText, statusEl } from "../ui/index.js";
 import { addMessage } from "../state/index.js";
-import { convertPageContentToMarkdown } from "../markdown/index.js";
 import { isInternalUrl } from "../utils/index.js";
 import {
   toolNames,
@@ -54,7 +53,14 @@ const normalizeToolCall = (toolCall) => {
 const fetchPageMarkdownData = async (tabId) => {
   await waitForContentScript(tabId);
   const pageData = await sendMessageToTab(tabId, { type: "getPageContent" });
-  return convertPageContentToMarkdown(pageData);
+  if (!pageData || typeof pageData.content !== "string") {
+    throw new Error("页面内容为空");
+  }
+  return {
+    title: pageData.title || "",
+    url: pageData.url || "",
+    content: pageData.content,
+  };
 };
 const formatPageReadResult = ({
   headerLines,

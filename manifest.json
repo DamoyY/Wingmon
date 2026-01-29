@@ -49,9 +49,12 @@
         "src/content/handlers/index.js",
         "src/content/handlers/getPageContent.js",
         "src/content/handlers/clickButton.js",
+        "src/content/markdown/index.js",
+        "src/content/markdown/converter.js",
         "src/content/dom/index.js",
         "src/content/dom/buttonIds.js",
-        "src/content/dom/viewportMarker.js"
+        "src/content/dom/viewportMarker.js",
+        "node_modules/turndown/lib/turndown.browser.es.js"
       ],
       "matches": [
         "<all_urls>"

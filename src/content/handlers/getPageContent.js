@@ -1,4 +1,5 @@
 import { assignLlmIds, insertViewportMarker } from "../dom/index.js";
+import { convertPageContentToMarkdown } from "../markdown/index.js";
 
 const handleGetPageContent = (sendResponse) => {
   if (!document.body) {
@@ -9,12 +10,12 @@ const handleGetPageContent = (sendResponse) => {
   try {
     marker = insertViewportMarker(document.body);
     assignLlmIds(document.body);
-    const html = document.body.innerHTML;
-    sendResponse({
-      html,
+    const markdown = convertPageContentToMarkdown({
+      body: document.body,
       title: document.title || "",
       url: window.location?.href || "",
     });
+    sendResponse(markdown);
   } finally {
     if (marker && marker.parentNode) {
       marker.parentNode.removeChild(marker);
