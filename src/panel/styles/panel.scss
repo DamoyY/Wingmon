@@ -16,6 +16,8 @@
 
 :root {
   @include color.light-theme();
+  --md-ref-typeface-brand: "Roboto", system-ui, -apple-system, sans-serif;
+  --md-ref-typeface-plain: "Roboto", system-ui, -apple-system, sans-serif;
 }
 
 :root[data-theme="dark"] {
@@ -24,7 +26,6 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
   background: linear-gradient(
     to bottom,
     var(--md-sys-color-surface-container),
@@ -113,7 +114,6 @@ body {
 }
 
 .title {
-  font-weight: 600;
   justify-self: center;
   text-align: center;
 }
@@ -175,11 +175,14 @@ md-filled-select {
 
 .key-title {
   margin: 0;
-  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  min-height: var(--md-outlined-button-container-height, 40px);
 }
 
 .key-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   justify-content: flex-end;
 }
@@ -241,6 +244,57 @@ md-filled-select {
   margin-bottom: 0;
 }
 
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4,
+.message-content h5,
+.message-content h6 {
+  margin: 0 0 8px;
+}
+
+.message-content h1 {
+  font-family: var(--md-sys-typescale-headline-large-font);
+  font-size: var(--md-sys-typescale-headline-large-size);
+  line-height: var(--md-sys-typescale-headline-large-line-height);
+  font-weight: var(--md-sys-typescale-headline-large-weight);
+}
+
+.message-content h2 {
+  font-family: var(--md-sys-typescale-headline-medium-font);
+  font-size: var(--md-sys-typescale-headline-medium-size);
+  line-height: var(--md-sys-typescale-headline-medium-line-height);
+  font-weight: var(--md-sys-typescale-headline-medium-weight);
+}
+
+.message-content h3 {
+  font-family: var(--md-sys-typescale-headline-small-font);
+  font-size: var(--md-sys-typescale-headline-small-size);
+  line-height: var(--md-sys-typescale-headline-small-line-height);
+  font-weight: var(--md-sys-typescale-headline-small-weight);
+}
+
+.message-content h4 {
+  font-family: var(--md-sys-typescale-title-large-font);
+  font-size: var(--md-sys-typescale-title-large-size);
+  line-height: var(--md-sys-typescale-title-large-line-height);
+  font-weight: var(--md-sys-typescale-title-large-weight);
+}
+
+.message-content h5 {
+  font-family: var(--md-sys-typescale-title-medium-font);
+  font-size: var(--md-sys-typescale-title-medium-size);
+  line-height: var(--md-sys-typescale-title-medium-line-height);
+  font-weight: var(--md-sys-typescale-title-medium-weight);
+}
+
+.message-content h6 {
+  font-family: var(--md-sys-typescale-title-small-font);
+  font-size: var(--md-sys-typescale-title-small-size);
+  line-height: var(--md-sys-typescale-title-small-line-height);
+  font-weight: var(--md-sys-typescale-title-small-weight);
+}
+
 .message pre {
   background: var(--md-sys-color-surface-container-highest);
   color: var(--md-sys-color-on-surface);
@@ -248,15 +302,20 @@ md-filled-select {
   border-radius: 10px;
   overflow-x: auto;
   margin: 8px 0;
-  font-size: 0.75rem;
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  font-weight: var(--md-sys-typescale-body-small-weight);
 }
 
 .message code {
   background: var(--md-sys-color-surface-container-highest);
   padding: 2px 4px;
   border-radius: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.75rem;
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  font-weight: var(--md-sys-typescale-body-small-weight);
 }
 
 .message pre code {
@@ -325,7 +384,6 @@ md-filled-select {
 }
 
 .status {
-  font-size: 0.75rem;
   color: var(--md-sys-color-on-surface-variant);
 }
 
@@ -353,8 +411,6 @@ md-filled-select {
 
 .history-header {
   padding: 10px 12px;
-  font-weight: 600;
-  font-size: 0.8125rem;
   border-bottom: 1px solid var(--md-sys-color-outline);
 }
 
@@ -381,7 +437,6 @@ md-list-item:hover .delete-icon {
 
 .history-empty {
   padding: 10px 12px;
-  font-size: 0.8125rem;
   color: var(--md-sys-color-on-surface-variant);
   text-align: center;
 }

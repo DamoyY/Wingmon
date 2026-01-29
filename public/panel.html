@@ -5,16 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>LLM 侧边栏</title>
     <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="panel.css" />
   </head>
-  <body>
+  <body class="md-typescale-body-medium">
     <div id="app">
       <section id="key-view" class="view">
         <header class="key-header">
-          <h1 class="key-title">设置</h1>
+          <h1 class="key-title md-typescale-headline-small">设置</h1>
           <div class="key-actions">
             <md-filled-button id="save-key">保存</md-filled-button>
             <md-outlined-button id="cancel-settings" type="button"
@@ -23,7 +27,7 @@
           </div>
         </header>
         <div class="key-content">
-          <p id="settings-hint">
+          <p id="settings-hint" class="md-typescale-body-medium">
             首次使用需要输入 API Key、Base URL 和模型，仅保存在本地。
           </p>
           <md-filled-text-field
@@ -62,7 +66,7 @@
               <div slot="headline">暗色</div>
             </md-select-option>
           </md-filled-select>
-          <div id="key-status" class="status"></div>
+          <div id="key-status" class="status md-typescale-label-small"></div>
         </div>
       </section>
       <section id="chat-view" class="view hidden">
@@ -71,7 +75,7 @@
             <md-icon-button id="new-chat" title="新建对话" class="hidden">
               <md-icon>add</md-icon>
             </md-icon-button>
-            <div class="title">Wingmon</div>
+            <div class="title md-typescale-title-medium">Wingmon</div>
             <div class="header-actions">
               <md-icon-button id="history" title="历史记录">
                 <md-icon>history</md-icon>
@@ -82,14 +86,14 @@
             </div>
           </header>
           <div id="history-panel" class="history-panel hidden">
-            <div class="history-header">历史记录</div>
+            <div class="history-header md-typescale-title-small">历史记录</div>
             <md-list id="history-list"></md-list>
           </div>
         </div>
         <div id="messages" class="messages"></div>
         <div id="bottom-bar" class="bottom-bar">
           <div class="composer">
-            <div id="status" class="status"></div>
+            <div id="status" class="status md-typescale-label-small"></div>
             <div class="row composer-actions">
               <md-filled-button id="send-with-page"
                 ><md-icon slot="icon">tab</md-icon>携页面发送</md-filled-button
@@ -113,9 +117,9 @@
       </section>
     </div>
     <md-dialog id="confirm-dialog">
-      <div slot="headline">确认</div>
+      <div slot="headline" class="md-typescale-title-large">确认</div>
       <form slot="content" id="confirm-form" method="dialog">
-        <p id="confirm-message"></p>
+        <p id="confirm-message" class="md-typescale-body-medium"></p>
       </form>
       <div slot="actions">
         <md-text-button form="confirm-form" value="cancel">取消</md-text-button>

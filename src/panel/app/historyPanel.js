@@ -51,7 +51,8 @@ export const renderHistoryList = async () => {
   const history = await getHistory();
   historyList.innerHTML = "";
   if (!history.length) {
-    historyList.innerHTML = '<div class="history-empty">暂无历史记录</div>';
+    historyList.innerHTML =
+      '<div class="history-empty md-typescale-body-small">暂无历史记录</div>';
     return;
   }
   const sorted = [...history].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -64,6 +65,7 @@ export const renderHistoryList = async () => {
 
     const headline = document.createElement("div");
     headline.slot = "headline";
+    headline.className = "md-typescale-body-small";
     headline.textContent = formatDateTime(item.updatedAt);
     listItem.appendChild(headline);
 

@@ -74,7 +74,7 @@ const createMessageActions = (index, handlers) => {
 
 const createMessageContent = (content) => {
   const body = document.createElement("div");
-  body.className = "message-content";
+  body.className = "message-content md-typescale-body-medium";
   body.innerHTML = renderMarkdown(content);
   return body;
 };

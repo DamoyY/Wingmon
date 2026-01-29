@@ -2,6 +2,7 @@ import { getSettings } from "../services/index.js";
 import { initMarkdownRenderer } from "../markdown/index.js";
 import {
   applyTheme,
+  applyTypography,
   fillSettingsForm,
   setupChatLayout,
   showChatView,
@@ -15,6 +16,7 @@ import { updateComposerButtonsState } from "./messageSender.js";
 const initPanel = async () => {
   const settingsPromise = getSettings();
   await initMarkdownRenderer();
+  applyTypography();
   const settings = await settingsPromise;
   fillSettingsForm(settings);
   applyTheme(settings.theme);
