@@ -4,7 +4,7 @@ import {
   highlightCodeBlocks,
   renderMath,
 } from "../markdown/index.js";
-import { combineMessageContents } from "../utils/index.js";
+import { combineMessageContents, t } from "../utils/index.js";
 
 const FADE_OUT_DURATION = 100;
 const FADE_OUT_EASING = "cubic-bezier(0.2, 0, 0, 1)";
@@ -97,21 +97,21 @@ const createMessageActions = (indices, handlers) => {
   if (!Array.isArray(indices) || indices.length === 0) {
     throw new Error("消息索引无效");
   }
-  const onCopy = ensureHandler(handlers?.onCopy, "复制");
-  const onDelete = ensureHandler(handlers?.onDelete, "删除");
-  const onError = ensureHandler(handlers?.onError, "错误处理");
+  const onCopy = ensureHandler(handlers?.onCopy, t("copy"));
+  const onDelete = ensureHandler(handlers?.onDelete, t("delete"));
+  const onError = ensureHandler(handlers?.onError, t("error"));
   const actions = document.createElement("div");
   actions.className = "message-actions";
   const copyButton = createActionButton({
     icon: "content_copy",
     className: "message-action message-copy",
-    title: "复制",
+    title: t("copy"),
     onClick: () => runAction(onCopy, indices, onError),
   });
   const deleteButton = createActionButton({
     icon: "delete",
     className: "message-action message-delete",
-    title: "删除",
+    title: t("delete"),
     onClick: () => runAction(onDelete, indices, onError),
   });
   actions.append(copyButton, deleteButton);

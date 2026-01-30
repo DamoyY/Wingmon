@@ -14,12 +14,16 @@ import { syncSettingsSnapshot } from "./settingsController.js";
 import { refreshSendWithPageButton } from "./sendWithPageButton.js";
 import { updateComposerButtonsState } from "./messageSender.js";
 import { renderMessagesView } from "./messagePresenter.js";
+import { setLocale, translateDOM } from "../utils/index.js";
 
 const initPanel = async () => {
   const settingsPromise = getSettings();
+
   await initMarkdownRenderer();
   applyTypography();
   const settings = await settingsPromise;
+  await setLocale(settings.language || "en");
+  translateDOM();
   fillSettingsForm(settings);
   applyTheme(settings.theme, settings.themeColor);
   followModeSwitch.selected = Boolean(settings.followMode);

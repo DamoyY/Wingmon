@@ -1,4 +1,4 @@
-import { parseJson } from "../utils/index.js";
+import { parseJson, t } from "../utils/index.js";
 
 export const toolNames = {
   openBrowserPage: "open_page",
@@ -13,14 +13,14 @@ const openPageToolSchema = {
   type: "object",
   properties: {
     url: { type: "string" },
-    focus: { type: "boolean", description: "是否将浏览器焦点切换至此页面" },
+    focus: { type: "boolean", description: t("toolParamFocus") },
   },
   required: ["url", "focus"],
   additionalProperties: false,
 };
 const clickButtonToolSchema = {
   type: "object",
-  properties: { id: { type: "string", description: "要点击的 button 的 ID" } },
+  properties: { id: { type: "string", description: t("toolParamId") } },
   required: ["id"],
   additionalProperties: false,
 };
@@ -50,32 +50,32 @@ const listTabsToolSchema = {
 const toolDescriptors = [
   {
     name: toolNames.openBrowserPage,
-    description: "在当前浏览器打开指定网页",
+    description: t("toolOpenPage"),
     parameters: openPageToolSchema,
   },
   {
     name: toolNames.clickButton,
-    description: "点击当前页面上指定的 button",
+    description: t("toolClickButton"),
     parameters: clickButtonToolSchema,
   },
   {
     name: toolNames.getPageMarkdown,
-    description: "读取页面内容",
+    description: t("toolGetPage"),
     parameters: pageMarkdownToolSchema,
   },
   {
     name: toolNames.closeBrowserPage,
-    description: "关闭标签页",
+    description: t("toolClosePage"),
     parameters: closePageToolSchema,
   },
   {
     name: toolNames.runConsoleCommand,
-    description: "在 Sandbox Page 中执行控制台命令并获取结果",
+    description: t("toolRunConsole"),
     parameters: consoleToolSchema,
   },
   {
     name: toolNames.listTabs,
-    description: "列出所有当前已打开的标签页的标题、URL 和 TabID",
+    description: t("toolListTabs"),
     parameters: listTabsToolSchema,
   },
 ];

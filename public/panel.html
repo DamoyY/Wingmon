@@ -1,155 +1,135 @@
 <!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>LLM 侧边栏</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="panel.css" />
-  </head>
-  <body class="md-typescale-body-medium">
-    <div id="app">
-      <section id="key-view" class="view">
-        <header class="key-header">
-          <md-icon-button id="cancel-settings" title="返回">
-            <md-icon>arrow_back</md-icon>
-          </md-icon-button>
-          <h1 class="key-title md-typescale-headline-small">设置</h1>
-          <div class="key-actions">
-            <md-filled-button id="save-key">保存</md-filled-button>
-          </div>
-        </header>
-        <div class="key-content">
-          <p id="settings-hint" class="md-typescale-body-medium">
-            首次使用需要输入 API Key、Base URL 和模型，仅保存在本地。
-          </p>
-          <md-filled-text-field
-            id="api-key-input"
-            label="API Key"
-            autocomplete="off"
-          ></md-filled-text-field>
-          <md-filled-text-field
-            id="base-url-input"
-            label="Base URL"
-            placeholder="https://api.openai.com/v1"
-            autocomplete="off"
-          ></md-filled-text-field>
-          <md-filled-text-field
-            id="model-input"
-            label="模型"
-            placeholder="gpt-5"
-            autocomplete="off"
-          ></md-filled-text-field>
-          <md-filled-select id="api-type-select" label="API 类型">
-            <md-select-option value="chat">
-              <div slot="headline">Chat Completion</div>
-            </md-select-option>
-            <md-select-option value="responses">
-              <div slot="headline">Response</div>
-            </md-select-option>
-          </md-filled-select>
-          <md-filled-select id="theme-select" label="主题">
-            <md-select-option value="auto">
-              <div slot="headline">自动</div>
-            </md-select-option>
-            <md-select-option value="light">
-              <div slot="headline">亮色</div>
-            </md-select-option>
-            <md-select-option value="dark">
-              <div slot="headline">暗色</div>
-            </md-select-option>
-          </md-filled-select>
-          <md-filled-text-field
-            id="theme-color-input"
-            label="主题色"
-            placeholder="#63A002"
-            autocomplete="off"
-          ></md-filled-text-field>
-          <div id="key-status" class="status md-typescale-label-small"></div>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title data-i18n="panelTitle">LLM 侧边栏</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+  <link rel="stylesheet" href="panel.css" />
+</head>
+
+<body class="md-typescale-body-medium">
+  <div id="app">
+    <section id="key-view" class="view">
+      <header class="key-header">
+        <md-icon-button id="cancel-settings" data-i18n-title="back" title="返回">
+          <md-icon>arrow_back</md-icon>
+        </md-icon-button>
+        <h1 class="key-title md-typescale-headline-small" data-i18n="settings">设置</h1>
+        <div class="key-actions">
+          <md-filled-button id="save-key" data-i18n="save">保存</md-filled-button>
         </div>
-      </section>
-      <section id="history-view" class="view hidden">
-        <header class="history-view-header">
-          <md-icon-button id="close-history" title="返回">
-            <md-icon>arrow_back</md-icon>
-          </md-icon-button>
-          <h1 class="history-title md-typescale-headline-small">历史记录</h1>
-          <div class="history-actions"></div>
-        </header>
-        <div class="history-content">
-          <md-list id="history-list"></md-list>
-        </div>
-      </section>
-      <section id="chat-view" class="view hidden">
-        <div id="top-bar" class="top-bar">
-          <header class="header">
-            <md-icon-button id="new-chat" title="新建对话" class="hidden">
-              <md-icon>add</md-icon>
-            </md-icon-button>
-            <div class="title md-typescale-title-medium">Wingmon</div>
-            <div class="header-actions">
-              <md-icon-button id="history" title="历史记录">
-                <md-icon>history</md-icon>
-              </md-icon-button>
-              <md-icon-button id="open-settings" title="设置">
-                <md-icon>settings</md-icon>
-              </md-icon-button>
-            </div>
-          </header>
-        </div>
-        <div id="empty-state" class="empty-state">
-          <img src="icons/icon-128.png" alt="Wingmon" />
-        </div>
-        <div id="messages" class="messages"></div>
-        <div id="bottom-bar" class="bottom-bar">
-          <div class="composer">
-            <div class="row composer-header">
-              <div class="follow-mode">
-                <span class="md-typescale-label-medium">跟随模式</span>
-                <md-switch id="follow-mode" aria-label="跟随模式"></md-switch>
-              </div>
-              <div class="row composer-actions">
-                <md-filled-button id="send-with-page"
-                  ><md-icon slot="icon">tab</md-icon>携页面发送</md-filled-button
-                >
-                <md-filled-button id="send">
-                  <md-icon slot="icon">send</md-icon>
-                  发送
-                </md-filled-button>
-                <md-filled-button id="stop" class="hidden stop-button"
-                  >停止</md-filled-button
-                >
-              </div>
-            </div>
-            <md-filled-text-field
-              id="prompt"
-              type="textarea"
-              rows="4"
-              placeholder="输入要发送的内容"
-            ></md-filled-text-field>
-          </div>
-        </div>
-      </section>
-    </div>
-    <md-dialog id="confirm-dialog">
-      <div slot="headline" class="md-typescale-title-large">确认</div>
-      <form slot="content" id="confirm-form" method="dialog">
-        <p id="confirm-message" class="md-typescale-body-medium"></p>
-      </form>
-      <div slot="actions">
-        <md-text-button form="confirm-form" value="cancel">取消</md-text-button>
-        <md-filled-button form="confirm-form" value="confirm"
-          >确定</md-filled-button
-        >
+      </header>
+      <div class="key-content">
+        <p id="settings-hint" class="md-typescale-body-medium" data-i18n="settingsHint">
+          首次使用需要输入 API Key、Base URL 和模型，仅保存在本地。
+        </p>
+        <md-filled-text-field id="api-key-input" label="API Key" autocomplete="off"></md-filled-text-field>
+        <md-filled-text-field id="base-url-input" label="Base URL" placeholder="https://api.openai.com/v1"
+          autocomplete="off"></md-filled-text-field>
+        <md-filled-text-field id="model-input" data-i18n-label="model" label="模型" placeholder="gpt-5"
+          autocomplete="off"></md-filled-text-field>
+        <md-filled-select id="api-type-select" data-i18n-label="apiType" label="API 类型">
+          <md-select-option value="chat">
+            <div slot="headline">Chat Completion</div>
+          </md-select-option>
+          <md-select-option value="responses">
+            <div slot="headline">Response</div>
+          </md-select-option>
+        </md-filled-select>
+        <md-filled-select id="language-select" data-i18n-label="language" label="语言">
+          <md-select-option value="zh_CN">
+            <div slot="headline">简体中文</div>
+          </md-select-option>
+          <md-select-option value="en">
+            <div slot="headline">English</div>
+          </md-select-option>
+        </md-filled-select>
+        <md-filled-select id="theme-select" data-i18n-label="theme" label="主题">
+          <md-select-option value="auto">
+            <div slot="headline" data-i18n="themeAuto">自动</div>
+          </md-select-option>
+          <md-select-option value="light">
+            <div slot="headline" data-i18n="themeLight">亮色</div>
+          </md-select-option>
+          <md-select-option value="dark">
+            <div slot="headline" data-i18n="themeDark">暗色</div>
+          </md-select-option>
+        </md-filled-select>
+        <md-filled-text-field id="theme-color-input" data-i18n-label="themeColor" label="主题色" placeholder="#63A002"
+          autocomplete="off"></md-filled-text-field>
+        <div id="key-status" class="status md-typescale-label-small"></div>
       </div>
-    </md-dialog>
-    <script src="panel.bundle.js"></script>
-  </body>
+    </section>
+    <section id="history-view" class="view hidden">
+      <header class="history-view-header">
+        <md-icon-button id="close-history" data-i18n-title="back" title="返回">
+          <md-icon>arrow_back</md-icon>
+        </md-icon-button>
+        <h1 class="history-title md-typescale-headline-small" data-i18n="history">历史记录</h1>
+        <div class="history-actions"></div>
+      </header>
+      <div class="history-content">
+        <md-list id="history-list"></md-list>
+      </div>
+    </section>
+    <section id="chat-view" class="view hidden">
+      <div id="top-bar" class="top-bar">
+        <header class="header">
+          <md-icon-button id="new-chat" data-i18n-title="newChat" title="新建对话" class="hidden">
+            <md-icon>add</md-icon>
+          </md-icon-button>
+          <div class="title md-typescale-title-medium">Wingmon</div>
+          <div class="header-actions">
+            <md-icon-button id="history" data-i18n-title="history" title="历史记录">
+              <md-icon>history</md-icon>
+            </md-icon-button>
+            <md-icon-button id="open-settings" data-i18n-title="settings" title="设置">
+              <md-icon>settings</md-icon>
+            </md-icon-button>
+          </div>
+        </header>
+      </div>
+      <div id="empty-state" class="empty-state">
+        <img src="icons/icon-128.png" alt="Wingmon" />
+      </div>
+      <div id="messages" class="messages"></div>
+      <div id="bottom-bar" class="bottom-bar">
+        <div class="composer">
+          <div class="row composer-header">
+            <div class="follow-mode">
+              <span class="md-typescale-label-medium" data-i18n="followMode">跟随模式</span>
+              <md-switch id="follow-mode" data-i18n-aria-label="followMode" aria-label="跟随模式"></md-switch>
+            </div>
+            <div class="row composer-actions">
+              <md-filled-button id="send-with-page"><md-icon slot="icon">tab</md-icon><span
+                  data-i18n="sendWithPage">携页面发送</span></md-filled-button>
+              <md-filled-button id="send">
+                <md-icon slot="icon">send</md-icon>
+                <span data-i18n="send">发送</span>
+              </md-filled-button>
+              <md-filled-button id="stop" class="hidden stop-button" data-i18n="stop">停止</md-filled-button>
+            </div>
+          </div>
+          <md-filled-text-field id="prompt" type="textarea" rows="4" data-i18n-placeholder="promptPlaceholder"
+            placeholder="输入要发送的内容"></md-filled-text-field>
+        </div>
+      </div>
+    </section>
+  </div>
+  <md-dialog id="confirm-dialog">
+    <div slot="headline" class="md-typescale-title-large" data-i18n="confirm">确认</div>
+    <form slot="content" id="confirm-form" method="dialog">
+      <p id="confirm-message" class="md-typescale-body-medium"></p>
+    </form>
+    <div slot="actions">
+      <md-text-button form="confirm-form" value="cancel" data-i18n="cancel">取消</md-text-button>
+      <md-filled-button form="confirm-form" value="confirm" data-i18n="ok">确定</md-filled-button>
+    </div>
+  </md-dialog>
+  <script src="panel.bundle.js"></script>
+</body>
+
 </html>

@@ -1,7 +1,7 @@
 import { reportStatus } from "../ui/index.js";
 import { removeMessage, state, touchUpdatedAt } from "../state/index.js";
 import { deleteConversation, saveConversation } from "../services/index.js";
-import { combineMessageContents } from "../utils/index.js";
+import { combineMessageContents, t } from "../utils/index.js";
 
 const setStatus = (text) => {
   reportStatus(text);
@@ -49,7 +49,7 @@ const handleCopyMessage = async (indices) => {
   }
   await navigator.clipboard.writeText(text);
   if (!state.sending) {
-    setStatus("已复制");
+    setStatus(t("copied"));
   }
 };
 
@@ -68,7 +68,7 @@ const collectToolIndicesBetween = (indices) => {
 
 const handleDeleteMessage = async (indices, refreshMessages) => {
   if (state.sending) {
-    throw new Error("回复中，暂时无法删除消息");
+    throw new Error(t("cannotDeleteDuringResponse"));
   }
   const normalized = normalizeIndices(indices);
   const toolIndices = collectToolIndicesBetween(normalized);
@@ -81,7 +81,7 @@ const handleDeleteMessage = async (indices, refreshMessages) => {
 };
 
 const reportActionError = (error) => {
-  const message = error?.message || "操作失败";
+  const message = error?.message || t("actionFailed");
   setStatus(message);
 };
 

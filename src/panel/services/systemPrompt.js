@@ -22,12 +22,14 @@ const formatTime = (date) => {
   if (Number.isNaN(date.getTime())) {
     throw new Error("时间格式化失败：日期无效");
   }
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const hour = date.getHours();
-  const minute = date.getMinutes();
-  return `${year}年${month}月${day}日${hour}时${minute}分`;
+  return date.toLocaleString(chrome.i18n.getUILanguage(), {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  });
 };
 
 const resolveUserAgent = () => {

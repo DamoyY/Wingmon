@@ -7,3 +7,4 @@ export {
   default as normalizeThemeColor,
 } from "./themeColor.js";
 export * from "./url.js";
+export * from "./i18n.js";

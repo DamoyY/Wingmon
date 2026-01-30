@@ -3,6 +3,7 @@ import {
   baseUrlInput,
   modelInput,
   apiTypeSelect,
+  languageSelect,
   themeSelect,
   themeColorInput,
 } from "./elements.js";
@@ -17,6 +18,7 @@ const fillSettingsForm = (settings) => {
   baseUrlInput.value = settings.baseUrl || "";
   modelInput.value = settings.model || "";
   selectValue(apiTypeSelect, settings.apiType || "chat");
+  selectValue(languageSelect, settings.language || "en");
   selectValue(themeSelect, normalizeTheme(settings.theme));
   themeColorInput.value = normalizeThemeColor(settings.themeColor);
 };

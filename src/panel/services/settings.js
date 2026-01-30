@@ -5,13 +5,14 @@ import {
 } from "../utils/index.js";
 
 const settingsKeys = {
-  apiKey: "openai_api_key",
-  baseUrl: "openai_base_url",
-  model: "openai_model",
-  apiType: "openai_api_type",
-  theme: "openai_theme",
-  themeColor: "openai_theme_color",
-  followMode: "openai_follow_mode",
+  apiKey: "api_key",
+  baseUrl: "base_url",
+  model: "model",
+  apiType: "api_type",
+  theme: "theme",
+  themeColor: "theme_color",
+  followMode: "follow_mode",
+  language: "language",
 };
 const toSettings = (data) => ({
   apiKey: data?.[settingsKeys.apiKey] || "",
@@ -26,6 +27,7 @@ const toSettings = (data) => ({
     data?.[settingsKeys.followMode] === undefined
       ? true
       : Boolean(data?.[settingsKeys.followMode]),
+  language: data?.[settingsKeys.language] || "en",
 });
 export const getSettings = () =>
   new Promise((resolve) => {
@@ -44,6 +46,7 @@ const setSettings = (settings) =>
         [settingsKeys.theme]: normalizeTheme(settings.theme),
         [settingsKeys.themeColor]: normalizeThemeColor(settings.themeColor),
         [settingsKeys.followMode]: Boolean(settings.followMode),
+        [settingsKeys.language]: settings.language,
       },
       resolve,
     );
@@ -55,6 +58,7 @@ export const updateSettings = async (patch) => {
     ...patch,
     theme: normalizeTheme(patch.theme ?? current.theme),
     themeColor: normalizeThemeColor(patch.themeColor ?? current.themeColor),
+    language: patch.language ?? current.language,
   };
   await setSettings(next);
   return next;

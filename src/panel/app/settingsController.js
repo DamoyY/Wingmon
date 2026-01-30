@@ -5,6 +5,7 @@ import {
   fillSettingsForm,
   keyInput,
   keyStatus,
+  languageSelect,
   saveKey,
   modelInput,
   setText,
@@ -13,7 +14,12 @@ import {
   themeColorInput,
   themeSelect,
 } from "../ui/index.js";
-import { normalizeTheme, normalizeThemeColor } from "../utils/index.js";
+import {
+  normalizeTheme,
+  normalizeThemeColor,
+  setLocale,
+  translateDOM,
+} from "../utils/index.js";
 import { getSettings, updateSettings } from "../services/index.js";
 
 let settingsSnapshot = null;
@@ -108,6 +114,8 @@ export const handleCancelSettings = async () => {
   fillSettingsForm(settings);
   setText(keyStatus, "");
   applyTheme(settings.theme, settings.themeColor);
+  await setLocale(settings.language || "en");
+  translateDOM();
   syncSettingsSnapshot(settings);
   if (settings.apiKey && settings.baseUrl && settings.model) {
     await showChatView({ animate: true });
@@ -148,5 +156,14 @@ export const handleThemeColorChange = async () => {
   const theme = applyTheme(themeSelect.value, themeColor);
   const next = await updateSettings({ theme, themeColor });
   themeColorInput.value = next.themeColor;
+  syncSettingsSnapshot(next);
+};
+
+export const handleLanguageChange = async () => {
+  setText(keyStatus, "");
+  const language = languageSelect.value;
+  await setLocale(language);
+  translateDOM();
+  const next = await updateSettings({ language });
   syncSettingsSnapshot(next);
 };
