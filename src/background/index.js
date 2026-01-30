@@ -8,6 +8,19 @@ const openPanelForTab = async (tab) => {
     await chrome.sidePanel.open({ windowId: tab.windowId });
   }
 };
+const registerContentScriptReadyListener = () => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message?.type !== "contentScriptReady") {
+      return false;
+    }
+    if (!sender?.tab) {
+      sendResponse({ error: "未找到消息来源标签页" });
+      return true;
+    }
+    sendResponse({ ok: true });
+    return true;
+  });
+};
 
 enablePanelBehavior();
 chrome.runtime.onInstalled.addListener(() => {
@@ -16,3 +29,4 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.action.onClicked.addListener(async (tab) => {
   await openPanelForTab(tab);
 });
+registerContentScriptReadyListener();
