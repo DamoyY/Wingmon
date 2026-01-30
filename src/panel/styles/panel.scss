@@ -1,4 +1,6 @@
+@use "sass:meta";
 @use "@material/web/color/color";
+@include meta.load-css("katex/dist/katex.css");
 
 * {
   box-sizing: border-box;
@@ -371,6 +373,7 @@ md-filled-select {
   font-size: var(--md-sys-typescale-body-small-size);
   line-height: var(--md-sys-typescale-body-small-line-height);
   font-weight: var(--md-sys-typescale-body-small-weight);
+  white-space: pre-wrap;
 }
 
 .message code {
@@ -386,6 +389,7 @@ md-filled-select {
 .message pre code {
   background: transparent;
   padding: 0;
+  word-break: break-word;
 }
 
 .message pre code.hljs {

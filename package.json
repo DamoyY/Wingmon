@@ -12,6 +12,7 @@
     "eslint-plugin-prettier": "latest",
     "globals": "latest",
     "highlight.js": "latest",
+    "katex": "latest",
     "md4w": "latest",
     "turndown": "latest",
     "turndown-plugin-gfm": "latest"

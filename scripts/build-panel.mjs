@@ -1,5 +1,5 @@
 import path from "node:path";
-import { copyFile, writeFile } from "node:fs/promises";
+import { copyFile, readdir, mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import * as sass from "sass";
@@ -34,4 +34,14 @@ await build({
 await copyFile(
   path.join(rootDir, "node_modules/md4w/js/md4w-fast.wasm"),
   path.join(rootDir, "public/md4w-fast.wasm"),
+);
+
+const katexFontsDir = path.join(rootDir, "node_modules/katex/dist/fonts");
+const publicFontsDir = path.join(rootDir, "public/fonts");
+await mkdir(publicFontsDir, { recursive: true });
+const katexFonts = await readdir(katexFontsDir);
+await Promise.all(
+  katexFonts.map((file) =>
+    copyFile(path.join(katexFontsDir, file), path.join(publicFontsDir, file)),
+  ),
 );

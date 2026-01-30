@@ -1,5 +1,9 @@
 import { messagesEl, newChatButton, emptyState } from "./elements.js";
-import { renderMarkdown, highlightCodeBlocks } from "../markdown/index.js";
+import {
+  renderMarkdown,
+  highlightCodeBlocks,
+  renderMath,
+} from "../markdown/index.js";
 import { combineMessageContents } from "../utils/index.js";
 
 const FADE_OUT_DURATION = 100;
@@ -122,6 +126,7 @@ const createMessageContent = (content) => {
   body.className = "message-content md-typescale-body-medium";
   body.innerHTML = renderMarkdown(content);
   applyHeadingClasses(body);
+  renderMath(body);
   highlightCodeBlocks(body);
   return body;
 };
@@ -265,6 +270,7 @@ export const updateLastAssistantMessage = (messages) => {
   }
   contentEl.innerHTML = renderMarkdown(lastEntry.content);
   applyHeadingClasses(contentEl);
+  renderMath(contentEl);
   highlightCodeBlocks(contentEl);
   messagesEl.scrollTop = messagesEl.scrollHeight;
   return true;
