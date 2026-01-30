@@ -1,10 +1,10 @@
 import {
-  historyPanel,
   historyList,
-  historyButton,
   showConfirmDialog,
   fadeOutMessages,
   resetMessagesFade,
+  showHistoryView,
+  showChatView,
 } from "../ui/index.js";
 import {
   loadConversationState,
@@ -31,7 +31,7 @@ const handleLoadConversation = async (id) => {
     return;
   }
   if (id === state.conversationId) {
-    historyPanel.classList.add("hidden");
+    await showChatView({ animate: true });
     return;
   }
   const conversation = await loadConversation(id);
@@ -41,7 +41,7 @@ const handleLoadConversation = async (id) => {
     conversation.updatedAt,
   );
   renderMessagesView();
-  historyPanel.classList.add("hidden");
+  await showChatView({ animate: true });
 };
 
 export const renderHistoryList = async () => {
@@ -94,31 +94,13 @@ export const renderHistoryList = async () => {
   });
 };
 
-export const toggleHistoryPanel = async () => {
-  const isHidden = historyPanel.classList.contains("hidden");
-  if (isHidden) {
-    await renderHistoryList();
-  }
-  historyPanel.classList.toggle("hidden");
+export const handleOpenHistory = async () => {
+  await renderHistoryList();
+  await showHistoryView({ animate: true });
 };
 
-const closeHistoryPanel = () => {
-  historyPanel.classList.add("hidden");
-};
-
-export const bindHistoryPanelOutsideClose = () => {
-  document.addEventListener("click", (event) => {
-    if (historyPanel.classList.contains("hidden")) {
-      return;
-    }
-    if (historyPanel.contains(event.target)) {
-      return;
-    }
-    if (historyButton.contains(event.target)) {
-      return;
-    }
-    closeHistoryPanel();
-  });
+export const handleCloseHistory = async () => {
+  await showChatView({ animate: true });
 };
 
 export const handleNewChat = async () => {
@@ -129,5 +111,4 @@ export const handleNewChat = async () => {
   resetConversation();
   renderMessagesView();
   resetMessagesFade();
-  historyPanel.classList.add("hidden");
 };

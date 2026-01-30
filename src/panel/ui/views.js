@@ -1,5 +1,6 @@
 import {
   keyView,
+  historyView,
   chatView,
   keyStatus,
   settingsHint,
@@ -28,6 +29,16 @@ const resetViewStyles = (view) => {
 const setSettingsMode = (isFirstUse) => {
   settingsHint.classList.toggle("hidden", !isFirstUse);
   cancelSettings.classList.toggle("hidden", isFirstUse);
+};
+
+const resolveOutgoingView = () => {
+  if (historyView && !historyView.classList.contains("hidden")) {
+    return historyView;
+  }
+  if (keyView && !keyView.classList.contains("hidden")) {
+    return keyView;
+  }
+  return keyView;
 };
 
 const animateSwap = async ({
@@ -100,7 +111,9 @@ export const showKeyView = ({ isFirstUse = false, animate = false } = {}) => {
   if (!animate) {
     keyView.classList.remove("hidden");
     chatView.classList.add("hidden");
+    historyView.classList.add("hidden");
     resetViewStyles(chatView);
+    resetViewStyles(historyView);
     resetViewStyles(keyView);
   }
   setText(keyStatus, "");
@@ -118,9 +131,10 @@ export const showKeyView = ({ isFirstUse = false, animate = false } = {}) => {
 
 export const showChatView = ({ animate = false } = {}) => {
   if (animate) {
+    const outgoingView = resolveOutgoingView();
     return animateSwap({
       incoming: chatView,
-      outgoing: keyView,
+      outgoing: outgoingView,
       incomingFrom: "-100%",
       outgoingTo: "100%",
       onComplete: () => {
@@ -129,9 +143,29 @@ export const showChatView = ({ animate = false } = {}) => {
     });
   }
   keyView.classList.add("hidden");
+  historyView.classList.add("hidden");
   chatView.classList.remove("hidden");
   resetViewStyles(keyView);
+  resetViewStyles(historyView);
   resetViewStyles(chatView);
   promptEl.focus();
   return Promise.resolve();
+};
+
+export const showHistoryView = ({ animate = false } = {}) => {
+  if (!animate) {
+    historyView.classList.remove("hidden");
+    chatView.classList.add("hidden");
+    keyView.classList.add("hidden");
+    resetViewStyles(chatView);
+    resetViewStyles(keyView);
+    resetViewStyles(historyView);
+    return Promise.resolve();
+  }
+  return animateSwap({
+    incoming: historyView,
+    outgoing: chatView,
+    incomingFrom: "100%",
+    outgoingTo: "-100%",
+  });
 };

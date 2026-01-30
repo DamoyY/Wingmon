@@ -12,6 +12,7 @@ import {
   promptEl,
   newChatButton,
   historyButton,
+  closeHistoryButton,
   themeSelect,
   followModeSwitch,
 } from "../ui/index.js";
@@ -32,9 +33,9 @@ import {
   handlePromptInput,
 } from "./messageSender.js";
 import {
-  bindHistoryPanelOutsideClose,
   handleNewChat,
-  toggleHistoryPanel,
+  handleOpenHistory,
+  handleCloseHistory,
 } from "./historyPanel.js";
 
 const bindEvents = () => {
@@ -51,12 +52,12 @@ const bindEvents = () => {
   promptEl.addEventListener("keydown", handlePromptKeydown);
   promptEl.addEventListener("input", handlePromptInput);
   newChatButton.addEventListener("click", handleNewChat);
-  historyButton.addEventListener("click", toggleHistoryPanel);
+  historyButton.addEventListener("click", handleOpenHistory);
+  closeHistoryButton.addEventListener("click", handleCloseHistory);
   themeSelect.addEventListener("change", handleThemeChange);
   followModeSwitch.addEventListener("change", async () => {
     await updateSettings({ followMode: Boolean(followModeSwitch.selected) });
   });
-  bindHistoryPanelOutsideClose();
   chrome.tabs.onActivated.addListener(() => {
     refreshSendWithPageButton();
   });

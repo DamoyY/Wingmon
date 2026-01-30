@@ -18,12 +18,12 @@
     <div id="app">
       <section id="key-view" class="view">
         <header class="key-header">
+          <md-icon-button id="cancel-settings" title="返回">
+            <md-icon>arrow_back</md-icon>
+          </md-icon-button>
           <h1 class="key-title md-typescale-headline-small">设置</h1>
           <div class="key-actions">
             <md-filled-button id="save-key">保存</md-filled-button>
-            <md-outlined-button id="cancel-settings" type="button"
-              >取消</md-outlined-button
-            >
           </div>
         </header>
         <div class="key-content">
@@ -69,6 +69,18 @@
           <div id="key-status" class="status md-typescale-label-small"></div>
         </div>
       </section>
+      <section id="history-view" class="view hidden">
+        <header class="history-view-header">
+          <md-icon-button id="close-history" title="返回">
+            <md-icon>arrow_back</md-icon>
+          </md-icon-button>
+          <h1 class="history-title md-typescale-headline-small">历史记录</h1>
+          <div class="history-actions"></div>
+        </header>
+        <div class="history-content">
+          <md-list id="history-list"></md-list>
+        </div>
+      </section>
       <section id="chat-view" class="view hidden">
         <div id="top-bar" class="top-bar">
           <header class="header">
@@ -85,10 +97,6 @@
               </md-icon-button>
             </div>
           </header>
-          <div id="history-panel" class="history-panel hidden">
-            <div class="history-header md-typescale-title-small">历史记录</div>
-            <md-list id="history-list"></md-list>
-          </div>
         </div>
         <div id="messages" class="messages"></div>
         <div id="bottom-bar" class="bottom-bar">

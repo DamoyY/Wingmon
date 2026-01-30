@@ -1,6 +1,7 @@
 const byId = (id) => document.getElementById(id);
 export const [
   keyView,
+  historyView,
   chatView,
   topBar,
   bottomBar,
@@ -22,12 +23,13 @@ export const [
   stopButton,
   newChatButton,
   historyButton,
-  historyPanel,
+  closeHistoryButton,
   historyList,
   confirmDialog,
   confirmMessage,
 ] = [
   "key-view",
+  "history-view",
   "chat-view",
   "top-bar",
   "bottom-bar",
@@ -49,7 +51,7 @@ export const [
   "stop",
   "new-chat",
   "history",
-  "history-panel",
+  "close-history",
   "history-list",
   "confirm-dialog",
   "confirm-message",
