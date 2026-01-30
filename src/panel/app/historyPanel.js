@@ -17,6 +17,7 @@ import {
   getHistory,
   loadConversation,
 } from "../services/index.js";
+import { t } from "../utils/index.js";
 
 const formatDateTime = (timestamp) => {
   const date = new Date(timestamp);
@@ -48,8 +49,9 @@ export const renderHistoryList = async () => {
   const history = await getHistory();
   historyList.innerHTML = "";
   if (!history.length) {
-    historyList.innerHTML =
-      '<div class="history-empty md-typescale-body-small">暂无历史记录</div>';
+    historyList.innerHTML = `<div class="history-empty md-typescale-body-small">${t(
+      "historyEmpty",
+    )}</div>`;
     return;
   }
   const sorted = [...history].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -69,13 +71,13 @@ export const renderHistoryList = async () => {
     const deleteBtn = document.createElement("md-icon-button");
     deleteBtn.slot = "end";
     deleteBtn.className = "delete-icon";
-    deleteBtn.title = "删除";
+    deleteBtn.title = t("delete");
     const deleteIcon = document.createElement("md-icon");
     deleteIcon.textContent = "delete";
     deleteBtn.appendChild(deleteIcon);
     deleteBtn.addEventListener("click", async (event) => {
       event.stopPropagation();
-      const confirmed = await showConfirmDialog("确定要删除这条记录吗？");
+      const confirmed = await showConfirmDialog(t("historyDeleteConfirm"));
       if (!confirmed) {
         return;
       }
