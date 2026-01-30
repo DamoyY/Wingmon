@@ -1,0 +1,39 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  margin: 0;
+  padding: 0 16px;
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(48px);
+  -webkit-backdrop-filter: blur(48px);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+}
+
+.top-bar .header {
+  width: 100%;
+}
+
+.title {
+  text-align: center;
+}
+
+#new-chat {
+  align-self: center;
+}
+
+.header-actions {
+  align-self: center;
+  display: flex;
+  gap: 4px;
+}

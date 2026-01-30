@@ -1,0 +1,54 @@
+.history-view-header {
+  display: grid;
+  grid-template-columns: var(--md-icon-button-container-height, 40px) 1fr
+    var(--md-icon-button-container-height, 40px);
+  align-items: center;
+  gap: 8px;
+}
+
+.history-title {
+  margin: 0;
+  text-align: center;
+}
+
+.history-actions {
+  display: flex;
+  justify-content: flex-end;
+  min-height: var(--md-icon-button-container-height, 40px);
+  width: var(--md-icon-button-container-height, 40px);
+}
+
+.history-content {
+  flex: 1;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: 12px;
+  background: var(--md-sys-color-surface-container);
+  overflow-y: auto;
+}
+
+md-list {
+  --md-list-container-color: transparent;
+}
+
+md-list-item {
+  --md-list-item-one-line-container-height: 40px;
+}
+
+md-list-item .delete-icon {
+  opacity: 0;
+  transition: opacity 0.2s;
+  --md-icon-button-hover-icon-color: var(--md-sys-color-error);
+  --md-icon-button-hover-state-layer-color: var(--md-sys-color-error);
+  --md-icon-button-pressed-icon-color: var(--md-sys-color-error);
+  --md-icon-button-pressed-state-layer-color: var(--md-sys-color-error);
+}
+
+md-list-item:hover .delete-icon {
+  opacity: 1;
+}
+
+.history-empty {
+  padding: 10px 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  text-align: center;
+}

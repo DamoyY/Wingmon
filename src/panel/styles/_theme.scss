@@ -1,0 +1,68 @@
+@use "@material/web/color/color";
+
+:root {
+  @include color.light-theme();
+  --md-sys-shape-corner-extra-small: 12px;
+  --md-ref-typeface-brand: "Roboto", system-ui, -apple-system, sans-serif;
+  --md-ref-typeface-plain: "Roboto", system-ui, -apple-system, sans-serif;
+  --theme-transition-duration: 240ms;
+  --hljs-foreground: #24292f;
+  --hljs-comment: #6e7781;
+  --hljs-keyword: #cf222e;
+  --hljs-string: #0a3069;
+  --hljs-number: #0550ae;
+  --hljs-title: #1f6feb;
+  --hljs-built-in: #8250df;
+  --hljs-attr: #116329;
+  --hljs-variable: #953800;
+}
+
+:root[data-theme="dark"] {
+  @include color.dark-theme();
+  --hljs-foreground: #e6edf3;
+  --hljs-comment: #8b949e;
+  --hljs-keyword: #ff7b72;
+  --hljs-string: #a5d6ff;
+  --hljs-number: #79c0ff;
+  --hljs-title: #d2a8ff;
+  --hljs-built-in: #d2a8ff;
+  --hljs-attr: #7ee787;
+  --hljs-variable: #ffa657;
+}
+
+:root.theme-transition {
+  transition: background-color var(--theme-transition-duration) ease,
+    color var(--theme-transition-duration) ease;
+}
+
+:root.theme-transition body,
+:root.theme-transition #app,
+:root.theme-transition .top-bar,
+:root.theme-transition .bottom-bar,
+:root.theme-transition .messages,
+:root.theme-transition .message,
+:root.theme-transition .message pre,
+:root.theme-transition .message code,
+:root.theme-transition .message blockquote,
+:root.theme-transition .history-content,
+:root.theme-transition .status,
+:root.theme-transition .history-empty,
+:root.theme-transition md-filled-text-field,
+:root.theme-transition md-outlined-text-field,
+:root.theme-transition md-filled-select,
+:root.theme-transition md-outlined-select,
+:root.theme-transition md-list,
+:root.theme-transition md-list-item,
+:root.theme-transition md-dialog,
+:root.theme-transition md-filled-button,
+:root.theme-transition md-outlined-button,
+:root.theme-transition md-text-button,
+:root.theme-transition md-icon-button,
+:root.theme-transition md-switch {
+  transition: background-color var(--theme-transition-duration) ease,
+    color var(--theme-transition-duration) ease,
+    border-color var(--theme-transition-duration) ease,
+    box-shadow var(--theme-transition-duration) ease,
+    fill var(--theme-transition-duration) ease,
+    stroke var(--theme-transition-duration) ease;
+}

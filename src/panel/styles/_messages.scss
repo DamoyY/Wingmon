@@ -1,0 +1,239 @@
+.messages {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: calc(var(--chat-top-bar-height) + 16px) 20px
+    calc(var(--chat-bottom-bar-height) + 16px) 16px;
+  z-index: 1;
+}
+
+.empty-state {
+  position: absolute;
+  top: var(--chat-top-bar-height);
+  bottom: var(--chat-bottom-bar-height);
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.32s cubic-bezier(0.2, 0, 0, 1);
+  z-index: 2;
+}
+
+.empty-state.is-visible {
+  opacity: 1;
+}
+
+.empty-state img {
+  width: 128px;
+  height: 128px;
+  opacity: 0.3;
+}
+
+:root:not([data-theme="dark"]) .empty-state img {
+  filter: invert(1);
+}
+
+.message-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 85%;
+}
+
+.message-row.user {
+  align-self: flex-end;
+}
+
+.message-row.assistant {
+  align-self: flex-start;
+}
+
+.message {
+  padding: 10px 12px;
+  border-radius: 12px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.message p {
+  margin: 0 0 8px;
+}
+
+.message p:last-child {
+  margin-bottom: 0;
+}
+
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4,
+.message-content h5,
+.message-content h6 {
+  margin: 0 0 8px;
+  font-weight: var(--md-ref-typeface-weight-bold, 700);
+}
+
+.message pre {
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+  padding: 10px 12px;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  font-weight: var(--md-sys-typescale-body-small-weight);
+  white-space: pre-wrap;
+}
+
+.message code {
+  background: var(--md-sys-color-surface-container-highest);
+  padding: 2px 4px;
+  border-radius: 6px;
+  font-family: var(--md-sys-typescale-body-small-font);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  font-weight: var(--md-sys-typescale-body-small-weight);
+}
+
+.message pre code {
+  background: transparent;
+  padding: 0;
+  word-break: break-word;
+}
+
+.message pre code.hljs {
+  color: var(--hljs-foreground);
+}
+
+.message pre code.hljs .hljs-subst {
+  color: var(--hljs-foreground);
+}
+
+.message pre code.hljs .hljs-comment,
+.message pre code.hljs .hljs-quote {
+  color: var(--hljs-comment);
+}
+
+.message pre code.hljs .hljs-keyword,
+.message pre code.hljs .hljs-selector-tag,
+.message pre code.hljs .hljs-meta,
+.message pre code.hljs .hljs-doctag,
+.message pre code.hljs .hljs-formula {
+  color: var(--hljs-keyword);
+}
+
+.message pre code.hljs .hljs-string,
+.message pre code.hljs .hljs-symbol,
+.message pre code.hljs .hljs-bullet,
+.message pre code.hljs .hljs-addition {
+  color: var(--hljs-string);
+}
+
+.message pre code.hljs .hljs-number,
+.message pre code.hljs .hljs-literal {
+  color: var(--hljs-number);
+}
+
+.message pre code.hljs .hljs-title,
+.message pre code.hljs .hljs-section,
+.message pre code.hljs .hljs-name {
+  color: var(--hljs-title);
+}
+
+.message pre code.hljs .hljs-built_in,
+.message pre code.hljs .hljs-type,
+.message pre code.hljs .hljs-class .hljs-title {
+  color: var(--hljs-built-in);
+}
+
+.message pre code.hljs .hljs-attr,
+.message pre code.hljs .hljs-attribute {
+  color: var(--hljs-attr);
+}
+
+.message pre code.hljs .hljs-variable,
+.message pre code.hljs .hljs-template-variable,
+.message pre code.hljs .hljs-selector-id,
+.message pre code.hljs .hljs-selector-class {
+  color: var(--hljs-variable);
+}
+
+.message pre code.hljs .hljs-emphasis {
+  font-style: italic;
+}
+
+.message pre code.hljs .hljs-strong {
+  font-weight: 700;
+}
+
+.message ul,
+.message ol {
+  margin: 0 0 8px 18px;
+  padding: 0;
+}
+
+.message blockquote {
+  margin: 8px 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.message.user {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+.message.assistant {
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
+.message-actions {
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.message-row:hover .message-actions {
+  opacity: 1;
+}
+
+.message-action {
+  --md-icon-button-state-layer-width: 28px;
+  --md-icon-button-state-layer-height: 28px;
+  --md-icon-button-icon-size: 18px;
+  --md-icon-button-icon-color: var(--md-sys-color-secondary);
+  --md-icon-button-hover-icon-color: var(--md-sys-color-primary);
+  --md-icon-button-hover-state-layer-color: var(--md-sys-color-primary);
+  --md-icon-button-pressed-icon-color: var(--md-sys-color-primary);
+  --md-icon-button-pressed-state-layer-color: var(--md-sys-color-primary);
+}
+
+.message-action.message-delete {
+  --md-icon-button-hover-icon-color: var(--md-sys-color-error);
+  --md-icon-button-hover-state-layer-color: var(--md-sys-color-error);
+  --md-icon-button-pressed-icon-color: var(--md-sys-color-error);
+  --md-icon-button-pressed-state-layer-color: var(--md-sys-color-error);
+}
+
+.message-row.user .message-actions {
+  align-self: flex-end;
+}
+
+.message-row.assistant .message-actions {
+  align-self: flex-start;
+}
+
+.status {
+  color: var(--md-sys-color-on-surface-variant);
+}
