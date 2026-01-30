@@ -1,5 +1,12 @@
 import { parseJson, t } from "../utils/index.js";
 
+export class ToolInputError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ToolInputError";
+  }
+}
+
 export const toolNames = {
   openBrowserPage: "open_page",
   clickButton: "click_button",
@@ -110,26 +117,32 @@ export const getToolDefinitions = (apiType) => {
     buildToolDefinition(tool, useResponsesFormat),
   );
 };
-export const parseToolArguments = (text) => parseJson(text);
+export const parseToolArguments = (text) => {
+  try {
+    return parseJson(text);
+  } catch (error) {
+    throw new ToolInputError(error?.message || "工具参数解析失败");
+  }
+};
 export const getToolCallArguments = (call) =>
   call?.function?.arguments ?? call?.arguments ?? "";
 export const getToolCallId = (call) => {
   const callId = call?.call_id || call?.id;
   if (!callId) {
-    throw new Error("工具调用缺少 call_id");
+    throw new ToolInputError("工具调用缺少 call_id");
   }
   return callId;
 };
 export const getToolCallName = (call) => {
   const name = call?.function?.name || call?.name;
   if (!name) {
-    throw new Error("工具调用缺少 name");
+    throw new ToolInputError("工具调用缺少 name");
   }
   return name;
 };
 const validateTabIdArgs = (args) => {
   if (!args || typeof args !== "object") {
-    throw new Error("工具参数必须是对象");
+    throw new ToolInputError("工具参数必须是对象");
   }
   const raw = args.tabId;
   if (typeof raw === "number" && Number.isInteger(raw) && raw > 0) {
@@ -138,56 +151,56 @@ const validateTabIdArgs = (args) => {
   if (typeof raw === "string" && raw.trim()) {
     const parsed = Number(raw);
     if (!Number.isInteger(parsed) || parsed <= 0) {
-      throw new Error("tabId 必须是正整数");
+      throw new ToolInputError("tabId 必须是正整数");
     }
     return { tabId: parsed };
   }
-  throw new Error("tabId 必须是正整数");
+  throw new ToolInputError("tabId 必须是正整数");
 };
 export const validateGetPageMarkdownArgs = (args) => validateTabIdArgs(args);
 export const validateClosePageArgs = (args) => validateTabIdArgs(args);
 export const validateConsoleArgs = (args) => {
   if (!args || typeof args !== "object") {
-    throw new Error("工具参数必须是对象");
+    throw new ToolInputError("工具参数必须是对象");
   }
   if (typeof args.command !== "string" || !args.command.trim()) {
-    throw new Error("command 必须是非空字符串");
+    throw new ToolInputError("command 必须是非空字符串");
   }
   return { command: args.command.trim() };
 };
 export const validateOpenPageArgs = (args) => {
   if (!args || typeof args !== "object") {
-    throw new Error("工具参数必须是对象");
+    throw new ToolInputError("工具参数必须是对象");
   }
   if (typeof args.url !== "string" || !args.url.trim()) {
-    throw new Error("url 必须是非空字符串");
+    throw new ToolInputError("url 必须是非空字符串");
   }
   if (typeof args.focus !== "boolean") {
-    throw new Error("focus 必须是布尔值");
+    throw new ToolInputError("focus 必须是布尔值");
   }
   let parsedUrl;
   try {
     parsedUrl = new URL(args.url);
   } catch {
-    throw new Error("url 格式不正确");
+    throw new ToolInputError("url 格式不正确");
   }
   if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-    throw new Error("url 仅支持 http 或 https");
+    throw new ToolInputError("url 仅支持 http 或 https");
   }
   return { url: parsedUrl.toString(), focus: args.focus };
 };
 export const validateClickButtonArgs = (args) => {
   if (!args || typeof args !== "object") {
-    throw new Error("工具参数必须是对象");
+    throw new ToolInputError("工具参数必须是对象");
   }
   if (typeof args.id !== "string" || !args.id.trim()) {
-    throw new Error("id 必须是非空字符串");
+    throw new ToolInputError("id 必须是非空字符串");
   }
   return { id: args.id.trim() };
 };
 export const validateListTabsArgs = (args) => {
   if (!args || typeof args !== "object") {
-    throw new Error("工具参数必须是对象");
+    throw new ToolInputError("工具参数必须是对象");
   }
   return {};
 };

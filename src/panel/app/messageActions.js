@@ -1,10 +1,13 @@
-import { reportStatus } from "../ui/index.js";
 import { removeMessage, state, touchUpdatedAt } from "../state/index.js";
 import { deleteConversation, saveConversation } from "../services/index.js";
 import { combineMessageContents, t } from "../utils/index.js";
 
 const setStatus = (text) => {
-  reportStatus(text);
+  if (text) {
+    console.info(text);
+  } else {
+    console.info("");
+  }
 };
 
 const persistConversation = async () => {
@@ -53,17 +56,34 @@ const handleCopyMessage = async (indices) => {
   }
 };
 
-const collectToolIndicesBetween = (indices) => {
-  const minIndex = Math.min(...indices);
-  const maxIndex = Math.max(...indices);
-  const toolIndices = [];
-  for (let i = minIndex; i <= maxIndex; i += 1) {
+const collectHiddenIndicesForward = (startIndex) => {
+  const hiddenIndices = [];
+  for (let i = startIndex + 1; i < state.messages.length; i += 1) {
     const message = state.messages[i];
-    if (message?.role === "tool") {
-      toolIndices.push(i);
+    if (!message) {
+      throw new Error("消息索引无效");
     }
+    if (!message.hidden) {
+      break;
+    }
+    hiddenIndices.push(i);
   }
-  return toolIndices;
+  return hiddenIndices;
+};
+
+const collectHiddenIndicesBackward = (startIndex) => {
+  const hiddenIndices = [];
+  for (let i = startIndex - 1; i >= 0; i -= 1) {
+    const message = state.messages[i];
+    if (!message) {
+      throw new Error("消息索引无效");
+    }
+    if (!message.hidden) {
+      break;
+    }
+    hiddenIndices.push(i);
+  }
+  return hiddenIndices;
 };
 
 const handleDeleteMessage = async (indices, refreshMessages) => {
@@ -71,10 +91,32 @@ const handleDeleteMessage = async (indices, refreshMessages) => {
     throw new Error(t("cannotDeleteDuringResponse"));
   }
   const normalized = normalizeIndices(indices);
-  const toolIndices = collectToolIndicesBetween(normalized);
-  const combined = Array.from(new Set([...normalized, ...toolIndices])).sort(
-    (a, b) => b - a,
-  );
+  const hiddenIndices = new Set();
+  normalized.forEach((index) => {
+    const message = state.messages[index];
+    if (!message) {
+      throw new Error("消息索引无效");
+    }
+    if (message.role === "user") {
+      collectHiddenIndicesForward(index).forEach((hiddenIndex) => {
+        hiddenIndices.add(hiddenIndex);
+      });
+      return;
+    }
+    if (message.role === "assistant") {
+      collectHiddenIndicesBackward(index).forEach((hiddenIndex) => {
+        hiddenIndices.add(hiddenIndex);
+      });
+      if (Array.isArray(message.tool_calls) && message.tool_calls.length) {
+        collectHiddenIndicesForward(index).forEach((hiddenIndex) => {
+          hiddenIndices.add(hiddenIndex);
+        });
+      }
+    }
+  });
+  const combined = Array.from(
+    new Set([...normalized, ...Array.from(hiddenIndices)]),
+  ).sort((a, b) => b - a);
   combined.forEach((index) => removeMessage(index));
   refreshMessages();
   await persistConversation();

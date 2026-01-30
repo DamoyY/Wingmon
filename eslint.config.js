@@ -46,6 +46,7 @@ module.exports = [
         "ignorePackages",
         { js: "always", mjs: "always", cjs: "always" },
       ],
+      "no-console": "off",
     },
   },
   {

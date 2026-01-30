@@ -66,8 +66,16 @@ const isSettingsDirty = () => {
   );
 };
 
+const isSettingsComplete = () => {
+  const current = readFormSettings();
+  return Boolean(current.apiKey && current.baseUrl && current.model);
+};
+
 const updateSaveButtonVisibility = () => {
-  saveKey.classList.toggle("hidden", !isSettingsDirty());
+  saveKey.classList.toggle(
+    "hidden",
+    !isSettingsDirty() || !isSettingsComplete(),
+  );
 };
 
 export const syncSettingsSnapshot = (settings) => {

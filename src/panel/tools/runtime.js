@@ -1,4 +1,3 @@
-import { reportStatus } from "../ui/index.js";
 import { addMessage } from "../state/index.js";
 import { isInternalUrl, t } from "../utils/index.js";
 import {
@@ -7,6 +6,7 @@ import {
   getToolCallArguments,
   getToolCallId,
   getToolCallName,
+  ToolInputError,
   validateOpenPageArgs,
   validateClickButtonArgs,
   validateGetPageMarkdownArgs,
@@ -238,14 +238,14 @@ const toolStrategies = new Map([
 const getToolStrategy = (name) => {
   const strategy = toolStrategies.get(name);
   if (!strategy) {
-    throw new Error(`未支持的工具：${name}`);
+    throw new ToolInputError(`未支持的工具：${name}`);
   }
   return strategy;
 };
 const executeToolCall = async (toolCall) => {
   const normalized = normalizeToolCall(toolCall);
   if (!normalized) {
-    throw new Error("工具调用格式不正确");
+    throw new ToolInputError("工具调用格式不正确");
   }
   const args = parseToolArguments(normalized.arguments || "{}");
   const strategy = getToolStrategy(normalized.name);
@@ -261,11 +261,16 @@ export const handleToolCalls = async (toolCalls) => {
       output = await executeToolCall(call);
     } catch (error) {
       const message = error?.message || t("statusFailed");
-      reportStatus(message);
-      output =
-        name === toolNames.closeBrowserPage
-          ? t("statusFailed")
-          : `${t("statusFailed")}: ${message}`;
+      const isInputError = error instanceof ToolInputError;
+      if (!isInputError) {
+        console.error(`工具执行失败: ${name}`, message);
+        output = "错误";
+      } else {
+        output =
+          name === toolNames.closeBrowserPage
+            ? t("statusFailed")
+            : `${t("statusFailed")}: ${message}`;
+      }
     }
     addMessage({ role: "tool", content: output, tool_call_id: callId, name });
   }, Promise.resolve());

@@ -2,7 +2,6 @@ import {
   fillSettingsForm,
   keyStatus,
   promptEl,
-  reportStatus,
   sendButton,
   sendWithPageButton,
   setText,
@@ -39,6 +38,14 @@ import { setSendWithPagePromptReady } from "./sendWithPageButton.js";
 let activeAbortController = null;
 const BUTTON_VISIBILITY_DURATION = 180;
 const BUTTON_VISIBILITY_EASING = "cubic-bezier(0.2, 0, 0, 1)";
+
+const logStatus = (message) => {
+  if (message) {
+    console.info(message);
+    return;
+  }
+  console.info("");
+};
 
 const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -140,7 +147,7 @@ const prefillSharedPage = async () => {
   if (typeof activeTab.id !== "number") {
     throw new Error("活动标签页缺少 TabID");
   }
-  reportStatus("读取页面中…");
+  logStatus("读取页面中…");
   const callId = createRandomId("local");
   const args = { tabId: activeTab.id };
   const output = await buildPageMarkdownToolOutput(activeTab.id);
@@ -198,7 +205,7 @@ export const stopSending = async () => {
     return;
   }
   activeAbortController.abort();
-  reportStatus("已停止");
+  logStatus("已停止");
   await saveCurrentConversation();
 };
 
@@ -232,7 +239,7 @@ export const sendMessage = async ({ includePage = false } = {}) => {
       await prefillSharedPage();
     }
     ensureNotAborted(abortController.signal);
-    reportStatus("请求中…");
+    logStatus("请求中…");
     const createResponseStream = async function* createResponseStream() {
       const requestNext = async function* requestNext() {
         ensureNotAborted(abortController.signal);
@@ -241,7 +248,7 @@ export const sendMessage = async ({ includePage = false } = {}) => {
           assistantIndex = state.messages.length;
           addMessage({ role: "assistant", content: "" });
           renderMessagesView();
-          reportStatus("回复中…");
+          logStatus("回复中…");
         };
         const systemPrompt = await buildSystemPrompt();
         const tools = getToolDefinitions(settings.apiType);
@@ -265,7 +272,7 @@ export const sendMessage = async ({ includePage = false } = {}) => {
         }
         await handleToolCalls(pendingToolCalls);
         ensureNotAborted(abortController.signal);
-        reportStatus("请求中…");
+        logStatus("请求中…");
         yield* requestNext();
       };
       yield* requestNext();
@@ -288,13 +295,13 @@ export const sendMessage = async ({ includePage = false } = {}) => {
     };
     await runRequestCycle();
     await saveCurrentConversation();
-    reportStatus("");
+    logStatus("");
   } catch (error) {
     if (error?.name === "AbortError" || error?.message === "已停止") {
-      reportStatus("已停止");
+      logStatus("已停止");
       return;
     }
-    reportStatus(`${error.message}`);
+    console.error(error?.message || "请求失败");
   } finally {
     state.sending = false;
     activeAbortController = null;
