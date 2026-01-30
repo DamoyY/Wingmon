@@ -1,0 +1,40 @@
+import TurndownService from "../../../node_modules/turndown/lib/turndown.browser.es.js";
+import { tables } from "../../../node_modules/turndown-plugin-gfm/lib/turndown-plugin-gfm.browser.es.js";
+import { isDataUrl, isSvgUrl } from "./url.js";
+
+const ensureTurndownService = () => {
+  if (typeof TurndownService !== "function") {
+    throw new Error("TurndownService 未加载，无法转换页面内容");
+  }
+};
+
+const buildImageRule = (service) => ({
+  filter: "img",
+  replacement: (_content, node) => {
+    if (!node || node.nodeName !== "IMG") {
+      return "";
+    }
+    const src = node.getAttribute("src") || "";
+    const alt = node.getAttribute("alt") || "";
+    if (!src || isDataUrl(src)) {
+      return service.escape(alt);
+    }
+    if (isSvgUrl(src)) {
+      return `![${service.escape(alt)}]()`;
+    }
+    const title = node.getAttribute("title");
+    const titlePart = title ? ` "${service.escape(title)}"` : "";
+    return `![${service.escape(alt)}](${src}${titlePart})`;
+  },
+});
+
+const createTurndownService = () => {
+  ensureTurndownService();
+  const service = new TurndownService({ codeBlockStyle: "fenced" });
+  service.use(tables);
+  service.remove(["script", "style"]);
+  service.addRule("image", buildImageRule(service));
+  return service;
+};
+
+export default createTurndownService;

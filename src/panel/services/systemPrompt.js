@@ -1,4 +1,4 @@
-import { state } from "../state/index.js";
+import { setStateValue, state } from "../state/index.js";
 import { getActiveTab } from "./tabs.js";
 
 const loadSystemPrompt = async () => {
@@ -11,8 +11,9 @@ const loadSystemPrompt = async () => {
   if (!response.ok) {
     throw new Error(`系统提示加载失败：${response.status}`);
   }
-  state.systemPrompt = (await response.text()) || "";
-  return state.systemPrompt;
+  const content = (await response.text()) || "";
+  setStateValue("systemPrompt", content);
+  return content;
 };
 
 const formatTime = (date) => {

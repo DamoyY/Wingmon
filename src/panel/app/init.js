@@ -12,7 +12,7 @@ import {
 import bindEvents from "./controller.js";
 import { syncSettingsSnapshot } from "./settingsController.js";
 import { refreshSendWithPageButton } from "./sendWithPageButton.js";
-import { updateComposerButtonsState } from "./messageSender.js";
+import { updateComposerButtonsState } from "./composerState.js";
 import { renderMessagesView } from "./messagePresenter.js";
 import { setLocale, translateDOM } from "../utils/index.js";
 

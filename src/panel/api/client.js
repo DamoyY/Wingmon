@@ -5,11 +5,12 @@ const requestModel = async ({
   settings,
   systemPrompt,
   tools,
+  toolAdapter,
   onDelta,
   onStreamStart,
   signal,
 }) => {
-  const strategy = getApiStrategy(settings.apiType);
+  const strategy = getApiStrategy(settings.apiType, toolAdapter);
   const requestBody = strategy.buildRequestBody(settings, systemPrompt, tools);
   const response = await fetch(
     buildEndpoint(settings.baseUrl, settings.apiType),

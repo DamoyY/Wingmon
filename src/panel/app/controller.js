@@ -33,14 +33,10 @@ import {
   sendMessage,
   sendMessageWithPage,
   stopSending,
-  handlePromptKeydown,
-  handlePromptInput,
-} from "./messageSender.js";
-import {
-  handleNewChat,
-  handleOpenHistory,
-  handleCloseHistory,
-} from "./historyPanel.js";
+} from "./messageSendFlow.js";
+import { handlePromptKeydown, handlePromptInput } from "./promptHandlers.js";
+import handleNewChat from "./chatSession.js";
+import { handleOpenHistory, handleCloseHistory } from "./historyPanel.js";
 
 const bindEvents = () => {
   saveKey.addEventListener("click", handleSaveSettings);

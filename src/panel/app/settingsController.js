@@ -1,18 +1,13 @@
 import {
-  apiTypeSelect,
   applyTheme,
-  baseUrlInput,
   fillSettingsForm,
-  keyInput,
   keyStatus,
-  languageSelect,
+  readSettingsFormValues,
   saveKey,
-  modelInput,
   setText,
   showChatView,
   showKeyView,
-  themeColorInput,
-  themeSelect,
+  updateSettingsFormValues,
 } from "../ui/index.js";
 import {
   normalizeTheme,
@@ -31,7 +26,8 @@ const normalizeSettings = (settings) => {
     if (trimmed) {
       try {
         themeColor = normalizeThemeColor(trimmed);
-      } catch {
+      } catch (error) {
+        console.error("主题色归一化失败", error);
         themeColor = trimmed;
       }
     }
@@ -46,15 +42,7 @@ const normalizeSettings = (settings) => {
   };
 };
 
-const readFormSettings = () =>
-  normalizeSettings({
-    apiKey: keyInput.value,
-    baseUrl: baseUrlInput.value,
-    model: modelInput.value,
-    apiType: apiTypeSelect.value,
-    theme: themeSelect.value,
-    themeColor: themeColorInput.value,
-  });
+const readFormSettings = () => normalizeSettings(readSettingsFormValues());
 
 const isSettingsDirty = () => {
   if (!settingsSnapshot) {
@@ -88,17 +76,18 @@ export const handleSettingsFieldChange = () => {
 };
 
 export const handleSaveSettings = async () => {
-  const apiKey = keyInput.value.trim();
-  const baseUrl = baseUrlInput.value.trim();
-  const model = modelInput.value.trim();
-  const apiType = apiTypeSelect.value;
+  const formValues = readSettingsFormValues();
+  const apiKey = formValues.apiKey.trim();
+  const baseUrl = formValues.baseUrl.trim();
+  const model = formValues.model.trim();
+  const { apiType } = formValues;
   let themeColor = null;
   if (!apiKey || !baseUrl || !model) {
     setText(keyStatus, "API Key、Base URL 和模型不能为空");
     return;
   }
   try {
-    themeColor = normalizeThemeColor(themeColorInput.value);
+    themeColor = normalizeThemeColor(formValues.themeColor);
   } catch (error) {
     setText(keyStatus, error.message);
     return;
@@ -108,10 +97,10 @@ export const handleSaveSettings = async () => {
     baseUrl,
     model,
     apiType,
-    theme: normalizeTheme(themeSelect.value),
+    theme: normalizeTheme(formValues.theme),
     themeColor,
   });
-  themeColorInput.value = next.themeColor;
+  updateSettingsFormValues({ themeColor: next.themeColor });
   applyTheme(next.theme, next.themeColor);
   syncSettingsSnapshot(next);
   await showChatView({ animate: true });
@@ -139,37 +128,39 @@ export const handleOpenSettings = async () => {
 
 export const handleThemeChange = async () => {
   setText(keyStatus, "");
+  const formValues = readSettingsFormValues();
   let themeColor = null;
   try {
-    themeColor = normalizeThemeColor(themeColorInput.value);
+    themeColor = normalizeThemeColor(formValues.themeColor);
   } catch (error) {
     setText(keyStatus, error.message);
     return;
   }
-  const theme = applyTheme(themeSelect.value, themeColor);
+  const theme = applyTheme(formValues.theme, themeColor);
   const next = await updateSettings({ theme, themeColor });
-  themeColorInput.value = next.themeColor;
+  updateSettingsFormValues({ themeColor: next.themeColor });
   syncSettingsSnapshot(next);
 };
 
 export const handleThemeColorChange = async () => {
   setText(keyStatus, "");
+  const formValues = readSettingsFormValues();
   let themeColor = null;
   try {
-    themeColor = normalizeThemeColor(themeColorInput.value);
+    themeColor = normalizeThemeColor(formValues.themeColor);
   } catch (error) {
     setText(keyStatus, error.message);
     return;
   }
-  const theme = applyTheme(themeSelect.value, themeColor);
+  const theme = applyTheme(formValues.theme, themeColor);
   const next = await updateSettings({ theme, themeColor });
-  themeColorInput.value = next.themeColor;
+  updateSettingsFormValues({ themeColor: next.themeColor });
   syncSettingsSnapshot(next);
 };
 
 export const handleLanguageChange = async () => {
   setText(keyStatus, "");
-  const language = languageSelect.value;
+  const { language } = readSettingsFormValues();
   await setLocale(language);
   translateDOM();
   const next = await updateSettings({ language });

@@ -1,24 +1,37 @@
 import {
-  addChatToolCallDelta,
-  addResponsesToolCallEvent,
-  buildChatMessages,
-  buildResponsesInput,
-  extractChatToolCalls,
-  extractResponsesToolCalls,
-  finalizeChatToolCalls,
-  finalizeResponsesToolCalls,
-} from "../tools/index.js";
-import {
   streamChatCompletion,
   streamResponses,
   extractResponsesText,
 } from "./sse.js";
 
-const apiStrategies = {
+const requiredToolAdapterKeys = [
+  "addChatToolCallDelta",
+  "addResponsesToolCallEvent",
+  "buildChatMessages",
+  "buildResponsesInput",
+  "extractChatToolCalls",
+  "extractResponsesToolCalls",
+  "finalizeChatToolCalls",
+  "finalizeResponsesToolCalls",
+];
+
+const ensureToolAdapter = (adapter) => {
+  if (!adapter) {
+    throw new Error("缺少工具适配器");
+  }
+  requiredToolAdapterKeys.forEach((key) => {
+    if (typeof adapter[key] !== "function") {
+      throw new Error(`工具适配器缺少方法：${key}`);
+    }
+  });
+  return adapter;
+};
+
+const createApiStrategies = (toolAdapter) => ({
   chat: {
     buildRequestBody: (settings, systemPrompt, tools) => ({
       model: settings.model,
-      messages: buildChatMessages(systemPrompt),
+      messages: toolAdapter.buildChatMessages(systemPrompt),
       stream: true,
       tools,
     }),
@@ -27,18 +40,18 @@ const apiStrategies = {
       await streamChatCompletion(response, {
         onDelta,
         onToolCallDelta: (deltas) => {
-          collector = addChatToolCallDelta(collector, deltas);
+          collector = toolAdapter.addChatToolCallDelta(collector, deltas);
         },
       });
-      return finalizeChatToolCalls(collector);
+      return toolAdapter.finalizeChatToolCalls(collector);
     },
-    extractToolCalls: (data) => extractChatToolCalls(data),
+    extractToolCalls: (data) => toolAdapter.extractChatToolCalls(data),
     extractReply: (data) => data?.choices?.[0]?.message?.content?.trim(),
   },
   responses: {
     buildRequestBody: (settings, systemPrompt, tools) => ({
       model: settings.model,
-      input: buildResponsesInput(),
+      input: toolAdapter.buildResponsesInput(),
       stream: true,
       tools,
       ...(systemPrompt ? { instructions: systemPrompt } : {}),
@@ -48,16 +61,23 @@ const apiStrategies = {
       await streamResponses(response, {
         onDelta,
         onToolCallEvent: (payload, eventType) => {
-          collector = addResponsesToolCallEvent(collector, payload, eventType);
+          collector = toolAdapter.addResponsesToolCallEvent(
+            collector,
+            payload,
+            eventType,
+          );
         },
       });
-      return finalizeResponsesToolCalls(collector);
+      return toolAdapter.finalizeResponsesToolCalls(collector);
     },
-    extractToolCalls: (data) => extractResponsesToolCalls(data),
+    extractToolCalls: (data) => toolAdapter.extractResponsesToolCalls(data),
     extractReply: (data) => extractResponsesText(data),
   },
-};
-const getApiStrategy = (apiType) => {
+});
+
+const getApiStrategy = (apiType, toolAdapter) => {
+  const resolvedAdapter = ensureToolAdapter(toolAdapter);
+  const apiStrategies = createApiStrategies(resolvedAdapter);
   const strategy = apiStrategies[apiType];
   if (!strategy) {
     throw new Error(`不支持的 API 类型: ${apiType}`);
