@@ -1,4 +1,4 @@
-import { messagesEl, newChatButton } from "./elements.js";
+import { messagesEl, newChatButton, emptyState } from "./elements.js";
 import { renderMarkdown } from "../markdown/index.js";
 import { combineMessageContents } from "../utils/index.js";
 
@@ -19,6 +19,18 @@ const ensureNewChatButton = () => {
     throw new Error("新建对话按钮未找到");
   }
   return newChatButton;
+};
+
+const ensureEmptyState = () => {
+  if (!emptyState) {
+    throw new Error("空状态容器未找到");
+  }
+  return emptyState;
+};
+
+const setEmptyStateVisible = (visible) => {
+  const container = ensureEmptyState();
+  container.classList.toggle("is-visible", visible);
 };
 
 const ensureHandler = (handler, label) => {
@@ -206,6 +218,7 @@ export const renderMessages = (messages, handlers) => {
   messagesEl.scrollTop = messagesEl.scrollHeight;
   const button = ensureNewChatButton();
   button.classList.toggle("hidden", !hasVisibleMessages);
+  setEmptyStateVisible(!hasVisibleMessages);
 };
 
 export const updateLastAssistantMessage = (messages) => {

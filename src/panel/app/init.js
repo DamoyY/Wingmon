@@ -13,6 +13,7 @@ import bindEvents from "./controller.js";
 import { syncSettingsSnapshot } from "./settingsController.js";
 import { refreshSendWithPageButton } from "./sendWithPageButton.js";
 import { updateComposerButtonsState } from "./messageSender.js";
+import { renderMessagesView } from "./messagePresenter.js";
 
 const initPanel = async () => {
   const settingsPromise = getSettings();
@@ -29,6 +30,7 @@ const initPanel = async () => {
   } else {
     showKeyView({ isFirstUse: true });
   }
+  renderMessagesView();
   bindEvents();
   updateComposerButtonsState();
   await refreshSendWithPageButton();

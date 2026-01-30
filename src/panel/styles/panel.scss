@@ -85,6 +85,10 @@ body {
   .view {
     transition: none;
   }
+
+  .empty-state {
+    transition: none;
+  }
 }
 
 .header {
@@ -228,6 +232,35 @@ md-filled-select {
   padding: calc(var(--chat-top-bar-height) + 16px) 20px
     calc(var(--chat-bottom-bar-height) + 16px) 16px;
   z-index: 1;
+}
+
+.empty-state {
+  position: absolute;
+  top: var(--chat-top-bar-height);
+  bottom: var(--chat-bottom-bar-height);
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.32s cubic-bezier(0.2, 0, 0, 1);
+  z-index: 2;
+}
+
+.empty-state.is-visible {
+  opacity: 1;
+}
+
+.empty-state img {
+  width: 128px;
+  height: 128px;
+  opacity: 0.3;
+}
+
+:root:not([data-theme="dark"]) .empty-state img {
+  filter: invert(1);
 }
 
 .message-row {
