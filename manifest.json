@@ -60,7 +60,8 @@
         "src/content/dom/index.js",
         "src/content/dom/buttonIds.js",
         "src/content/dom/viewportMarker.js",
-        "node_modules/turndown/lib/turndown.browser.es.js"
+        "node_modules/turndown/lib/turndown.browser.es.js",
+        "node_modules/turndown-plugin-gfm/lib/turndown-plugin-gfm.browser.es.js"
       ],
       "matches": [
         "<all_urls>"

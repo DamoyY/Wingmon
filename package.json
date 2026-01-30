@@ -11,8 +11,10 @@
     "@material/web": "latest",
     "eslint-plugin-prettier": "latest",
     "globals": "latest",
+    "highlight.js": "latest",
     "md4w": "latest",
-    "turndown": "latest"
+    "turndown": "latest",
+    "turndown-plugin-gfm": "latest"
   },
   "devDependencies": {
     "esbuild": "latest",

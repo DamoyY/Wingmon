@@ -1,4 +1,5 @@
 import TurndownService from "../../../node_modules/turndown/lib/turndown.browser.es.js";
+import { tables } from "../../../node_modules/turndown-plugin-gfm/lib/turndown-plugin-gfm.browser.es.js";
 
 if (typeof TurndownService !== "function") {
   throw new Error("TurndownService 未加载，无法转换页面内容");
@@ -21,6 +22,7 @@ const isDataUrl = (url) => normalizeUrl(url).startsWith("data:");
 const isSvgUrl = (url) => /\.svg([?#]|$)/i.test(normalizeUrl(url));
 
 const turndown = new TurndownService({ codeBlockStyle: "fenced" });
+turndown.use(tables);
 turndown.remove(["script", "style"]);
 turndown.addRule("image", {
   filter: "img",

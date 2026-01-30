@@ -37,6 +37,66 @@ import {
 import { setSendWithPagePromptReady } from "./sendWithPageButton.js";
 
 let activeAbortController = null;
+const BUTTON_VISIBILITY_DURATION = 180;
+const BUTTON_VISIBILITY_EASING = "cubic-bezier(0.2, 0, 0, 1)";
+
+const prefersReducedMotion = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const animateButtonVisibility = (button, shouldShow) => {
+  const target = button;
+  const targetState = shouldShow ? "show" : "hide";
+  const isHidden = target.classList.contains("hidden");
+  target.dataset.visibilityTarget = targetState;
+  if (prefersReducedMotion()) {
+    target.classList.toggle("hidden", !shouldShow);
+    target.style.opacity = "";
+    target.style.pointerEvents = "";
+    delete target.dataset.visibilityTarget;
+    return;
+  }
+  target.getAnimations().forEach((animation) => animation.cancel());
+  if (shouldShow && !isHidden) {
+    target.style.opacity = "";
+    target.style.pointerEvents = "";
+    delete target.dataset.visibilityTarget;
+    return;
+  }
+  if (!shouldShow && isHidden) {
+    target.style.opacity = "";
+    target.style.pointerEvents = "";
+    delete target.dataset.visibilityTarget;
+    return;
+  }
+  if (shouldShow) {
+    target.classList.remove("hidden");
+    target.style.pointerEvents = "";
+  } else {
+    target.style.pointerEvents = "none";
+  }
+  const animation = target.animate(
+    [{ opacity: shouldShow ? 0 : 1 }, { opacity: shouldShow ? 1 : 0 }],
+    {
+      duration: BUTTON_VISIBILITY_DURATION,
+      easing: BUTTON_VISIBILITY_EASING,
+      fill: "both",
+    },
+  );
+  animation.finished
+    .catch(() => null)
+    .then(() => {
+      if (target.dataset.visibilityTarget !== targetState) {
+        return;
+      }
+      target.style.opacity = "";
+      target.style.pointerEvents = "";
+      if (!shouldShow) {
+        target.classList.add("hidden");
+      }
+      delete target.dataset.visibilityTarget;
+      animation.cancel();
+    });
+};
 
 const hasPromptContent = (value) => {
   if (typeof value !== "string") {
@@ -56,9 +116,9 @@ export const handlePromptInput = () => {
 };
 
 const setComposerSending = (sending) => {
-  sendButton.classList.toggle("hidden", sending);
-  sendWithPageButton.classList.toggle("hidden", sending);
-  stopButton.classList.toggle("hidden", !sending);
+  animateButtonVisibility(sendButton, !sending);
+  animateButtonVisibility(sendWithPageButton, !sending);
+  animateButtonVisibility(stopButton, sending);
 };
 
 const ensureNotAborted = (signal) => {
