@@ -28,7 +28,7 @@ body {
   margin: 0;
   background: linear-gradient(
     to bottom,
-    var(--md-sys-color-surface-container),
+    var(--md-sys-color-surface-bright),
     var(--md-sys-color-surface-dim)
   );
   color: var(--md-sys-color-on-surface);
@@ -300,48 +300,7 @@ md-filled-select {
 .message-content h5,
 .message-content h6 {
   margin: 0 0 8px;
-}
-
-.message-content h1 {
-  font-family: var(--md-sys-typescale-headline-large-font);
-  font-size: var(--md-sys-typescale-headline-large-size);
-  line-height: var(--md-sys-typescale-headline-large-line-height);
-  font-weight: var(--md-sys-typescale-headline-large-weight);
-}
-
-.message-content h2 {
-  font-family: var(--md-sys-typescale-headline-medium-font);
-  font-size: var(--md-sys-typescale-headline-medium-size);
-  line-height: var(--md-sys-typescale-headline-medium-line-height);
-  font-weight: var(--md-sys-typescale-headline-medium-weight);
-}
-
-.message-content h3 {
-  font-family: var(--md-sys-typescale-headline-small-font);
-  font-size: var(--md-sys-typescale-headline-small-size);
-  line-height: var(--md-sys-typescale-headline-small-line-height);
-  font-weight: var(--md-sys-typescale-headline-small-weight);
-}
-
-.message-content h4 {
-  font-family: var(--md-sys-typescale-title-large-font);
-  font-size: var(--md-sys-typescale-title-large-size);
-  line-height: var(--md-sys-typescale-title-large-line-height);
-  font-weight: var(--md-sys-typescale-title-large-weight);
-}
-
-.message-content h5 {
-  font-family: var(--md-sys-typescale-title-medium-font);
-  font-size: var(--md-sys-typescale-title-medium-size);
-  line-height: var(--md-sys-typescale-title-medium-line-height);
-  font-weight: var(--md-sys-typescale-title-medium-weight);
-}
-
-.message-content h6 {
-  font-family: var(--md-sys-typescale-title-small-font);
-  font-size: var(--md-sys-typescale-title-small-size);
-  line-height: var(--md-sys-typescale-title-small-line-height);
-  font-weight: var(--md-sys-typescale-title-small-weight);
+  font-weight: var(--md-ref-typeface-weight-bold, 700);
 }
 
 .message pre {

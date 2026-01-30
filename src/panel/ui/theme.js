@@ -1,4 +1,23 @@
-import { normalizeTheme } from "../utils/index.js";
+import {
+  applyTheme as applyMaterialTheme,
+  argbFromHex,
+  themeFromSourceColor,
+} from "@material/material-color-utilities";
+import {
+  DEFAULT_THEME_COLOR,
+  normalizeTheme,
+  normalizeThemeColor,
+} from "../utils/index.js";
+
+let currentThemeColor = DEFAULT_THEME_COLOR;
+const applyMaterialTokens = (dark) => {
+  const seedColor = argbFromHex(currentThemeColor);
+  const materialTheme = themeFromSourceColor(seedColor);
+  applyMaterialTheme(materialTheme, {
+    target: document.documentElement,
+    dark,
+  });
+};
 
 let autoThemeMedia = null;
 let autoThemeListener = null;
@@ -24,10 +43,12 @@ const startAutoThemeSync = () => {
   }
   const media = window.matchMedia("(prefers-color-scheme: dark)");
   const applySystemTheme = () => {
+    const isDark = media.matches;
     document.documentElement.setAttribute(
       "data-theme",
-      media.matches ? "dark" : "light",
+      isDark ? "dark" : "light",
     );
+    applyMaterialTokens(isDark);
   };
   applySystemTheme();
   if (typeof media.addEventListener === "function") {
@@ -40,14 +61,16 @@ const startAutoThemeSync = () => {
   autoThemeMedia = media;
   autoThemeListener = applySystemTheme;
 };
-const applyTheme = (theme) => {
+const applyTheme = (theme, themeColor = currentThemeColor) => {
   const normalized = normalizeTheme(theme);
+  currentThemeColor = normalizeThemeColor(themeColor);
   stopAutoThemeSync();
   if (normalized === "auto") {
     startAutoThemeSync();
     return normalized;
   }
   document.documentElement.setAttribute("data-theme", normalized);
+  applyMaterialTokens(normalized === "dark");
   return normalized;
 };
 export default applyTheme;

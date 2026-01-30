@@ -6,6 +6,32 @@ const FADE_OUT_DURATION = 100;
 const FADE_OUT_EASING = "cubic-bezier(0.2, 0, 0, 1)";
 let fadePromise = null;
 let activeAnimation = null;
+const headingClassMap = new Map([
+  ["H1", "md-typescale-headline-medium"],
+  ["H2", "md-typescale-headline-small"],
+  ["H3", "md-typescale-title-large"],
+  ["H4", "md-typescale-title-medium"],
+  ["H5", "md-typescale-title-small"],
+  ["H6", "md-typescale-body-medium"],
+]);
+
+const ensureElement = (element, label) => {
+  if (!(element instanceof Element)) {
+    throw new Error(`${label}无效`);
+  }
+  return element;
+};
+
+const applyHeadingClasses = (container) => {
+  const target = ensureElement(container, "消息内容容器");
+  target.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((heading) => {
+    const className = headingClassMap.get(heading.tagName);
+    if (!className) {
+      throw new Error(`未找到标题样式映射：${heading.tagName}`);
+    }
+    heading.classList.add(className);
+  });
+};
 
 const ensureMessagesElement = () => {
   if (!messagesEl) {
@@ -95,6 +121,7 @@ const createMessageContent = (content) => {
   const body = document.createElement("div");
   body.className = "message-content md-typescale-body-medium";
   body.innerHTML = renderMarkdown(content);
+  applyHeadingClasses(body);
   return body;
 };
 
@@ -236,6 +263,7 @@ export const updateLastAssistantMessage = (messages) => {
     return false;
   }
   contentEl.innerHTML = renderMarkdown(lastEntry.content);
+  applyHeadingClasses(contentEl);
   messagesEl.scrollTop = messagesEl.scrollHeight;
   return true;
 };

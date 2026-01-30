@@ -1,4 +1,8 @@
-import { normalizeTheme } from "../utils/index.js";
+import {
+  DEFAULT_THEME_COLOR,
+  normalizeTheme,
+  normalizeThemeColor,
+} from "../utils/index.js";
 
 const settingsKeys = {
   apiKey: "openai_api_key",
@@ -6,6 +10,7 @@ const settingsKeys = {
   model: "openai_model",
   apiType: "openai_api_type",
   theme: "openai_theme",
+  themeColor: "openai_theme_color",
   followMode: "openai_follow_mode",
 };
 const toSettings = (data) => ({
@@ -14,6 +19,9 @@ const toSettings = (data) => ({
   model: data?.[settingsKeys.model] || "",
   apiType: data?.[settingsKeys.apiType] || "chat",
   theme: normalizeTheme(data?.[settingsKeys.theme] || "auto"),
+  themeColor: normalizeThemeColor(
+    data?.[settingsKeys.themeColor] ?? DEFAULT_THEME_COLOR,
+  ),
   followMode:
     data?.[settingsKeys.followMode] === undefined
       ? true
@@ -34,6 +42,7 @@ const setSettings = (settings) =>
         [settingsKeys.model]: settings.model,
         [settingsKeys.apiType]: settings.apiType,
         [settingsKeys.theme]: normalizeTheme(settings.theme),
+        [settingsKeys.themeColor]: normalizeThemeColor(settings.themeColor),
         [settingsKeys.followMode]: Boolean(settings.followMode),
       },
       resolve,
@@ -45,6 +54,7 @@ export const updateSettings = async (patch) => {
     ...current,
     ...patch,
     theme: normalizeTheme(patch.theme ?? current.theme),
+    themeColor: normalizeThemeColor(patch.themeColor ?? current.themeColor),
   };
   await setSettings(next);
   return next;

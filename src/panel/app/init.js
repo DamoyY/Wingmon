@@ -21,7 +21,7 @@ const initPanel = async () => {
   applyTypography();
   const settings = await settingsPromise;
   fillSettingsForm(settings);
-  applyTheme(settings.theme);
+  applyTheme(settings.theme, settings.themeColor);
   followModeSwitch.selected = Boolean(settings.followMode);
   syncSettingsSnapshot(settings);
   setupChatLayout();

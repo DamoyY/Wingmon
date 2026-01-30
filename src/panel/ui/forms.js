@@ -4,8 +4,9 @@ import {
   modelInput,
   apiTypeSelect,
   themeSelect,
+  themeColorInput,
 } from "./elements.js";
-import { normalizeTheme } from "../utils/index.js";
+import { normalizeTheme, normalizeThemeColor } from "../utils/index.js";
 
 const selectValue = (selectEl, value) => {
   selectEl.select(value);
@@ -17,5 +18,6 @@ const fillSettingsForm = (settings) => {
   modelInput.value = settings.model || "";
   selectValue(apiTypeSelect, settings.apiType || "chat");
   selectValue(themeSelect, normalizeTheme(settings.theme));
+  themeColorInput.value = normalizeThemeColor(settings.themeColor);
 };
 export default fillSettingsForm;

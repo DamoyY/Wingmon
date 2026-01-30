@@ -14,6 +14,7 @@ import {
   historyButton,
   closeHistoryButton,
   themeSelect,
+  themeColorInput,
   followModeSwitch,
 } from "../ui/index.js";
 import { refreshSendWithPageButton } from "./sendWithPageButton.js";
@@ -24,6 +25,7 @@ import {
   handleOpenSettings,
   handleSettingsFieldChange,
   handleThemeChange,
+  handleThemeColorChange,
 } from "./settingsController.js";
 import {
   sendMessage,
@@ -55,6 +57,7 @@ const bindEvents = () => {
   historyButton.addEventListener("click", handleOpenHistory);
   closeHistoryButton.addEventListener("click", handleCloseHistory);
   themeSelect.addEventListener("change", handleThemeChange);
+  themeColorInput.addEventListener("change", handleThemeColorChange);
   followModeSwitch.addEventListener("change", async () => {
     await updateSettings({ followMode: Boolean(followModeSwitch.selected) });
   });

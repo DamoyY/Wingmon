@@ -7,6 +7,7 @@
   "type": "commonjs",
   "dependencies": {
     "@eslint/eslintrc": "latest",
+    "@material/material-color-utilities": "latest",
     "@material/web": "latest",
     "eslint-plugin-prettier": "latest",
     "globals": "latest",
