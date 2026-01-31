@@ -1,23 +1,4 @@
-import {
-  saveKey,
-  cancelSettings,
-  openSettings,
-  sendButton,
-  sendWithPageButton,
-  stopButton,
-  keyInput,
-  baseUrlInput,
-  modelInput,
-  apiTypeSelect,
-  promptEl,
-  newChatButton,
-  historyButton,
-  closeHistoryButton,
-  themeSelect,
-  themeColorInput,
-  followModeSwitch,
-  languageSelect,
-} from "../ui/index.js";
+import { elements } from "../ui/index.js";
 import { refreshSendWithPageButton } from "./sendWithPageButton.js";
 import { updateSettings } from "../services/index.js";
 import {
@@ -39,6 +20,26 @@ import handleNewChat from "./chatSession.js";
 import { handleOpenHistory, handleCloseHistory } from "./historyPanel.js";
 
 const bindEvents = () => {
+  const {
+    saveKey,
+    cancelSettings,
+    openSettings,
+    sendButton,
+    sendWithPageButton,
+    stopButton,
+    keyInput,
+    baseUrlInput,
+    modelInput,
+    apiTypeSelect,
+    promptEl,
+    newChatButton,
+    historyButton,
+    closeHistoryButton,
+    themeSelect,
+    themeColorInput,
+    followModeSwitch,
+    languageSelect,
+  } = elements;
   saveKey.addEventListener("click", handleSaveSettings);
   cancelSettings.addEventListener("click", handleCancelSettings);
   openSettings.addEventListener("click", handleOpenSettings);

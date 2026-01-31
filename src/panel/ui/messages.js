@@ -1,4 +1,4 @@
-import { messagesEl, newChatButton, emptyState } from "./elements.js";
+import { elements } from "./elements.js";
 import {
   renderMarkdown,
   highlightCodeBlocks,
@@ -38,24 +38,24 @@ const applyHeadingClasses = (container) => {
 };
 
 const ensureMessagesElement = () => {
-  if (!messagesEl) {
+  if (!elements.messagesEl) {
     throw new Error("消息容器未找到");
   }
-  return messagesEl;
+  return elements.messagesEl;
 };
 
 const ensureNewChatButton = () => {
-  if (!newChatButton) {
+  if (!elements.newChatButton) {
     throw new Error("新建对话按钮未找到");
   }
-  return newChatButton;
+  return elements.newChatButton;
 };
 
 const ensureEmptyState = () => {
-  if (!emptyState) {
+  if (!elements.emptyState) {
     throw new Error("空状态容器未找到");
   }
-  return emptyState;
+  return elements.emptyState;
 };
 
 const setEmptyStateVisible = (visible) => {
@@ -234,6 +234,10 @@ export const renderMessages = (messages, handlers) => {
   if (!handlers || typeof handlers !== "object") {
     throw new Error("消息操作处理器缺失");
   }
+  const { messagesEl } = elements;
+  if (!messagesEl) {
+    throw new Error("消息容器未找到");
+  }
   let hasVisibleMessages = false;
   const displayMessages = buildDisplayMessages(messages);
   messagesEl.innerHTML = "";
@@ -255,6 +259,10 @@ export const renderMessages = (messages, handlers) => {
 };
 
 export const updateLastAssistantMessage = (messages) => {
+  const { messagesEl } = elements;
+  if (!messagesEl) {
+    throw new Error("消息容器未找到");
+  }
   const displayMessages = buildDisplayMessages(messages);
   const lastEntry = displayMessages[displayMessages.length - 1];
   if (!lastEntry || lastEntry.role !== "assistant") {

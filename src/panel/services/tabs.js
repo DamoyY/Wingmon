@@ -1,8 +1,35 @@
 const readyTabs = new Set();
 const failedTabs = new Set();
+const failedTabErrors = new Map();
 const pendingWaits = new Map();
 const readyMessageType = "contentScriptReady";
 let listenersReady = false;
+const contentScriptNotReadyMessage = "页面已完成加载但内容脚本未就绪";
+const waitForReadyFailedMessage =
+  "等待页面内容脚本就绪失败：页面已完成加载但未收到就绪信号";
+
+const resolveFailedTabError = (tabId) =>
+  failedTabErrors.get(tabId) || new Error(contentScriptNotReadyMessage);
+
+const reportContentScriptFailure = (tabId) => {
+  if (failedTabs.has(tabId)) {
+    return resolveFailedTabError(tabId);
+  }
+  const error = new Error(contentScriptNotReadyMessage);
+  failedTabs.add(tabId);
+  failedTabErrors.set(tabId, error);
+  console.error(error.message);
+  const waiters = pendingWaits.get(tabId);
+  if (!waiters) {
+    return error;
+  }
+  waiters.forEach((waiter) => {
+    clearTimeout(waiter.timeoutId);
+    waiter.reject(new Error(waitForReadyFailedMessage));
+  });
+  pendingWaits.delete(tabId);
+  return error;
+};
 const registerContentScriptListeners = () => {
   if (listenersReady) {
     return;
@@ -34,6 +61,7 @@ const registerContentScriptListeners = () => {
     if (changeInfo.status === "loading") {
       readyTabs.delete(tabId);
       failedTabs.delete(tabId);
+      failedTabErrors.delete(tabId);
       return;
     }
     if (changeInfo.status !== "complete") {
@@ -42,19 +70,11 @@ const registerContentScriptListeners = () => {
     if (readyTabs.has(tabId) || failedTabs.has(tabId)) {
       return;
     }
-    failedTabs.add(tabId);
-    const waiters = pendingWaits.get(tabId);
-    if (!waiters) {
-      return;
-    }
-    waiters.forEach((waiter) => {
-      clearTimeout(waiter.timeoutId);
-      waiter.reject(
-        new Error("等待页面内容脚本就绪失败：页面已完成加载但未收到就绪信号"),
-      );
-    });
-    pendingWaits.delete(tabId);
+    reportContentScriptFailure(tabId);
   });
+};
+export const initTabListeners = () => {
+  registerContentScriptListeners();
 };
 export const getActiveTab = () =>
   new Promise((resolve, reject) => {
@@ -183,7 +203,7 @@ export const waitForContentScript = async (tabId, timeoutMs = 10000) => {
     return;
   }
   if (failedTabs.has(tabId)) {
-    throw new Error("页面已完成加载但内容脚本未就绪");
+    throw resolveFailedTabError(tabId);
   }
   const tab = await new Promise((resolve, reject) => {
     chrome.tabs.get(tabId, (currentTab) => {
@@ -201,8 +221,8 @@ export const waitForContentScript = async (tabId, timeoutMs = 10000) => {
     });
   });
   if (tab.status === "complete") {
-    failedTabs.add(tabId);
-    throw new Error("页面已完成加载但内容脚本未就绪");
+    const error = reportContentScriptFailure(tabId);
+    throw error;
   }
   const waitForReady = () =>
     new Promise((resolve, reject) => {

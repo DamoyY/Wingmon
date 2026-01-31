@@ -1,7 +1,11 @@
-import { confirmDialog, confirmMessage } from "./elements.js";
+import { elements } from "./elements.js";
 
 const showConfirmDialog = (message) =>
   new Promise((resolve) => {
+    const { confirmDialog, confirmMessage } = elements;
+    if (!confirmDialog || !confirmMessage) {
+      throw new Error("确认弹窗元素未初始化");
+    }
     confirmMessage.textContent = message;
     confirmDialog.show();
     const handleClose = () => {

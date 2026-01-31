@@ -1,6 +1,6 @@
 import {
+  elements,
   fillSettingsForm,
-  keyStatus,
   setText,
   showKeyView,
 } from "../ui/index.js";
@@ -53,7 +53,10 @@ const ensureSettingsReady = (settings) => {
   if (!settings.apiKey || !settings.baseUrl || !settings.model) {
     showKeyView({ isFirstUse: true });
     fillSettingsForm(settings);
-    setText(keyStatus, "请先补全 API Key、Base URL 和模型");
+    if (!elements.keyStatus) {
+      throw new Error("状态提示元素未初始化");
+    }
+    setText(elements.keyStatus, "请先补全 API Key、Base URL 和模型");
     return false;
   }
   return true;

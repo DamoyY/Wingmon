@@ -1,9 +1,8 @@
 import {
   applyTheme,
+  elements,
   fillSettingsForm,
-  keyStatus,
   readSettingsFormValues,
-  saveKey,
   setText,
   showChatView,
   showKeyView,
@@ -60,7 +59,10 @@ const isSettingsComplete = () => {
 };
 
 const updateSaveButtonVisibility = () => {
-  saveKey.classList.toggle(
+  if (!elements.saveKey) {
+    throw new Error("保存按钮未找到");
+  }
+  elements.saveKey.classList.toggle(
     "hidden",
     !isSettingsDirty() || !isSettingsComplete(),
   );
@@ -83,13 +85,19 @@ export const handleSaveSettings = async () => {
   const { apiType } = formValues;
   let themeColor = null;
   if (!apiKey || !baseUrl || !model) {
-    setText(keyStatus, "API Key、Base URL 和模型不能为空");
+    if (!elements.keyStatus) {
+      throw new Error("状态提示元素未初始化");
+    }
+    setText(elements.keyStatus, "API Key、Base URL 和模型不能为空");
     return;
   }
   try {
     themeColor = normalizeThemeColor(formValues.themeColor);
   } catch (error) {
-    setText(keyStatus, error.message);
+    if (!elements.keyStatus) {
+      throw new Error("状态提示元素未初始化");
+    }
+    setText(elements.keyStatus, error.message);
     return;
   }
   const next = await updateSettings({
@@ -109,7 +117,10 @@ export const handleSaveSettings = async () => {
 export const handleCancelSettings = async () => {
   const settings = await getSettings();
   fillSettingsForm(settings);
-  setText(keyStatus, "");
+  if (!elements.keyStatus) {
+    throw new Error("状态提示元素未初始化");
+  }
+  setText(elements.keyStatus, "");
   applyTheme(settings.theme, settings.themeColor);
   await setLocale(settings.language || "en");
   translateDOM();
@@ -127,13 +138,16 @@ export const handleOpenSettings = async () => {
 };
 
 export const handleThemeChange = async () => {
-  setText(keyStatus, "");
+  if (!elements.keyStatus) {
+    throw new Error("状态提示元素未初始化");
+  }
+  setText(elements.keyStatus, "");
   const formValues = readSettingsFormValues();
   let themeColor = null;
   try {
     themeColor = normalizeThemeColor(formValues.themeColor);
   } catch (error) {
-    setText(keyStatus, error.message);
+    setText(elements.keyStatus, error.message);
     return;
   }
   const theme = applyTheme(formValues.theme, themeColor);
@@ -143,13 +157,16 @@ export const handleThemeChange = async () => {
 };
 
 export const handleThemeColorChange = async () => {
-  setText(keyStatus, "");
+  if (!elements.keyStatus) {
+    throw new Error("状态提示元素未初始化");
+  }
+  setText(elements.keyStatus, "");
   const formValues = readSettingsFormValues();
   let themeColor = null;
   try {
     themeColor = normalizeThemeColor(formValues.themeColor);
   } catch (error) {
-    setText(keyStatus, error.message);
+    setText(elements.keyStatus, error.message);
     return;
   }
   const theme = applyTheme(formValues.theme, themeColor);
@@ -159,7 +176,10 @@ export const handleThemeColorChange = async () => {
 };
 
 export const handleLanguageChange = async () => {
-  setText(keyStatus, "");
+  if (!elements.keyStatus) {
+    throw new Error("状态提示元素未初始化");
+  }
+  setText(elements.keyStatus, "");
   const { language } = readSettingsFormValues();
   await setLocale(language);
   translateDOM();

@@ -1,4 +1,4 @@
-import { historyList } from "../ui/index.js";
+import { elements } from "../ui/index.js";
 
 const formatDateTime = (timestamp) => {
   const date = new Date(timestamp);
@@ -82,6 +82,10 @@ const renderHistoryListView = ({
   emptyText,
   deleteLabel,
 }) => {
+  const { historyList } = elements;
+  if (!historyList) {
+    throw new Error("历史记录列表未找到");
+  }
   historyList.innerHTML = "";
   if (!history.length) {
     historyList.appendChild(createEmptyState(emptyText));

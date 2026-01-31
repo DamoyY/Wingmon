@@ -1,12 +1,4 @@
-import {
-  keyInput,
-  baseUrlInput,
-  modelInput,
-  apiTypeSelect,
-  languageSelect,
-  themeSelect,
-  themeColorInput,
-} from "./elements.js";
+import { elements } from "./elements.js";
 import { normalizeTheme, normalizeThemeColor } from "../utils/index.js";
 
 const selectValue = (selectEl, value) => {
@@ -18,6 +10,13 @@ const ensureString = (value, label) => {
     throw new Error(`${label}必须是字符串`);
   }
   return value;
+};
+
+const ensureElement = (element, label) => {
+  if (!element) {
+    throw new Error(`${label}未找到`);
+  }
+  return element;
 };
 
 const readInputValue = (input, label) => {
@@ -35,19 +34,29 @@ const readSelectValue = (select, label) => {
 };
 
 export const readSettingsFormValues = () => ({
-  apiKey: readInputValue(keyInput, "API Key"),
-  baseUrl: readInputValue(baseUrlInput, "Base URL"),
-  model: readInputValue(modelInput, "模型"),
-  apiType: readSelectValue(apiTypeSelect, "API 类型"),
-  language: readSelectValue(languageSelect, "语言"),
-  theme: readSelectValue(themeSelect, "主题"),
-  themeColor: readInputValue(themeColorInput, "主题色"),
+  apiKey: readInputValue(elements.keyInput, "API Key"),
+  baseUrl: readInputValue(elements.baseUrlInput, "Base URL"),
+  model: readInputValue(elements.modelInput, "模型"),
+  apiType: readSelectValue(elements.apiTypeSelect, "API 类型"),
+  language: readSelectValue(elements.languageSelect, "语言"),
+  theme: readSelectValue(elements.themeSelect, "主题"),
+  themeColor: readInputValue(elements.themeColorInput, "主题色"),
 });
 
 export const updateSettingsFormValues = (values) => {
   if (!values || typeof values !== "object") {
     throw new Error("设置表单更新必须提供对象");
   }
+  const keyInput = ensureElement(elements.keyInput, "API Key 输入框");
+  const baseUrlInput = ensureElement(elements.baseUrlInput, "Base URL 输入框");
+  const modelInput = ensureElement(elements.modelInput, "模型输入框");
+  const apiTypeSelect = ensureElement(elements.apiTypeSelect, "API 类型选择框");
+  const languageSelect = ensureElement(elements.languageSelect, "语言选择框");
+  const themeSelect = ensureElement(elements.themeSelect, "主题选择框");
+  const themeColorInput = ensureElement(
+    elements.themeColorInput,
+    "主题色输入框",
+  );
   if (Object.prototype.hasOwnProperty.call(values, "apiKey")) {
     keyInput.value = ensureString(values.apiKey, "API Key");
   }
@@ -72,6 +81,16 @@ export const updateSettingsFormValues = (values) => {
 };
 
 const fillSettingsForm = (settings) => {
+  const keyInput = ensureElement(elements.keyInput, "API Key 输入框");
+  const baseUrlInput = ensureElement(elements.baseUrlInput, "Base URL 输入框");
+  const modelInput = ensureElement(elements.modelInput, "模型输入框");
+  const apiTypeSelect = ensureElement(elements.apiTypeSelect, "API 类型选择框");
+  const languageSelect = ensureElement(elements.languageSelect, "语言选择框");
+  const themeSelect = ensureElement(elements.themeSelect, "主题选择框");
+  const themeColorInput = ensureElement(
+    elements.themeColorInput,
+    "主题色输入框",
+  );
   keyInput.value = settings.apiKey || "";
   baseUrlInput.value = settings.baseUrl || "";
   modelInput.value = settings.model || "";

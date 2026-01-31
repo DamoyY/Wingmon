@@ -1,12 +1,4 @@
-import {
-  keyView,
-  historyView,
-  chatView,
-  keyStatus,
-  settingsHint,
-  cancelSettings,
-  promptEl,
-} from "./elements.js";
+import { elements } from "./elements.js";
 import setText from "./text.js";
 
 const ANIMATION_DURATION = 320;
@@ -27,11 +19,16 @@ const resetViewStyles = (view) => {
 };
 
 const setSettingsMode = (isFirstUse) => {
+  const { settingsHint, cancelSettings } = elements;
+  if (!settingsHint || !cancelSettings) {
+    throw new Error("设置视图元素未初始化");
+  }
   settingsHint.classList.toggle("hidden", !isFirstUse);
   cancelSettings.classList.toggle("hidden", isFirstUse);
 };
 
 const resolveOutgoingView = () => {
+  const { historyView, keyView } = elements;
   if (historyView && !historyView.classList.contains("hidden")) {
     return historyView;
   }
@@ -108,6 +105,10 @@ const animateSwap = async ({
 };
 
 export const showKeyView = ({ isFirstUse = false, animate = false } = {}) => {
+  const { keyView, chatView, historyView, keyStatus } = elements;
+  if (!keyView || !chatView || !historyView || !keyStatus) {
+    throw new Error("视图元素未初始化");
+  }
   if (!animate) {
     keyView.classList.remove("hidden");
     chatView.classList.add("hidden");
@@ -130,6 +131,10 @@ export const showKeyView = ({ isFirstUse = false, animate = false } = {}) => {
 };
 
 export const showChatView = ({ animate = false } = {}) => {
+  const { keyView, historyView, chatView, promptEl } = elements;
+  if (!keyView || !historyView || !chatView || !promptEl) {
+    throw new Error("视图元素未初始化");
+  }
   if (animate) {
     const outgoingView = resolveOutgoingView();
     return animateSwap({
@@ -153,6 +158,10 @@ export const showChatView = ({ animate = false } = {}) => {
 };
 
 export const showHistoryView = ({ animate = false } = {}) => {
+  const { keyView, historyView, chatView } = elements;
+  if (!keyView || !historyView || !chatView) {
+    throw new Error("视图元素未初始化");
+  }
   if (!animate) {
     historyView.classList.remove("hidden");
     chatView.classList.add("hidden");

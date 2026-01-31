@@ -1,4 +1,4 @@
-import { chatView, topBar, bottomBar } from "./elements.js";
+import { elements } from "./elements.js";
 
 const ensureElement = (element, name) => {
   if (!element) {
@@ -8,9 +8,9 @@ const ensureElement = (element, name) => {
 };
 
 const updateChatBarSizes = () => {
-  const topBarEl = ensureElement(topBar, "Top bar");
-  const bottomBarEl = ensureElement(bottomBar, "Bottom bar");
-  const chatViewEl = ensureElement(chatView, "Chat view");
+  const topBarEl = ensureElement(elements.topBar, "Top bar");
+  const bottomBarEl = ensureElement(elements.bottomBar, "Bottom bar");
+  const chatViewEl = ensureElement(elements.chatView, "Chat view");
   const topHeight = topBarEl.offsetHeight;
   const bottomHeight = bottomBarEl.offsetHeight;
   if (!Number.isFinite(topHeight) || topHeight <= 0) {
@@ -24,9 +24,9 @@ const updateChatBarSizes = () => {
 };
 
 const setupChatLayout = () => {
-  ensureElement(chatView, "Chat view");
-  ensureElement(topBar, "Top bar");
-  ensureElement(bottomBar, "Bottom bar");
+  ensureElement(elements.chatView, "Chat view");
+  const topBar = ensureElement(elements.topBar, "Top bar");
+  const bottomBar = ensureElement(elements.bottomBar, "Bottom bar");
   updateChatBarSizes();
   const observer = new ResizeObserver(updateChatBarSizes);
   observer.observe(topBar);

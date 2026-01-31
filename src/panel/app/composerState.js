@@ -1,9 +1,4 @@
-import {
-  promptEl,
-  sendButton,
-  sendWithPageButton,
-  stopButton,
-} from "../ui/index.js";
+import { elements } from "../ui/index.js";
 import { setSendWithPagePromptReady } from "./sendWithPageButton.js";
 
 const BUTTON_VISIBILITY_DURATION = 180;
@@ -19,8 +14,18 @@ const ensurePromptValue = (value) => {
   return value;
 };
 
-const hasPromptContent = () =>
-  Boolean(ensurePromptValue(promptEl.value).trim());
+const ensurePromptElement = () => {
+  const { promptEl } = elements;
+  if (!promptEl) {
+    throw new Error("输入框未找到");
+  }
+  return promptEl;
+};
+
+const hasPromptContent = () => {
+  const promptEl = ensurePromptElement();
+  return Boolean(ensurePromptValue(promptEl.value).trim());
+};
 
 const finalizeVisibility = (element, shouldShow) => {
   const target = element;
@@ -82,13 +87,21 @@ const animateButtonVisibility = (button, shouldShow) => {
   animation.addEventListener("cancel", finalize, { once: true });
 };
 
-export const getPromptContent = () => ensurePromptValue(promptEl.value).trim();
+export const getPromptContent = () => {
+  const promptEl = ensurePromptElement();
+  return ensurePromptValue(promptEl.value).trim();
+};
 
 export const clearPromptContent = () => {
+  const promptEl = ensurePromptElement();
   promptEl.value = "";
 };
 
 export const updateComposerButtonsState = () => {
+  const { sendButton } = elements;
+  if (!sendButton) {
+    throw new Error("发送按钮未找到");
+  }
   const hasContent = hasPromptContent();
   sendButton.disabled = !hasContent;
   setSendWithPagePromptReady(hasContent);
@@ -97,6 +110,10 @@ export const updateComposerButtonsState = () => {
 export const setComposerSending = (sending) => {
   if (typeof sending !== "boolean") {
     throw new Error("发送状态必须为布尔值");
+  }
+  const { sendButton, sendWithPageButton, stopButton } = elements;
+  if (!sendButton || !sendWithPageButton || !stopButton) {
+    throw new Error("发送按钮未找到");
   }
   animateButtonVisibility(sendButton, !sending);
   animateButtonVisibility(sendWithPageButton, !sending);

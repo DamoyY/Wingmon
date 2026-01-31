@@ -1,4 +1,4 @@
-import { sendWithPageButton } from "../ui/index.js";
+import { elements } from "../ui/index.js";
 import { getActiveTab } from "../services/index.js";
 import { isInternalUrl } from "../utils/index.js";
 
@@ -8,7 +8,16 @@ let pageAvailable = false;
 let pageDisabledReason = DEFAULT_PAGE_DISABLED_REASON;
 let promptHasContent = false;
 
+const ensureSendWithPageButton = () => {
+  const { sendWithPageButton } = elements;
+  if (!sendWithPageButton) {
+    throw new Error("携页面发送按钮未找到");
+  }
+  return sendWithPageButton;
+};
+
 const applySendWithPageState = () => {
+  const sendWithPageButton = ensureSendWithPageButton();
   if (pageAvailable && promptHasContent) {
     sendWithPageButton.disabled = false;
     sendWithPageButton.title = "";
