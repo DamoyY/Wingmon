@@ -17,6 +17,9 @@
     "statusOpenSuccess": {
         "message": "**Open Success**"
     },
+    "statusClickSuccess": {
+        "message": "**Click Success**"
+    },
     "statusReadFailedInternal": {
         "message": "**Read Failed:**\nThis page is an internal browser page and cannot be read."
     },

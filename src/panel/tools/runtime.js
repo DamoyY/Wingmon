@@ -148,7 +148,21 @@ const executeClickButton = async (args) => {
         id,
       });
       if (result?.ok) {
-        return { ...state, done: true, result: t("statusSuccess") };
+        const { title, url, content } = await fetchPageMarkdownData(tab.id);
+        return {
+          ...state,
+          done: true,
+          result: formatPageReadResult({
+            headerLines: [
+              t("statusClickSuccess"),
+              `${t("statusTitle")}："${title}"；`,
+            ],
+            contentLabel: `${t("statusContent")}：`,
+            content,
+            internalUrl: url || tab.url || "",
+          }),
+          tabId: tab.id,
+        };
       }
       if (result?.ok === false && result.reason === "not_found") {
         return { ...state, notFoundCount: state.notFoundCount + 1 };
@@ -163,7 +177,7 @@ const executeClickButton = async (args) => {
     }
   }, Promise.resolve(initialState));
   if (finalState.done) {
-    return finalState.result;
+    return { content: finalState.result, pageReadTabId: finalState.tabId };
   }
   if (finalState.errors.length) {
     if (finalState.notFoundCount) {
@@ -251,14 +265,36 @@ const executeToolCall = async (toolCall) => {
   const strategy = getToolStrategy(normalized.name);
   return strategy(args);
 };
+const resolveToolOutput = (output, name) => {
+  if (typeof output === "string") {
+    return { content: output };
+  }
+  if (!output || typeof output !== "object") {
+    throw new Error(`工具输出无效：${name}`);
+  }
+  if (typeof output.content !== "string") {
+    throw new Error(`工具输出内容无效：${name}`);
+  }
+  const result = { content: output.content };
+  if (output.pageReadTabId !== undefined) {
+    if (!Number.isInteger(output.pageReadTabId) || output.pageReadTabId <= 0) {
+      throw new Error(`工具输出 TabID 无效：${name}`);
+    }
+    result.pageReadTabId = output.pageReadTabId;
+  }
+  return result;
+};
 export const handleToolCalls = async (toolCalls) => {
   await toolCalls.reduce(async (promise, call) => {
     await promise;
     const callId = getToolCallId(call);
     const name = getToolCallName(call);
     let output = "成功";
+    let pageReadTabId;
     try {
-      output = await executeToolCall(call);
+      const resolved = resolveToolOutput(await executeToolCall(call), name);
+      output = resolved.content;
+      pageReadTabId = resolved.pageReadTabId;
     } catch (error) {
       const message = error?.message || t("statusFailed");
       const isInputError = error instanceof ToolInputError;
@@ -272,6 +308,12 @@ export const handleToolCalls = async (toolCalls) => {
             : `${t("statusFailed")}: ${message}`;
       }
     }
-    addMessage({ role: "tool", content: output, tool_call_id: callId, name });
+    addMessage({
+      role: "tool",
+      content: output,
+      tool_call_id: callId,
+      name,
+      pageReadTabId,
+    });
   }, Promise.resolve());
 };

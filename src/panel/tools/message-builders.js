@@ -1,4 +1,5 @@
 import { state } from "../state/index.js";
+import { t } from "../utils/index.js";
 import {
   toolNames,
   parseToolArguments,
@@ -25,32 +26,54 @@ const extractGetPageTabIdFromCall = (call) => {
   const { tabId } = validateGetPageMarkdownArgs(args);
   return tabId;
 };
-const extractOpenPageTabIdFromOutput = (content) => {
+const extractPageReadTabIdFromOutput = (content, successLabel, toolName) => {
   if (typeof content !== "string") {
-    throw new Error("open_page 工具响应必须是字符串");
+    throw new Error(`${toolName} 工具响应必须是字符串`);
   }
   const trimmed = content.trim();
   if (!trimmed) {
-    throw new Error("open_page 工具响应不能为空");
+    throw new Error(`${toolName} 工具响应不能为空`);
   }
-  if (!trimmed.startsWith("**成功**")) {
+  if (!trimmed.startsWith(successLabel)) {
     return null;
   }
-  if (trimmed === "**成功**") {
+  if (trimmed === successLabel) {
     return null;
   }
   const match = trimmed.match(/TabID:\s*["'“”]?(\d+)["'“”]?/);
   if (!match) {
-    throw new Error("open_page 成功响应缺少 TabID");
+    throw new Error(`${toolName} 成功响应缺少 TabID`);
   }
   const tabId = Number(match[1]);
   if (!Number.isInteger(tabId) || tabId <= 0) {
-    throw new Error("open_page 响应 TabID 无效");
+    throw new Error(`${toolName} 响应 TabID 无效`);
+  }
+  return tabId;
+};
+const extractOpenPageTabIdFromOutput = (content) =>
+  extractPageReadTabIdFromOutput(
+    content,
+    t("statusOpenSuccess"),
+    toolNames.openBrowserPage,
+  );
+const extractClickButtonTabIdFromMessage = (message) => {
+  const storedTabId = message?.pageReadTabId;
+  if (Number.isInteger(storedTabId) && storedTabId > 0) {
+    return storedTabId;
+  }
+  const tabId = extractPageReadTabIdFromOutput(
+    message?.content,
+    t("statusClickSuccess"),
+    toolNames.clickButton,
+  );
+  if (!tabId) {
+    return null;
   }
   return tabId;
 };
 const isGetPageSuccessOutput = (content) =>
-  typeof content === "string" && content.trim().startsWith("**标题：**");
+  typeof content === "string" &&
+  content.trim().startsWith(t("statusTitleLabel"));
 const collectPageReadDedupeSets = (messages) => {
   const callInfoById = new Map();
   messages.forEach((msg) => {
@@ -115,6 +138,19 @@ const collectPageReadDedupeSets = (messages) => {
         callId,
         index,
       });
+      return;
+    }
+    if (name === toolNames.clickButton) {
+      const tabId = extractClickButtonTabIdFromMessage(msg);
+      if (!tabId) {
+        return;
+      }
+      readEvents.push({
+        tabId,
+        type: name,
+        callId,
+        index,
+      });
     }
   });
   const latestByTabId = new Map();
@@ -135,14 +171,19 @@ const collectPageReadDedupeSets = (messages) => {
       removeToolCallIds.add(event.callId);
       return;
     }
-    if (event.type === toolNames.openBrowserPage) {
+    if (
+      event.type === toolNames.openBrowserPage ||
+      event.type === toolNames.clickButton
+    ) {
       trimOpenPageResponseIds.add(event.callId);
     }
   });
   return { removeToolCallIds, trimOpenPageResponseIds };
 };
 const getToolOutputContent = (msg, trimOpenPageResponseIds) =>
-  trimOpenPageResponseIds.has(msg.tool_call_id) ? "**成功**" : msg.content;
+  trimOpenPageResponseIds.has(msg.tool_call_id)
+    ? `**${t("statusSuccess")}**`
+    : msg.content;
 const collectToolCallEntries = (toolCalls, removeToolCallIds) => {
   if (!Array.isArray(toolCalls)) {
     return [];

@@ -17,6 +17,9 @@
     "statusOpenSuccess": {
         "message": "**打开成功**"
     },
+    "statusClickSuccess": {
+        "message": "**点击成功**"
+    },
     "statusReadFailedInternal": {
         "message": "**读取失败：**\n该页面为浏览器内部页面，无法读取。"
     },
