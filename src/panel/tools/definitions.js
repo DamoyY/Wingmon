@@ -1,91 +1,49 @@
-import { parseJson, t } from "../utils/index.js";
+import { parseJson } from "../utils/index.js";
+import toolModules from "./modules/index.js";
+import ToolInputError from "./errors.js";
 
-export class ToolInputError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = "ToolInputError";
-  }
-}
-
-export const toolNames = {
-  openBrowserPage: "open_page",
-  clickButton: "click_button",
-  getPageMarkdown: "get_page",
-  closeBrowserPage: "close_page",
-  runConsoleCommand: "run_console",
-  listTabs: "list_tabs",
-};
 const TOOL_STRICT = true;
-const openPageToolSchema = {
-  type: "object",
-  properties: {
-    url: { type: "string" },
-    focus: { type: "boolean", description: t("toolParamFocus") },
-  },
-  required: ["url", "focus"],
-  additionalProperties: false,
-};
-const clickButtonToolSchema = {
-  type: "object",
-  properties: { id: { type: "string", description: t("toolParamId") } },
-  required: ["id"],
-  additionalProperties: false,
-};
-const pageMarkdownToolSchema = {
-  type: "object",
-  properties: { tabId: { type: "number" } },
-  required: ["tabId"],
-  additionalProperties: false,
-};
-const closePageToolSchema = {
-  type: "object",
-  properties: { tabId: { type: "number" } },
-  required: ["tabId"],
-  additionalProperties: false,
-};
-const consoleToolSchema = {
-  type: "object",
-  properties: { command: { type: "string" } },
-  required: ["command"],
-  additionalProperties: false,
-};
-const listTabsToolSchema = {
-  type: "object",
-  properties: {},
-  additionalProperties: false,
-};
-const toolDescriptors = [
-  {
-    name: toolNames.openBrowserPage,
-    description: t("toolOpenPage"),
-    parameters: openPageToolSchema,
-  },
-  {
-    name: toolNames.clickButton,
-    description: t("toolClickButton"),
-    parameters: clickButtonToolSchema,
-  },
-  {
-    name: toolNames.getPageMarkdown,
-    description: t("toolGetPage"),
-    parameters: pageMarkdownToolSchema,
-  },
-  {
-    name: toolNames.closeBrowserPage,
-    description: t("toolClosePage"),
-    parameters: closePageToolSchema,
-  },
-  {
-    name: toolNames.runConsoleCommand,
-    description: t("toolRunConsole"),
-    parameters: consoleToolSchema,
-  },
-  {
-    name: toolNames.listTabs,
-    description: t("toolListTabs"),
-    parameters: listTabsToolSchema,
-  },
-];
+const validatedTools = [];
+const toolModuleByName = new Map();
+const toolNames = {};
+toolModules.forEach((tool) => {
+  if (!tool || typeof tool !== "object") {
+    throw new Error("工具模块无效");
+  }
+  if (typeof tool.name !== "string" || !tool.name.trim()) {
+    throw new Error("工具缺少 name");
+  }
+  const name = tool.name.trim();
+  if (toolModuleByName.has(name)) {
+    throw new Error(`重复的工具 name：${name}`);
+  }
+  if (typeof tool.description !== "string" || !tool.description.trim()) {
+    throw new Error(`工具 ${name} 缺少 description`);
+  }
+  if (!tool.parameters || typeof tool.parameters !== "object") {
+    throw new Error(`工具 ${name} 缺少 parameters`);
+  }
+  if (typeof tool.execute !== "function") {
+    throw new Error(`工具 ${name} 缺少 execute`);
+  }
+  if (typeof tool.validateArgs !== "function") {
+    throw new Error(`工具 ${name} 缺少 validateArgs`);
+  }
+  if (tool.key !== undefined) {
+    if (typeof tool.key !== "string" || !tool.key.trim()) {
+      throw new Error(`工具 ${name} key 无效`);
+    }
+    if (toolNames[tool.key]) {
+      throw new Error(`重复的工具 key：${tool.key}`);
+    }
+    toolNames[tool.key] = name;
+  }
+  const normalized = { ...tool, name };
+  toolModuleByName.set(name, normalized);
+  validatedTools.push(normalized);
+});
+
+export { toolNames };
 
 const buildToolDefinition = (tool, useResponsesFormat) => {
   const { description } = tool;
@@ -113,7 +71,7 @@ const buildToolDefinition = (tool, useResponsesFormat) => {
 };
 export const getToolDefinitions = (apiType) => {
   const useResponsesFormat = apiType === "responses";
-  return toolDescriptors.map((tool) =>
+  return validatedTools.map((tool) =>
     buildToolDefinition(tool, useResponsesFormat),
   );
 };
@@ -140,67 +98,18 @@ export const getToolCallName = (call) => {
   }
   return name;
 };
-const validateTabIdArgs = (args) => {
-  if (!args || typeof args !== "object") {
-    throw new ToolInputError("工具参数必须是对象");
+export const getToolModule = (name) => {
+  const tool = toolModuleByName.get(name);
+  if (!tool) {
+    throw new ToolInputError(`未支持的工具：${name}`);
   }
-  const raw = args.tabId;
-  if (typeof raw === "number" && Number.isInteger(raw) && raw > 0) {
-    return { tabId: raw };
-  }
-  if (typeof raw === "string" && raw.trim()) {
-    const parsed = Number(raw);
-    if (!Number.isInteger(parsed) || parsed <= 0) {
-      throw new ToolInputError("tabId 必须是正整数");
-    }
-    return { tabId: parsed };
-  }
-  throw new ToolInputError("tabId 必须是正整数");
+  return tool;
 };
-export const validateGetPageMarkdownArgs = (args) => validateTabIdArgs(args);
-export const validateClosePageArgs = (args) => validateTabIdArgs(args);
-export const validateConsoleArgs = (args) => {
-  if (!args || typeof args !== "object") {
-    throw new ToolInputError("工具参数必须是对象");
+
+export const getToolValidator = (name) => {
+  const tool = getToolModule(name);
+  if (typeof tool.validateArgs !== "function") {
+    throw new ToolInputError(`工具 ${name} 缺少参数校验`);
   }
-  if (typeof args.command !== "string" || !args.command.trim()) {
-    throw new ToolInputError("command 必须是非空字符串");
-  }
-  return { command: args.command.trim() };
-};
-export const validateOpenPageArgs = (args) => {
-  if (!args || typeof args !== "object") {
-    throw new ToolInputError("工具参数必须是对象");
-  }
-  if (typeof args.url !== "string" || !args.url.trim()) {
-    throw new ToolInputError("url 必须是非空字符串");
-  }
-  if (typeof args.focus !== "boolean") {
-    throw new ToolInputError("focus 必须是布尔值");
-  }
-  let parsedUrl;
-  try {
-    parsedUrl = new URL(args.url);
-  } catch {
-    throw new ToolInputError("url 格式不正确");
-  }
-  if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-    throw new ToolInputError("url 仅支持 http 或 https");
-  }
-  return { url: parsedUrl.toString(), focus: args.focus };
-};
-export const validateClickButtonArgs = (args) => {
-  if (!args || typeof args !== "object") {
-    throw new ToolInputError("工具参数必须是对象");
-  }
-  if (typeof args.id !== "string" || !args.id.trim()) {
-    throw new ToolInputError("id 必须是非空字符串");
-  }
-  return { id: args.id.trim() };
-};
-export const validateListTabsArgs = (args) => {
-  if (!args || typeof args !== "object") {
-    throw new ToolInputError("工具参数必须是对象");
-  }
-  return {};
+  return tool.validateArgs;
 };

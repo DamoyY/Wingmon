@@ -1,0 +1,24 @@
+import { t } from "../../utils/index.js";
+import { closeTab } from "../../services/index.js";
+import { validateTabIdArgs } from "./shared.js";
+
+const parameters = {
+  type: "object",
+  properties: { tabId: { type: "number" } },
+  required: ["tabId"],
+  additionalProperties: false,
+};
+
+const execute = async ({ tabId }) => {
+  await closeTab(tabId);
+  return t("statusSuccess");
+};
+
+export default {
+  key: "closeBrowserPage",
+  name: "close_page",
+  description: t("toolClosePage"),
+  parameters,
+  validateArgs: validateTabIdArgs,
+  execute,
+};

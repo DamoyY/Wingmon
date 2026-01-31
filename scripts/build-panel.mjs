@@ -8,6 +8,22 @@ const rootDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
+const toolsDir = path.join(rootDir, "src/panel/tools/modules");
+const toolsIndexPath = path.join(toolsDir, "index.js");
+const toolFiles = (await readdir(toolsDir))
+  .filter(
+    (file) =>
+      file.endsWith(".js") && file !== "index.js" && file !== "shared.js",
+  )
+  .sort();
+const toolImports = toolFiles.map(
+  (file, index) => `import tool${index} from "./${file}";`,
+);
+const toolList = toolFiles.map((_, index) => `tool${index}`);
+const toolsIndexContent = `${toolImports.join("\n")}\n\nconst toolModules = [\n  ${toolList.join(
+  ",\n  ",
+)}\n];\n\nexport default toolModules;\n`;
+await writeFile(toolsIndexPath, toolsIndexContent);
 
 const sassResult = sass.compile(
   path.join(rootDir, "src/panel/styles/panel.scss"),

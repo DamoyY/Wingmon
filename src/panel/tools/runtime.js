@@ -1,38 +1,16 @@
-import { isInternalUrl } from "../utils/index.js";
 import {
   toolNames,
   parseToolArguments,
   getToolCallArguments,
   getToolCallId,
   getToolCallName,
-  ToolInputError,
-  validateOpenPageArgs,
-  validateClickButtonArgs,
-  validateGetPageMarkdownArgs,
-  validateClosePageArgs,
-  validateConsoleArgs,
-  validateListTabsArgs,
+  getToolModule,
 } from "./definitions.js";
 import {
-  buildOpenPageAlreadyExistsOutput,
-  buildOpenPageReadOutput,
-  buildClickButtonOutput,
-  buildPageMarkdownOutput,
-  buildListTabsOutput,
   buildToolErrorOutput,
   defaultToolSuccessOutput,
-  buildClosePageOutput,
 } from "./toolOutput.js";
-import {
-  closeTab,
-  createTab,
-  getAllTabs,
-  getSettings,
-  focusTab,
-  sendMessageToSandbox,
-  sendMessageToTab,
-  waitForContentScript,
-} from "../services/index.js";
+import ToolInputError from "./errors.js";
 
 const normalizeToolCall = (toolCall) => {
   if (!toolCall) {
@@ -61,202 +39,18 @@ const normalizeToolCall = (toolCall) => {
   }
   return null;
 };
-const fetchPageMarkdownData = async (tabId) => {
-  await waitForContentScript(tabId);
-  const pageData = await sendMessageToTab(tabId, { type: "getPageContent" });
-  if (!pageData || typeof pageData.content !== "string") {
-    throw new Error("页面内容为空");
-  }
-  return {
-    title: pageData.title || "",
-    url: pageData.url || "",
-    content: pageData.content,
-  };
+const executeTool = async (name, args) => {
+  const tool = getToolModule(name);
+  return tool.execute(tool.validateArgs(args));
 };
-const shouldFollowMode = async () => {
-  const settings = await getSettings();
-  return Boolean(settings.followMode);
-};
-const executeOpenBrowserPage = async (args) => {
-  const { url, focus } = validateOpenPageArgs(args);
-  const followMode = await shouldFollowMode();
-  const shouldFocus = followMode || focus;
-  const tabs = await getAllTabs();
-  const normalizedTabs = tabs.map((tab) => {
-    if (typeof tab.url !== "string" || !tab.url.trim()) {
-      throw new Error("标签页缺少 URL");
-    }
-    return { ...tab, normalizedUrl: new URL(tab.url).toString() };
-  });
-  const matchedTab = normalizedTabs.find((tab) => tab.normalizedUrl === url);
-  if (matchedTab) {
-    if (typeof matchedTab.id !== "number") {
-      throw new Error("标签页缺少 TabID");
-    }
-    if (shouldFocus) {
-      await focusTab(matchedTab.id);
-    }
-    return buildOpenPageAlreadyExistsOutput(matchedTab.id);
-  }
-  const tab = await createTab(url, shouldFocus);
-  if (shouldFocus) {
-    await focusTab(tab.id);
-  }
-  const initialInternal = isInternalUrl(url);
-  if (initialInternal) {
-    const title = tab.title || "";
-    return buildOpenPageReadOutput({
-      title,
-      tabId: tab.id,
-      isInternal: true,
-    });
-  }
-  const { title, url: pageUrl, content } = await fetchPageMarkdownData(tab.id);
-  return buildOpenPageReadOutput({
-    title,
-    tabId: tab.id,
-    content,
-    isInternal: isInternalUrl(pageUrl || url),
-  });
-};
-const executeClickButton = async (args) => {
-  const { id } = validateClickButtonArgs(args);
-  const tabs = await getAllTabs();
-  if (!tabs.length) {
-    throw new Error("未找到可用标签页");
-  }
-  const initialState = {
-    errors: [],
-    notFoundCount: 0,
-    done: false,
-    result: "",
-  };
-  const finalState = await tabs.reduce(async (promise, tab) => {
-    const state = await promise;
-    if (state.done) {
-      return state;
-    }
-    if (typeof tab.id !== "number") {
-      return { ...state, errors: [...state.errors, "标签页缺少 TabID"] };
-    }
-    try {
-      await waitForContentScript(tab.id, 3000);
-      const result = await sendMessageToTab(tab.id, {
-        type: "clickButton",
-        id,
-      });
-      if (result?.ok) {
-        const { title, url, content } = await fetchPageMarkdownData(tab.id);
-        const internalUrl = url || tab.url || "";
-        return {
-          ...state,
-          done: true,
-          result: buildClickButtonOutput({
-            title,
-            content,
-            isInternal: isInternalUrl(internalUrl),
-          }),
-          tabId: tab.id,
-        };
-      }
-      if (result?.ok === false && result.reason === "not_found") {
-        return { ...state, notFoundCount: state.notFoundCount + 1 };
-      }
-      throw new Error("按钮点击返回结果异常");
-    } catch (error) {
-      const message = error?.message || "点击失败";
-      return {
-        ...state,
-        errors: [...state.errors, `TabID ${tab.id}: ${message}`],
-      };
-    }
-  }, Promise.resolve(initialState));
-  if (finalState.done) {
-    return { content: finalState.result, pageReadTabId: finalState.tabId };
-  }
-  if (finalState.errors.length) {
-    if (finalState.notFoundCount) {
-      throw new Error(
-        `未在任何标签页找到 id 为 ${id} 的按钮，且部分标签页发生错误：${finalState.errors.join("；")}`,
-      );
-    }
-    throw new Error(`所有标签页点击失败：${finalState.errors.join("；")}`);
-  }
-  throw new Error(`未找到 id 为 ${id} 的按钮`);
-};
-const executeGetPageMarkdown = async (args) => {
-  const { tabId } = validateGetPageMarkdownArgs(args);
-  const tabs = await getAllTabs();
-  const targetTab = tabs.find((tab) => tab.id === tabId);
-  if (!targetTab) {
-    throw new Error(`未找到 TabID 为 ${tabId} 的标签页`);
-  }
-  if (typeof targetTab.url !== "string" || !targetTab.url.trim()) {
-    throw new Error("标签页缺少 URL");
-  }
-  if (await shouldFollowMode()) {
-    await focusTab(tabId);
-  }
-  const internalUrl = isInternalUrl(targetTab.url);
-  if (internalUrl) {
-    const title = targetTab.title || "";
-    return buildPageMarkdownOutput({
-      title,
-      url: targetTab.url,
-      isInternal: true,
-    });
-  }
-  const { title, url, content } = await fetchPageMarkdownData(tabId);
-  return buildPageMarkdownOutput({
-    title,
-    url,
-    content,
-    isInternal: false,
-  });
-};
-const executeCloseBrowserPage = async (args) => {
-  const { tabId } = validateClosePageArgs(args);
-  await closeTab(tabId);
-  return buildClosePageOutput();
-};
-const executeRunConsoleCommand = async (args) => {
-  const { command } = validateConsoleArgs(args);
-  const result = await sendMessageToSandbox({ command });
-  if (!result?.ok) {
-    throw new Error(result?.error || "命令执行失败");
-  }
-  return result.output;
-};
-const executeListTabs = async (args) => {
-  validateListTabsArgs(args);
-  const tabs = await getAllTabs();
-  return buildListTabsOutput(tabs);
-};
-export const buildPageMarkdownToolOutput = async (tabId) =>
-  executeGetPageMarkdown({ tabId });
-const toolStrategies = new Map([
-  [toolNames.openBrowserPage, executeOpenBrowserPage],
-  [toolNames.clickButton, executeClickButton],
-  [toolNames.getPageMarkdown, executeGetPageMarkdown],
-  [toolNames.closeBrowserPage, executeCloseBrowserPage],
-  [toolNames.runConsoleCommand, executeRunConsoleCommand],
-  [toolNames.listTabs, executeListTabs],
-]);
-const getToolStrategy = (name) => {
-  const strategy = toolStrategies.get(name);
-  if (!strategy) {
-    throw new ToolInputError(`未支持的工具：${name}`);
-  }
-  return strategy;
-};
+
 const executeToolCall = async (toolCall) => {
   const normalized = normalizeToolCall(toolCall);
   if (!normalized) {
     throw new ToolInputError("工具调用格式不正确");
   }
   const args = parseToolArguments(normalized.arguments || "{}");
-  const strategy = getToolStrategy(normalized.name);
-  return strategy(args);
+  return executeTool(normalized.name, args);
 };
 const resolveToolOutput = (output, name) => {
   if (typeof output === "string") {
@@ -276,6 +70,10 @@ const resolveToolOutput = (output, name) => {
     result.pageReadTabId = output.pageReadTabId;
   }
   return result;
+};
+export const buildPageMarkdownToolOutput = async (tabId) => {
+  const output = await executeTool(toolNames.getPageMarkdown, { tabId });
+  return resolveToolOutput(output, toolNames.getPageMarkdown).content;
 };
 const buildToolMessage = ({ callId, name, content, pageReadTabId }) => ({
   role: "tool",

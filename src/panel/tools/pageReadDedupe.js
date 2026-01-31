@@ -5,7 +5,7 @@ import {
   getToolCallArguments,
   getToolCallId,
   getToolCallName,
-  validateGetPageMarkdownArgs,
+  getToolValidator,
 } from "./definitions.js";
 
 const extractGetPageTabIdFromCall = (call) => {
@@ -17,7 +17,7 @@ const extractGetPageTabIdFromCall = (call) => {
     const message = error?.message || "未知错误";
     throw new Error(`get_page 工具参数解析失败：${message}`);
   }
-  const { tabId } = validateGetPageMarkdownArgs(args);
+  const { tabId } = getToolValidator(toolNames.getPageMarkdown)(args);
   return tabId;
 };
 
