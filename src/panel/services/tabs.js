@@ -1,3 +1,5 @@
+import { isInternalUrl } from "../utils/index.js";
+
 const readyTabs = new Set();
 const failedTabs = new Set();
 const failedTabErrors = new Map();
@@ -6,6 +8,7 @@ let listenersReady = false;
 const contentScriptNotReadyMessage = "页面已完成加载但内容脚本未就绪";
 const waitForReadyFailedMessage =
   "等待页面内容脚本就绪失败：页面已完成加载但未收到响应";
+const internalTabMessage = "浏览器内置页面不支持连接内容脚本";
 
 const resolveFailedTabError = (tabId) =>
   failedTabErrors.get(tabId) || new Error(contentScriptNotReadyMessage);
@@ -45,6 +48,33 @@ const reportContentScriptFailure = (tabId, error) => {
   });
   pendingWaits.delete(tabId);
   return failure;
+};
+
+const getTabSnapshot = (tabId) =>
+  new Promise((resolve, reject) => {
+    chrome.tabs.get(tabId, (currentTab) => {
+      if (chrome.runtime.lastError) {
+        const message =
+          chrome.runtime.lastError.message || "无法获取标签页状态";
+        reject(new Error(message));
+        return;
+      }
+      if (!currentTab) {
+        reject(new Error("未找到标签页"));
+        return;
+      }
+      resolve(currentTab);
+    });
+  });
+
+const ensureTabConnectable = async (tabId) => {
+  const tab = await getTabSnapshot(tabId);
+  if (isInternalUrl(tab.url || "")) {
+    const error = new Error(internalTabMessage);
+    reportContentScriptFailure(tabId, error);
+    throw error;
+  }
+  return tab;
 };
 
 const pingContentScript = (tabId) =>
@@ -89,9 +119,21 @@ const registerContentScriptListeners = () => {
     if (readyTabs.has(tabId) || failedTabs.has(tabId)) {
       return;
     }
-    pingContentScript(tabId)
-      .then(() => {
-        markTabReady(tabId);
+    getTabSnapshot(tabId)
+      .then((tab) => {
+        if (isInternalUrl(tab.url || "")) {
+          const waiters = pendingWaits.get(tabId);
+          if (waiters?.size) {
+            reportContentScriptFailure(tabId, new Error(internalTabMessage));
+          }
+          return false;
+        }
+        return pingContentScript(tabId).then(() => true);
+      })
+      .then((shouldMarkReady) => {
+        if (shouldMarkReady) {
+          markTabReady(tabId);
+        }
       })
       .catch((error) => {
         reportContentScriptFailure(tabId, error);
@@ -200,25 +242,28 @@ export const focusTab = (tabId) =>
     });
   });
 export const sendMessageToTab = (tabId, payload) =>
-  new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tabId, payload, (response) => {
-      if (chrome.runtime.lastError) {
-        const message =
-          chrome.runtime.lastError.message || "无法发送消息到页面";
-        reject(new Error(message));
-        return;
-      }
-      if (!response) {
-        reject(new Error("页面未返回结果"));
-        return;
-      }
-      if (response.error) {
-        reject(new Error(response.error));
-        return;
-      }
-      resolve(response);
-    });
-  });
+  ensureTabConnectable(tabId).then(
+    () =>
+      new Promise((resolve, reject) => {
+        chrome.tabs.sendMessage(tabId, payload, (response) => {
+          if (chrome.runtime.lastError) {
+            const message =
+              chrome.runtime.lastError.message || "无法发送消息到页面";
+            reject(new Error(message));
+            return;
+          }
+          if (!response) {
+            reject(new Error("页面未返回结果"));
+            return;
+          }
+          if (response.error) {
+            reject(new Error(response.error));
+            return;
+          }
+          resolve(response);
+        });
+      }),
+  );
 export const waitForContentScript = async (tabId, timeoutMs = 10000) => {
   if (typeof tabId !== "number") {
     throw new Error("TabID 必须是数字");
@@ -230,21 +275,7 @@ export const waitForContentScript = async (tabId, timeoutMs = 10000) => {
   if (failedTabs.has(tabId)) {
     throw resolveFailedTabError(tabId);
   }
-  const tab = await new Promise((resolve, reject) => {
-    chrome.tabs.get(tabId, (currentTab) => {
-      if (chrome.runtime.lastError) {
-        const message =
-          chrome.runtime.lastError.message || "无法获取标签页状态";
-        reject(new Error(message));
-        return;
-      }
-      if (!currentTab) {
-        reject(new Error("未找到标签页"));
-        return;
-      }
-      resolve(currentTab);
-    });
-  });
+  const tab = await ensureTabConnectable(tabId);
   if (tab.status === "complete") {
     try {
       await pingContentScript(tabId);

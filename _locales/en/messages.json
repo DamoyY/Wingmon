@@ -153,7 +153,7 @@
         "message": "Stop"
     },
     "promptPlaceholder": {
-        "message": "Type your message..."
+        "message": "Type your message ..."
     },
     "confirm": {
         "message": "Confirm"

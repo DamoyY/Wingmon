@@ -86,7 +86,7 @@
   border-radius: 10px;
   overflow-x: auto;
   margin: 8px 0;
-  font-family: var(--md-sys-typescale-body-small-font);
+  font-family: var(--md-ref-typeface-mono);
   font-size: var(--md-sys-typescale-body-small-size);
   line-height: var(--md-sys-typescale-body-small-line-height);
   font-weight: var(--md-sys-typescale-body-small-weight);
@@ -95,9 +95,10 @@
 
 .message code {
   background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
   padding: 2px 4px;
   border-radius: 6px;
-  font-family: var(--md-sys-typescale-body-small-font);
+  font-family: var(--md-ref-typeface-mono);
   font-size: var(--md-sys-typescale-body-small-size);
   line-height: var(--md-sys-typescale-body-small-line-height);
   font-weight: var(--md-sys-typescale-body-small-weight);

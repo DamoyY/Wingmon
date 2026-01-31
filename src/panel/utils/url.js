@@ -12,14 +12,29 @@ const stripControlAndWhitespace = (value) =>
   }, "");
 export const normalizeUrl = (url) =>
   stripControlAndWhitespace(normalizeUrlBase(url));
+const internalPrefixes = [
+  "chrome://",
+  "edge://",
+  "chrome-extension://",
+  "edge-extension://",
+  "devtools://",
+  "chrome-untrusted://",
+  "view-source:",
+  "about:",
+];
+const storePrefixes = [
+  "https://chromewebstore.google.com",
+  "http://chromewebstore.google.com",
+  "https://microsoftedge.microsoft.com",
+  "http://microsoftedge.microsoft.com",
+];
 export const isInternalUrl = (url) => {
   const normalized = normalizeUrl(url);
+  if (!normalized) {
+    return false;
+  }
   return (
-    normalized.startsWith("chrome://") ||
-    normalized.startsWith("edge://") ||
-    normalized.startsWith("https://chromewebstore.google.com") ||
-    normalized.startsWith("http://chromewebstore.google.com") ||
-    normalized.startsWith("https://microsoftedge.microsoft.com") ||
-    normalized.startsWith("http://microsoftedge.microsoft.com")
+    internalPrefixes.some((prefix) => normalized.startsWith(prefix)) ||
+    storePrefixes.some((prefix) => normalized.startsWith(prefix))
   );
 };

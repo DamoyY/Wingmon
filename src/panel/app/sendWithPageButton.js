@@ -52,10 +52,13 @@ export const setSendWithPagePromptReady = (hasContent) => {
 };
 export const updateSendWithPageButtonAvailability = async () => {
   const activeTab = await getActiveTab();
-  if (!activeTab.url) {
-    throw new Error("活动标签页缺少 URL");
+  const activeUrl =
+    typeof activeTab?.url === "string" ? activeTab.url.trim() : "";
+  if (!activeUrl) {
+    disableSendWithPageButtonForPage("当前标签页缺少 URL");
+    return;
   }
-  if (isInternalUrl(activeTab.url)) {
+  if (isInternalUrl(activeUrl)) {
     disableSendWithPageButtonForPage("内部页面不支持携页面发送");
     return;
   }

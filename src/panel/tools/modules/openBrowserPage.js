@@ -25,13 +25,26 @@ const buildOpenPageReadOutput = ({ title, tabId, content = "", isInternal }) =>
   buildPageReadResult({
     headerLines: [
       t("statusOpenSuccess"),
-      `${t("statusTitle")}："${title}"；`,
-      `${t("statusTabId")}："${tabId}"；`,
+      `${t("statusTitle")}: "${title}"`,
+      `${t("statusTabId")}: "${tabId}"`,
     ],
     contentLabel: `${t("statusContent")}：`,
     content,
     isInternal,
   });
+
+const normalizeTab = (tab) => {
+  if (typeof tab.url !== "string" || !tab.url.trim()) {
+    console.error("标签页缺少 URL", tab);
+    return null;
+  }
+  try {
+    return { ...tab, normalizedUrl: new URL(tab.url).toString() };
+  } catch (error) {
+    console.error("标签页 URL 解析失败", tab, error);
+    return null;
+  }
+};
 
 const validateArgs = (args) => {
   ensureObjectArgs(args);
@@ -57,12 +70,7 @@ const execute = async ({ url, focus }) => {
   const followMode = await shouldFollowMode();
   const shouldFocus = followMode || focus;
   const tabs = await getAllTabs();
-  const normalizedTabs = tabs.map((tab) => {
-    if (typeof tab.url !== "string" || !tab.url.trim()) {
-      throw new Error("标签页缺少 URL");
-    }
-    return { ...tab, normalizedUrl: new URL(tab.url).toString() };
-  });
+  const normalizedTabs = tabs.map(normalizeTab).filter(Boolean);
   const matchedTab = normalizedTabs.find((tab) => tab.normalizedUrl === url);
   if (matchedTab) {
     if (typeof matchedTab.id !== "number") {
