@@ -1,39 +1,25 @@
 import {
-  elements,
-  fillSettingsForm,
-  setText,
-  showKeyView,
-} from "../ui/index.js";
-import {
   addMessage,
   setStateValue,
   state,
   touchUpdatedAt,
 } from "../state/index.js";
 import { getSettings, saveConversation } from "../services/index.js";
-import { renderMessagesView } from "./messagePresenter.js";
-import {
-  clearPromptContent,
-  getPromptContent,
-  setComposerSending,
-  updateComposerButtonsState,
-} from "./composerState.js";
+import { getPromptContent } from "./composerState.js";
 import appendSharedPageContext from "./messagePageContext.js";
 import createResponseStream from "./messageRequestCycle.js";
 import {
   applyNonStreamedResponse,
   applyStreamedResponse,
 } from "./messageResponseHandlers.js";
+import {
+  ensureSettingsReady,
+  reportSendStatus,
+  setSendUiState,
+  syncComposerAfterSend,
+} from "./messageSendUi.js";
 
 let activeAbortController = null;
-
-const logStatus = (message) => {
-  if (message) {
-    console.info(message);
-    return;
-  }
-  console.info("");
-};
 
 const ensureNotAborted = (signal) => {
   if (signal?.aborted) {
@@ -49,25 +35,12 @@ const saveCurrentConversation = async () => {
   await saveConversation(state.conversationId, state.messages, state.updatedAt);
 };
 
-const ensureSettingsReady = (settings) => {
-  if (!settings.apiKey || !settings.baseUrl || !settings.model) {
-    showKeyView({ isFirstUse: true });
-    fillSettingsForm(settings);
-    if (!elements.keyStatus) {
-      throw new Error("状态提示元素未初始化");
-    }
-    setText(elements.keyStatus, "请先补全 API Key、Base URL 和模型");
-    return false;
-  }
-  return true;
-};
-
 export const stopSending = async () => {
   if (!activeAbortController) {
     return;
   }
   activeAbortController.abort();
-  logStatus("已停止");
+  reportSendStatus("已停止");
   await saveCurrentConversation();
 };
 
@@ -84,26 +57,24 @@ export const sendMessage = async ({ includePage = false } = {}) => {
     return;
   }
   addMessage({ role: "user", content });
-  clearPromptContent();
-  updateComposerButtonsState();
-  renderMessagesView();
+  syncComposerAfterSend();
   setStateValue("sending", true);
   const abortController = new AbortController();
   activeAbortController = abortController;
-  setComposerSending(true);
+  setSendUiState(true);
   try {
     await saveCurrentConversation();
     ensureNotAborted(abortController.signal);
     if (includePage) {
-      logStatus("读取页面中…");
+      reportSendStatus("读取页面中…");
       await appendSharedPageContext();
     }
     ensureNotAborted(abortController.signal);
-    logStatus("请求中…");
+    reportSendStatus("请求中…");
     const responseStream = createResponseStream({
       settings,
       signal: abortController.signal,
-      onStatus: logStatus,
+      onStatus: reportSendStatus,
     });
     const consumeResponses = async () => {
       const { value, done } = await responseStream.next();
@@ -119,17 +90,17 @@ export const sendMessage = async ({ includePage = false } = {}) => {
     };
     await consumeResponses();
     await saveCurrentConversation();
-    logStatus("");
+    reportSendStatus("");
   } catch (error) {
     if (error?.name === "AbortError" || error?.message === "已停止") {
-      logStatus("已停止");
+      reportSendStatus("已停止");
       return;
     }
     console.error(error?.message || "请求失败");
   } finally {
     setStateValue("sending", false);
     activeAbortController = null;
-    setComposerSending(false);
+    setSendUiState(false);
   }
 };
 

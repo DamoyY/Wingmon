@@ -1,5 +1,4 @@
-import { addMessage } from "../state/index.js";
-import { isInternalUrl, t } from "../utils/index.js";
+import { isInternalUrl } from "../utils/index.js";
 import {
   toolNames,
   parseToolArguments,
@@ -14,6 +13,16 @@ import {
   validateConsoleArgs,
   validateListTabsArgs,
 } from "./definitions.js";
+import {
+  buildOpenPageAlreadyExistsOutput,
+  buildOpenPageReadOutput,
+  buildClickButtonOutput,
+  buildPageMarkdownOutput,
+  buildListTabsOutput,
+  buildToolErrorOutput,
+  defaultToolSuccessOutput,
+  buildClosePageOutput,
+} from "./toolOutput.js";
 import {
   closeTab,
   createTab,
@@ -64,18 +73,6 @@ const fetchPageMarkdownData = async (tabId) => {
     content: pageData.content,
   };
 };
-const formatPageReadResult = ({
-  headerLines,
-  contentLabel,
-  content,
-  internalUrl,
-}) => {
-  const header = headerLines.join("\n");
-  if (isInternalUrl(internalUrl)) {
-    return `${header}\n${t("statusReadFailedInternal")}`;
-  }
-  return `${header}\n${contentLabel}\n${content}`;
-};
 const shouldFollowMode = async () => {
   const settings = await getSettings();
   return Boolean(settings.followMode);
@@ -99,26 +96,27 @@ const executeOpenBrowserPage = async (args) => {
     if (shouldFocus) {
       await focusTab(matchedTab.id);
     }
-    return t("statusAlreadyExists", [String(matchedTab.id)]);
+    return buildOpenPageAlreadyExistsOutput(matchedTab.id);
   }
   const tab = await createTab(url, shouldFocus);
   if (shouldFocus) {
     await focusTab(tab.id);
   }
-  if (isInternalUrl(url)) {
+  const initialInternal = isInternalUrl(url);
+  if (initialInternal) {
     const title = tab.title || "";
-    return `${t("statusOpenSuccess")}\n${t("statusTitle")}: "${title}"；\n${t("statusTabId")}: "${tab.id}"；\n${t("statusReadFailedInternal")}`;
+    return buildOpenPageReadOutput({
+      title,
+      tabId: tab.id,
+      isInternal: true,
+    });
   }
   const { title, url: pageUrl, content } = await fetchPageMarkdownData(tab.id);
-  return formatPageReadResult({
-    headerLines: [
-      t("statusOpenSuccess"),
-      `${t("statusTitle")}："${title}"；`,
-      `${t("statusTabId")}："${tab.id}"；`,
-    ],
-    contentLabel: `${t("statusContent")}：`,
+  return buildOpenPageReadOutput({
+    title,
+    tabId: tab.id,
     content,
-    internalUrl: pageUrl || url,
+    isInternal: isInternalUrl(pageUrl || url),
   });
 };
 const executeClickButton = async (args) => {
@@ -149,17 +147,14 @@ const executeClickButton = async (args) => {
       });
       if (result?.ok) {
         const { title, url, content } = await fetchPageMarkdownData(tab.id);
+        const internalUrl = url || tab.url || "";
         return {
           ...state,
           done: true,
-          result: formatPageReadResult({
-            headerLines: [
-              t("statusClickSuccess"),
-              `${t("statusTitle")}："${title}"；`,
-            ],
-            contentLabel: `${t("statusContent")}：`,
+          result: buildClickButtonOutput({
+            title,
             content,
-            internalUrl: url || tab.url || "",
+            isInternal: isInternalUrl(internalUrl),
           }),
           tabId: tab.id,
         };
@@ -202,22 +197,27 @@ const executeGetPageMarkdown = async (args) => {
   if (await shouldFollowMode()) {
     await focusTab(tabId);
   }
-  if (isInternalUrl(targetTab.url)) {
+  const internalUrl = isInternalUrl(targetTab.url);
+  if (internalUrl) {
     const title = targetTab.title || "";
-    return `${t("statusTitleLabel")}\n${title}\n**URL：**\n${targetTab.url}\n${t("statusReadFailedInternal")}`;
+    return buildPageMarkdownOutput({
+      title,
+      url: targetTab.url,
+      isInternal: true,
+    });
   }
   const { title, url, content } = await fetchPageMarkdownData(tabId);
-  return formatPageReadResult({
-    headerLines: [t("statusTitleLabel"), title, t("statusUrlLabel"), url],
-    contentLabel: t("statusContentLabel"),
+  return buildPageMarkdownOutput({
+    title,
+    url,
     content,
-    internalUrl: url,
+    isInternal: false,
   });
 };
 const executeCloseBrowserPage = async (args) => {
   const { tabId } = validateClosePageArgs(args);
   await closeTab(tabId);
-  return t("statusSuccess");
+  return buildClosePageOutput();
 };
 const executeRunConsoleCommand = async (args) => {
   const { command } = validateConsoleArgs(args);
@@ -230,14 +230,7 @@ const executeRunConsoleCommand = async (args) => {
 const executeListTabs = async (args) => {
   validateListTabsArgs(args);
   const tabs = await getAllTabs();
-  return tabs
-    .map((tab) => {
-      const title = tab.title || t("statusNoTitle");
-      const url = tab.url || t("statusNoAddress");
-      const { id } = tab;
-      return `${t("statusTitle")}: "${title}"\nURL: "${url}"\n${t("statusTabId")}: "${id}"`;
-    })
-    .join("\n\n");
+  return buildListTabsOutput(tabs);
 };
 export const buildPageMarkdownToolOutput = async (tabId) =>
   executeGetPageMarkdown({ tabId });
@@ -284,36 +277,52 @@ const resolveToolOutput = (output, name) => {
   }
   return result;
 };
+const buildToolMessage = ({ callId, name, content, pageReadTabId }) => ({
+  role: "tool",
+  content,
+  tool_call_id: callId,
+  name,
+  pageReadTabId,
+});
+const executeToolCallToMessage = async (call) => {
+  let callId;
+  let name;
+  let output = defaultToolSuccessOutput;
+  let pageReadTabId;
+  try {
+    callId = getToolCallId(call);
+    name = getToolCallName(call);
+    const resolved = resolveToolOutput(await executeToolCall(call), name);
+    output = resolved.content;
+    pageReadTabId = resolved.pageReadTabId;
+  } catch (error) {
+    const isInputError = error instanceof ToolInputError;
+    console.error(
+      `工具执行失败: ${name || "未知工具"}`,
+      error?.message || "未知错误",
+    );
+    output = buildToolErrorOutput({
+      message: error?.message,
+      isInputError,
+      isCloseTool: name === toolNames.closeBrowserPage,
+    });
+  }
+  if (!callId || !name) {
+    throw new ToolInputError("工具调用缺少 call_id 或 name");
+  }
+  return buildToolMessage({
+    callId,
+    name,
+    content: output,
+    pageReadTabId,
+  });
+};
 export const handleToolCalls = async (toolCalls) => {
+  const messages = [];
   await toolCalls.reduce(async (promise, call) => {
     await promise;
-    const callId = getToolCallId(call);
-    const name = getToolCallName(call);
-    let output = "成功";
-    let pageReadTabId;
-    try {
-      const resolved = resolveToolOutput(await executeToolCall(call), name);
-      output = resolved.content;
-      pageReadTabId = resolved.pageReadTabId;
-    } catch (error) {
-      const message = error?.message || t("statusFailed");
-      const isInputError = error instanceof ToolInputError;
-      if (!isInputError) {
-        console.error(`工具执行失败: ${name}`, message);
-        output = "错误";
-      } else {
-        output =
-          name === toolNames.closeBrowserPage
-            ? t("statusFailed")
-            : `${t("statusFailed")}: ${message}`;
-      }
-    }
-    addMessage({
-      role: "tool",
-      content: output,
-      tool_call_id: callId,
-      name,
-      pageReadTabId,
-    });
+    const message = await executeToolCallToMessage(call);
+    messages.push(message);
   }, Promise.resolve());
+  return messages;
 };

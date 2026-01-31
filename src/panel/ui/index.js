@@ -11,3 +11,4 @@ export { default as applyTypography } from "./typography.js";
 export * from "./views.js";
 export { default as showConfirmDialog } from "./dialog.js";
 export { default as setupChatLayout } from "./layout.js";
+export * from "./settingsView.js";

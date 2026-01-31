@@ -6,6 +6,7 @@ export { default as createMessageActionHandlers } from "./messageActions.js";
 export * from "./messagePresenter.js";
 export * from "./composerState.js";
 export * from "./messageSendFlow.js";
+export * from "./messageSendUi.js";
 export * from "./promptHandlers.js";
 export * from "./settingsController.js";
 export {

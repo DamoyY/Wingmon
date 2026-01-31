@@ -63,7 +63,8 @@ const createResponseStream = async function* createResponseStream({
     if (!pendingToolCalls.length) {
       return;
     }
-    await handleToolCalls(pendingToolCalls);
+    const toolMessages = await handleToolCalls(pendingToolCalls);
+    toolMessages.forEach((message) => addMessage(message));
     ensureNotAborted(signal);
     reportStatus("请求中…");
     yield* requestNext();

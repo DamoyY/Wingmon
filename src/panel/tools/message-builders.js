@@ -1,189 +1,19 @@
 import { state } from "../state/index.js";
-import { t } from "../utils/index.js";
 import {
-  toolNames,
-  parseToolArguments,
   getToolCallArguments,
   getToolCallId,
   getToolCallName,
-  validateGetPageMarkdownArgs,
 } from "./definitions.js";
+import {
+  collectPageReadDedupeSets,
+  getToolOutputContent,
+} from "./pageReadDedupe.js";
 
 const toChatToolCallForRequest = (entry) => ({
   id: entry.callId,
   type: "function",
   function: { name: entry.name, arguments: entry.arguments },
 });
-const extractGetPageTabIdFromCall = (call) => {
-  const argsText = getToolCallArguments(call);
-  let args;
-  try {
-    args = parseToolArguments(argsText || "{}");
-  } catch (error) {
-    const message = error?.message || "未知错误";
-    throw new Error(`get_page 工具参数解析失败：${message}`);
-  }
-  const { tabId } = validateGetPageMarkdownArgs(args);
-  return tabId;
-};
-const extractPageReadTabIdFromOutput = (content, successLabel, toolName) => {
-  if (typeof content !== "string") {
-    throw new Error(`${toolName} 工具响应必须是字符串`);
-  }
-  const trimmed = content.trim();
-  if (!trimmed) {
-    throw new Error(`${toolName} 工具响应不能为空`);
-  }
-  if (!trimmed.startsWith(successLabel)) {
-    return null;
-  }
-  if (trimmed === successLabel) {
-    return null;
-  }
-  const match = trimmed.match(/TabID:\s*["'“”]?(\d+)["'“”]?/);
-  if (!match) {
-    throw new Error(`${toolName} 成功响应缺少 TabID`);
-  }
-  const tabId = Number(match[1]);
-  if (!Number.isInteger(tabId) || tabId <= 0) {
-    throw new Error(`${toolName} 响应 TabID 无效`);
-  }
-  return tabId;
-};
-const extractOpenPageTabIdFromOutput = (content) =>
-  extractPageReadTabIdFromOutput(
-    content,
-    t("statusOpenSuccess"),
-    toolNames.openBrowserPage,
-  );
-const extractClickButtonTabIdFromMessage = (message) => {
-  const storedTabId = message?.pageReadTabId;
-  if (Number.isInteger(storedTabId) && storedTabId > 0) {
-    return storedTabId;
-  }
-  const tabId = extractPageReadTabIdFromOutput(
-    message?.content,
-    t("statusClickSuccess"),
-    toolNames.clickButton,
-  );
-  if (!tabId) {
-    return null;
-  }
-  return tabId;
-};
-const isGetPageSuccessOutput = (content) =>
-  typeof content === "string" &&
-  content.trim().startsWith(t("statusTitleLabel"));
-const collectPageReadDedupeSets = (messages) => {
-  const callInfoById = new Map();
-  messages.forEach((msg) => {
-    if (!Array.isArray(msg.tool_calls)) {
-      return;
-    }
-    msg.tool_calls.forEach((call) => {
-      const callId = getToolCallId(call);
-      const name = getToolCallName(call);
-      if (callInfoById.has(callId)) {
-        const existing = callInfoById.get(callId);
-        if (existing?.name !== name) {
-          throw new Error(`重复的工具调用 ID：${callId}`);
-        }
-        return;
-      }
-      const info = { name };
-      if (name === toolNames.getPageMarkdown) {
-        info.tabId = extractGetPageTabIdFromCall(call);
-      }
-      callInfoById.set(callId, info);
-    });
-  });
-  const readEvents = [];
-  messages.forEach((msg, index) => {
-    if (msg.role !== "tool") {
-      return;
-    }
-    const callId = msg.tool_call_id;
-    if (!callId) {
-      throw new Error("工具响应缺少 tool_call_id");
-    }
-    const info = callInfoById.get(callId);
-    const name = msg.name || info?.name;
-    if (!name) {
-      throw new Error(`工具响应缺少 name：${callId}`);
-    }
-    if (name === toolNames.getPageMarkdown) {
-      if (!isGetPageSuccessOutput(msg.content)) {
-        return;
-      }
-      const tabId = info?.tabId;
-      if (!tabId) {
-        throw new Error(`get_page 工具响应缺少 tabId：${callId}`);
-      }
-      readEvents.push({
-        tabId,
-        type: name,
-        callId,
-        index,
-      });
-      return;
-    }
-    if (name === toolNames.openBrowserPage) {
-      const tabId = extractOpenPageTabIdFromOutput(msg.content);
-      if (!tabId) {
-        return;
-      }
-      readEvents.push({
-        tabId,
-        type: name,
-        callId,
-        index,
-      });
-      return;
-    }
-    if (name === toolNames.clickButton) {
-      const tabId = extractClickButtonTabIdFromMessage(msg);
-      if (!tabId) {
-        return;
-      }
-      readEvents.push({
-        tabId,
-        type: name,
-        callId,
-        index,
-      });
-    }
-  });
-  const latestByTabId = new Map();
-  readEvents.forEach((event) => {
-    const existing = latestByTabId.get(event.tabId);
-    if (!existing || event.index > existing.index) {
-      latestByTabId.set(event.tabId, event);
-    }
-  });
-  const removeToolCallIds = new Set();
-  const trimOpenPageResponseIds = new Set();
-  readEvents.forEach((event) => {
-    const latest = latestByTabId.get(event.tabId);
-    if (!latest || latest.callId === event.callId) {
-      return;
-    }
-    if (event.type === toolNames.getPageMarkdown) {
-      removeToolCallIds.add(event.callId);
-      return;
-    }
-    if (
-      event.type === toolNames.openBrowserPage ||
-      event.type === toolNames.clickButton
-    ) {
-      trimOpenPageResponseIds.add(event.callId);
-    }
-  });
-  return { removeToolCallIds, trimOpenPageResponseIds };
-};
-const getToolOutputContent = (msg, trimOpenPageResponseIds) =>
-  trimOpenPageResponseIds.has(msg.tool_call_id)
-    ? `**${t("statusSuccess")}**`
-    : msg.content;
 const collectToolCallEntries = (toolCalls, removeToolCallIds) => {
   if (!Array.isArray(toolCalls)) {
     return [];
@@ -265,7 +95,7 @@ const buildStructuredMessages = ({ systemPrompt, format }) => {
     output.push({ role: "system", content: systemPrompt });
   }
   const contextMessages = buildContextMessages(state.messages);
-  const { removeToolCallIds, trimOpenPageResponseIds } =
+  const { removeToolCallIds, trimToolResponseIds } =
     collectPageReadDedupeSets(contextMessages);
   contextMessages.forEach((msg) => {
     if (msg.role === "tool") {
@@ -276,7 +106,7 @@ const buildStructuredMessages = ({ systemPrompt, format }) => {
       if (removeToolCallIds.has(callId)) {
         return;
       }
-      const content = getToolOutputContent(msg, trimOpenPageResponseIds);
+      const content = getToolOutputContent(msg, trimToolResponseIds);
       if (format === "chat") {
         output.push({ role: "tool", content, tool_call_id: callId });
         return;
