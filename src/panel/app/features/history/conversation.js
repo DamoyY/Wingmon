@@ -2,8 +2,11 @@ import {
   loadConversationState,
   resetConversation,
   state,
-} from "../../state/index.js";
-import { deleteConversation, loadConversation } from "../../services/index.js";
+} from "../../../state/index.js";
+import {
+  deleteConversation,
+  loadConversation,
+} from "../../../services/index.js";
 import { renderMessagesView } from "../messages/presenter.js";
 
 export const loadConversationIntoState = async (id) => {

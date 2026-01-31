@@ -15,9 +15,15 @@ import {
   sendMessageWithPage,
   stopSending,
 } from "../features/messages/sendFlow.js";
-import { handlePromptKeydown, handlePromptInput } from "../features/chat/promptHandlers.js";
+import {
+  handlePromptKeydown,
+  handlePromptInput,
+} from "../features/chat/promptHandlers.js";
 import handleNewChat from "../features/chat/session.js";
-import { handleOpenHistory, handleCloseHistory } from "../features/history/panel.js";
+import {
+  handleOpenHistory,
+  handleCloseHistory,
+} from "../features/history/panel.js";
 
 const bindEvents = () => {
   const {

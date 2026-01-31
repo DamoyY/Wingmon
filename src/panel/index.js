@@ -1,4 +1,4 @@
 import "./ui/components.js";
-import { initPanel } from "./app/index.js";
+import { initPanel } from "./app/core/index.js";
 
 initPanel();

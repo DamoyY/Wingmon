@@ -2,9 +2,9 @@ import {
   showConfirmDialog,
   showHistoryView,
   showChatView,
-} from "../../ui/index.js";
-import { state } from "../../state/index.js";
-import { t } from "../../utils/index.js";
+} from "../../../ui/index.js";
+import { state } from "../../../state/index.js";
+import { t } from "../../../utils/index.js";
 import fetchSortedHistory from "./data.js";
 import renderHistoryListView from "./listView.js";
 import {

@@ -1,4 +1,4 @@
-import { elements } from "../../ui/index.js";
+import { elements } from "../../../ui/index.js";
 import { setSendWithPagePromptReady } from "../messages/sendWithPageButton.js";
 
 const BUTTON_VISIBILITY_DURATION = 180;

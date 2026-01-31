@@ -1,7 +1,10 @@
-import { addMessage } from "../../state/index.js";
-import { getActiveTab } from "../../services/index.js";
-import { buildPageMarkdownToolOutput, toolNames } from "../../tools/index.js";
-import { createRandomId } from "../../utils/index.js";
+import { addMessage } from "../../../state/index.js";
+import { getActiveTab } from "../../../services/index.js";
+import {
+  buildPageMarkdownToolOutput,
+  toolNames,
+} from "../../../tools/index.js";
+import { createRandomId } from "../../../utils/index.js";
 
 const resolveTabId = (activeTab) => {
   if (typeof activeTab?.id !== "number") {

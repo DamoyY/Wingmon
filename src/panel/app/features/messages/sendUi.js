@@ -3,7 +3,7 @@ import {
   fillSettingsForm,
   setText,
   showKeyView,
-} from "../../ui/index.js";
+} from "../../../ui/index.js";
 import { renderMessagesView } from "./presenter.js";
 import {
   clearPromptContent,

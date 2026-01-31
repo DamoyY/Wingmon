@@ -8,9 +8,9 @@ import {
   clearSettingsStatus,
   setSaveButtonVisible,
   setSettingsStatus,
-} from "../../ui/index.js";
-import { setLocale, translateDOM } from "../../utils/index.js";
-import { getSettings, updateSettings } from "../../services/index.js";
+} from "../../../ui/index.js";
+import { setLocale, translateDOM } from "../../../utils/index.js";
+import { getSettings, updateSettings } from "../../../services/index.js";
 import {
   buildThemePayload,
   isSettingsComplete,

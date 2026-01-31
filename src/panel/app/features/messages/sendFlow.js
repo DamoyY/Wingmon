@@ -3,8 +3,8 @@ import {
   setStateValue,
   state,
   touchUpdatedAt,
-} from "../../state/index.js";
-import { getSettings, saveConversation } from "../../services/index.js";
+} from "../../../state/index.js";
+import { getSettings, saveConversation } from "../../../services/index.js";
 import { getPromptContent } from "../chat/composerState.js";
 import appendSharedPageContext from "./pageContext.js";
 import createResponseStream from "./requestCycle.js";
