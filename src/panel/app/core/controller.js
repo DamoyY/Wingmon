@@ -1,6 +1,6 @@
-import { elements } from "../ui/index.js";
-import { refreshSendWithPageButton } from "./sendWithPageButton.js";
-import { updateSettings } from "../services/index.js";
+import { elements } from "../../ui/index.js";
+import { refreshSendWithPageButton } from "../features/messages/sendWithPageButton.js";
+import { updateSettings } from "../../services/index.js";
 import {
   handleSaveSettings,
   handleCancelSettings,
@@ -9,15 +9,15 @@ import {
   handleThemeChange,
   handleThemeColorChange,
   handleLanguageChange,
-} from "./settingsController.js";
+} from "../features/settings/controller.js";
 import {
   sendMessage,
   sendMessageWithPage,
   stopSending,
-} from "./messageSendFlow.js";
-import { handlePromptKeydown, handlePromptInput } from "./promptHandlers.js";
-import handleNewChat from "./chatSession.js";
-import { handleOpenHistory, handleCloseHistory } from "./historyPanel.js";
+} from "../features/messages/sendFlow.js";
+import { handlePromptKeydown, handlePromptInput } from "../features/chat/promptHandlers.js";
+import handleNewChat from "../features/chat/session.js";
+import { handleOpenHistory, handleCloseHistory } from "../features/history/panel.js";
 
 const bindEvents = () => {
   const {

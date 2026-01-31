@@ -1,6 +1,6 @@
-import { removeMessage, addMessage, state } from "../state/index.js";
-import { attachToolCallsToAssistant } from "../tools/index.js";
-import { renderMessagesView } from "./messagePresenter.js";
+import { removeMessage, addMessage, state } from "../../state/index.js";
+import { attachToolCallsToAssistant } from "../../tools/index.js";
+import { renderMessagesView } from "./presenter.js";
 
 const normalizeToolCalls = (toolCalls) =>
   Array.isArray(toolCalls) ? toolCalls : [];

@@ -1,6 +1,6 @@
-import { elements } from "../ui/index.js";
-import { getActiveTab } from "../services/index.js";
-import { isInternalUrl } from "../utils/index.js";
+import { elements } from "../../ui/index.js";
+import { getActiveTab } from "../../services/index.js";
+import { isInternalUrl } from "../../utils/index.js";
 
 const DEFAULT_PAGE_DISABLED_REASON = "当前标签页不支持携页面发送";
 const DEFAULT_EMPTY_PROMPT_REASON = "请输入内容后发送";

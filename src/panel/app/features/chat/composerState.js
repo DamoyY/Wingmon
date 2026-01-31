@@ -1,5 +1,5 @@
-import { elements } from "../ui/index.js";
-import { setSendWithPagePromptReady } from "./sendWithPageButton.js";
+import { elements } from "../../ui/index.js";
+import { setSendWithPagePromptReady } from "../messages/sendWithPageButton.js";
 
 const BUTTON_VISIBILITY_DURATION = 180;
 const BUTTON_VISIBILITY_EASING = "cubic-bezier(0.2, 0, 0, 1)";

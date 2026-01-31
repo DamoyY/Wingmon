@@ -3,9 +3,9 @@ import {
   state,
   subscribeState,
   updateMessage,
-} from "../state/index.js";
-import { renderMessages, updateLastAssistantMessage } from "../ui/index.js";
-import createMessageActionHandlers from "./messageActions.js";
+} from "../../state/index.js";
+import { renderMessages, updateLastAssistantMessage } from "../../ui/index.js";
+import createMessageActionHandlers from "./actions.js";
 
 let actionHandlers = null;
 let unsubscribeMessages = null;

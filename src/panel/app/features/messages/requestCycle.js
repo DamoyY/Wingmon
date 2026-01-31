@@ -1,11 +1,11 @@
-import { buildSystemPrompt } from "../services/index.js";
+import { buildSystemPrompt } from "../../services/index.js";
 import {
   apiToolAdapter,
   getToolDefinitions,
   handleToolCalls,
-} from "../tools/index.js";
-import { requestModel } from "../api/index.js";
-import { addMessage, state } from "../state/index.js";
+} from "../../tools/index.js";
+import { requestModel } from "../../api/index.js";
+import { addMessage, state } from "../../state/index.js";
 import {
   appendAssistantDelta,
   renderMessagesView,

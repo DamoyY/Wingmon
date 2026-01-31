@@ -3,21 +3,21 @@ import {
   setStateValue,
   state,
   touchUpdatedAt,
-} from "../state/index.js";
-import { getSettings, saveConversation } from "../services/index.js";
-import { getPromptContent } from "./composerState.js";
-import appendSharedPageContext from "./messagePageContext.js";
-import createResponseStream from "./messageRequestCycle.js";
+} from "../../state/index.js";
+import { getSettings, saveConversation } from "../../services/index.js";
+import { getPromptContent } from "../chat/composerState.js";
+import appendSharedPageContext from "./pageContext.js";
+import createResponseStream from "./requestCycle.js";
 import {
   applyNonStreamedResponse,
   applyStreamedResponse,
-} from "./messageResponseHandlers.js";
+} from "./responseHandlers.js";
 import {
   ensureSettingsReady,
   reportSendStatus,
   setSendUiState,
   syncComposerAfterSend,
-} from "./messageSendUi.js";
+} from "./sendUi.js";
 
 let activeAbortController = null;
 

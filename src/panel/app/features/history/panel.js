@@ -2,15 +2,15 @@ import {
   showConfirmDialog,
   showHistoryView,
   showChatView,
-} from "../ui/index.js";
-import { state } from "../state/index.js";
-import { t } from "../utils/index.js";
-import fetchSortedHistory from "./historyData.js";
-import renderHistoryListView from "./historyListView.js";
+} from "../../ui/index.js";
+import { state } from "../../state/index.js";
+import { t } from "../../utils/index.js";
+import fetchSortedHistory from "./data.js";
+import renderHistoryListView from "./listView.js";
 import {
   deleteConversationById,
   loadConversationIntoState,
-} from "./historyConversation.js";
+} from "./conversation.js";
 
 const refreshHistoryList = async ({ onSelect, onDeleteRequest } = {}) => {
   const history = await fetchSortedHistory();

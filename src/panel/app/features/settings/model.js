@@ -1,4 +1,4 @@
-import { normalizeTheme, normalizeThemeColor } from "../utils/index.js";
+import { normalizeTheme, normalizeThemeColor } from "../../utils/index.js";
 
 let settingsSnapshot = null;
 

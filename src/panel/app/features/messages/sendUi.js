@@ -3,13 +3,13 @@ import {
   fillSettingsForm,
   setText,
   showKeyView,
-} from "../ui/index.js";
-import { renderMessagesView } from "./messagePresenter.js";
+} from "../../ui/index.js";
+import { renderMessagesView } from "./presenter.js";
 import {
   clearPromptContent,
   setComposerSending,
   updateComposerButtonsState,
-} from "./composerState.js";
+} from "../chat/composerState.js";
 
 const normalizeStatusMessage = (message) => {
   if (message === undefined || message === null) {

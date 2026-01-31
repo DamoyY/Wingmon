@@ -1,5 +1,5 @@
-import { getSettings, initTabListeners } from "../services/index.js";
-import { initMarkdownRenderer } from "../markdown/index.js";
+import { getSettings, initTabListeners } from "../../services/index.js";
+import { initMarkdownRenderer } from "../../markdown/index.js";
 import {
   applyTheme,
   applyTypography,
@@ -9,13 +9,13 @@ import {
   setupChatLayout,
   showChatView,
   showKeyView,
-} from "../ui/index.js";
+} from "../../ui/index.js";
 import bindEvents from "./controller.js";
-import { syncSettingsSnapshot } from "./settingsController.js";
-import { refreshSendWithPageButton } from "./sendWithPageButton.js";
-import { updateComposerButtonsState } from "./composerState.js";
-import { renderMessagesView } from "./messagePresenter.js";
-import { setLocale, translateDOM } from "../utils/index.js";
+import { syncSettingsSnapshot } from "../features/settings/controller.js";
+import { refreshSendWithPageButton } from "../features/messages/sendWithPageButton.js";
+import { updateComposerButtonsState } from "../features/chat/composerState.js";
+import { renderMessagesView } from "../features/messages/presenter.js";
+import { setLocale, translateDOM } from "../../utils/index.js";
 
 const initPanel = async () => {
   initTabListeners();
