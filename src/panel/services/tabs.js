@@ -2,61 +2,80 @@ const readyTabs = new Set();
 const failedTabs = new Set();
 const failedTabErrors = new Map();
 const pendingWaits = new Map();
-const readyMessageType = "contentScriptReady";
 let listenersReady = false;
 const contentScriptNotReadyMessage = "页面已完成加载但内容脚本未就绪";
 const waitForReadyFailedMessage =
-  "等待页面内容脚本就绪失败：页面已完成加载但未收到就绪信号";
+  "等待页面内容脚本就绪失败：页面已完成加载但未收到响应";
 
 const resolveFailedTabError = (tabId) =>
   failedTabErrors.get(tabId) || new Error(contentScriptNotReadyMessage);
 
-const reportContentScriptFailure = (tabId) => {
+const markTabReady = (tabId) => {
+  if (failedTabs.has(tabId)) {
+    return;
+  }
+  readyTabs.add(tabId);
+  const waiters = pendingWaits.get(tabId);
+  if (!waiters) {
+    return;
+  }
+  waiters.forEach((waiter) => {
+    clearTimeout(waiter.timeoutId);
+    waiter.resolve();
+  });
+  pendingWaits.delete(tabId);
+};
+
+const reportContentScriptFailure = (tabId, error) => {
   if (failedTabs.has(tabId)) {
     return resolveFailedTabError(tabId);
   }
-  const error = new Error(contentScriptNotReadyMessage);
+  const failure =
+    error instanceof Error ? error : new Error(contentScriptNotReadyMessage);
   failedTabs.add(tabId);
-  failedTabErrors.set(tabId, error);
-  console.error(error.message);
+  failedTabErrors.set(tabId, failure);
+  console.error(failure.message);
   const waiters = pendingWaits.get(tabId);
   if (!waiters) {
-    return error;
+    return failure;
   }
   waiters.forEach((waiter) => {
     clearTimeout(waiter.timeoutId);
     waiter.reject(new Error(waitForReadyFailedMessage));
   });
   pendingWaits.delete(tabId);
-  return error;
+  return failure;
 };
+
+const pingContentScript = (tabId) =>
+  new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(tabId, { type: "ping" }, (response) => {
+      if (chrome.runtime.lastError) {
+        const message =
+          chrome.runtime.lastError.message || contentScriptNotReadyMessage;
+        reject(new Error(message));
+        return;
+      }
+      if (!response) {
+        reject(new Error(contentScriptNotReadyMessage));
+        return;
+      }
+      if (response.error) {
+        reject(new Error(response.error));
+        return;
+      }
+      if (response.ok !== true) {
+        reject(new Error(contentScriptNotReadyMessage));
+        return;
+      }
+      resolve();
+    });
+  });
 const registerContentScriptListeners = () => {
   if (listenersReady) {
     return;
   }
   listenersReady = true;
-  chrome.runtime.onMessage.addListener((message, sender) => {
-    if (message?.type !== readyMessageType) {
-      return;
-    }
-    const tabId = sender?.tab?.id;
-    if (typeof tabId !== "number") {
-      return;
-    }
-    if (failedTabs.has(tabId)) {
-      return;
-    }
-    readyTabs.add(tabId);
-    const waiters = pendingWaits.get(tabId);
-    if (!waiters) {
-      return;
-    }
-    waiters.forEach((waiter) => {
-      clearTimeout(waiter.timeoutId);
-      waiter.resolve();
-    });
-    pendingWaits.delete(tabId);
-  });
   chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (changeInfo.status === "loading") {
       readyTabs.delete(tabId);
@@ -70,7 +89,13 @@ const registerContentScriptListeners = () => {
     if (readyTabs.has(tabId) || failedTabs.has(tabId)) {
       return;
     }
-    reportContentScriptFailure(tabId);
+    pingContentScript(tabId)
+      .then(() => {
+        markTabReady(tabId);
+      })
+      .catch((error) => {
+        reportContentScriptFailure(tabId, error);
+      });
   });
 };
 export const initTabListeners = () => {
@@ -78,7 +103,7 @@ export const initTabListeners = () => {
 };
 export const getActiveTab = () =>
   new Promise((resolve, reject) => {
-    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (chrome.runtime.lastError) {
         const message =
           chrome.runtime.lastError.message || "无法查询活动标签页";
@@ -221,8 +246,14 @@ export const waitForContentScript = async (tabId, timeoutMs = 10000) => {
     });
   });
   if (tab.status === "complete") {
-    const error = reportContentScriptFailure(tabId);
-    throw error;
+    try {
+      await pingContentScript(tabId);
+      markTabReady(tabId);
+      return;
+    } catch (error) {
+      const failure = reportContentScriptFailure(tabId, error);
+      throw failure;
+    }
   }
   const waitForReady = () =>
     new Promise((resolve, reject) => {
