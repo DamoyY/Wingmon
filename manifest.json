@@ -33,7 +33,7 @@
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval' http://localhost:* http://127.0.0.1:*; object-src 'self';",
-    "sandbox": "sandbox allow-scripts; script-src 'self' 'unsafe-eval';"
+    "sandbox": "sandbox allow-scripts; script-src 'self' 'unsafe-inline' 'unsafe-eval';"
   },
   "side_panel": {
     "default_path": "public/panel.html"
