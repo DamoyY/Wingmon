@@ -6,6 +6,7 @@
   },
   "type": "commonjs",
   "dependencies": {
+    "@babel/parser": "latest",
     "@eslint/eslintrc": "latest",
     "@material/material-color-utilities": "latest",
     "@material/web": "latest",

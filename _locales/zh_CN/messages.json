@@ -77,11 +77,17 @@
     "toolListTabs": {
         "message": "列出所有当前已打开的标签页的标题、URL 和 TabID"
     },
+    "toolShowHtml": {
+        "message": "输入该工具的HTML会在用户的浏览器中被打开"
+    },
     "toolParamFocus": {
         "message": "是否将浏览器焦点切换至此页面"
     },
     "toolParamId": {
         "message": "要点击的 button 的 ID"
+    },
+    "toolParamCode": {
+        "message": "HTML 代码"
     },
     "panelTitle": {
         "message": "LLM 侧边栏"

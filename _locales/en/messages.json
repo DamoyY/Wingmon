@@ -77,11 +77,17 @@
     "toolListTabs": {
         "message": "List the titles, URLs, and TabIDs of all currently open tabs"
     },
+    "toolShowHtml": {
+        "message": "The HTML provided to this tool will be opened in the user's browser"
+    },
     "toolParamFocus": {
         "message": "Whether to switch browser focus to this page"
     },
     "toolParamId": {
         "message": "The ID of the button to click"
+    },
+    "toolParamCode": {
+        "message": "HTML code"
     },
     "panelTitle": {
         "message": "LLM Sidebar"

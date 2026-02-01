@@ -51,3 +51,18 @@ window.addEventListener("message", (event) => {
   }
   handleRunConsoleCommand(data, reply);
 });
+
+const handleRenderHtml = (message) => {
+  const html = message.html;
+  if (typeof html !== "string") return;
+  document.open();
+  document.write(html);
+  document.close();
+};
+
+window.addEventListener("message", (event) => {
+  const data = event.data || {};
+  if (data.type === "renderHtml") {
+    handleRenderHtml(data);
+  }
+});

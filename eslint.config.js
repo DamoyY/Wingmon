@@ -11,6 +11,7 @@ module.exports = [
       "docs/**",
       "public/system_prompt.md",
       "public/panel.bundle.js",
+      "public/show-html.bundle.js",
     ],
   },
   {
