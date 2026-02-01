@@ -52,7 +52,7 @@ window.addEventListener("message", (event) => {
   handleRunConsoleCommand(data, reply);
 });
 const handleRenderHtml = (message) => {
-  const html = message.html;
+  const { html } = message;
   if (typeof html !== "string") return;
   document.open();
   document.write(html);

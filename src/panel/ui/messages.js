@@ -128,6 +128,7 @@ const createMessageContent = (content) => {
   applyHeadingClasses(body);
   renderMath(body);
   highlightCodeBlocks(body);
+  body.dataset.renderedText = body.textContent || "";
   return body;
 };
 
@@ -140,6 +141,54 @@ const resolveMessageContent = (content, role) => {
     throw new Error(`消息内容格式无效${label}`);
   }
   return content;
+};
+
+const wrapTrailingText = (container, length) => {
+  if (!Number.isInteger(length) || length <= 0) {
+    return;
+  }
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  let current = walker.nextNode();
+  while (current) {
+    nodes.push(current);
+    current = walker.nextNode();
+  }
+  let remaining = length;
+  for (let i = nodes.length - 1; i >= 0 && remaining > 0; i -= 1) {
+    const node = nodes[i];
+    const value = node.nodeValue || "";
+    if (value) {
+      const take = Math.min(remaining, value.length);
+      const splitIndex = value.length - take;
+      const beforeText = value.slice(0, splitIndex);
+      const targetText = value.slice(splitIndex);
+      const parent = node.parentNode;
+      if (parent) {
+        if (beforeText) {
+          parent.insertBefore(document.createTextNode(beforeText), node);
+        }
+        const span = document.createElement("span");
+        span.className = "stream-delta";
+        span.textContent = targetText;
+        parent.insertBefore(span, node);
+        parent.removeChild(node);
+        remaining -= take;
+      }
+    }
+  }
+};
+
+const resolveCommonPrefixLength = (previousText, nextText) => {
+  if (!previousText || !nextText) {
+    return 0;
+  }
+  const max = Math.min(previousText.length, nextText.length);
+  let index = 0;
+  while (index < max && previousText[index] === nextText[index]) {
+    index += 1;
+  }
+  return index;
 };
 
 const buildDisplayMessages = (messages) => {
@@ -276,10 +325,19 @@ export const updateLastAssistantMessage = (messages) => {
   if (!contentEl) {
     return false;
   }
+  const previousRenderedText = contentEl.dataset.renderedText || "";
   contentEl.innerHTML = renderMarkdown(lastEntry.content);
   applyHeadingClasses(contentEl);
   renderMath(contentEl);
   highlightCodeBlocks(contentEl);
+  const newRenderedText = contentEl.textContent || "";
+  const commonPrefixLength = resolveCommonPrefixLength(
+    previousRenderedText,
+    newRenderedText,
+  );
+  const appendedLength = newRenderedText.length - commonPrefixLength;
+  wrapTrailingText(contentEl, appendedLength);
+  contentEl.dataset.renderedText = newRenderedText;
   messagesEl.scrollTop = messagesEl.scrollHeight;
   return true;
 };
