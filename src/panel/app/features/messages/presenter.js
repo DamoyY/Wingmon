@@ -7,6 +7,7 @@ import {
 import {
   renderMessages,
   updateLastAssistantMessage,
+  animateMessageRemoval,
 } from "../../../ui/index.js";
 import createMessageActionHandlers from "./actions.js";
 
@@ -22,7 +23,10 @@ const refreshMessages = () => {
 
 const ensureActionHandlers = () => {
   if (!actionHandlers) {
-    actionHandlers = createMessageActionHandlers(refreshMessages);
+    actionHandlers = createMessageActionHandlers(
+      refreshMessages,
+      animateMessageRemoval,
+    );
   }
   return actionHandlers;
 };
@@ -64,7 +68,25 @@ const handleMessagesChange = (change) => {
   if (!change) {
     return;
   }
-  if (change.type === "add" && change.message?.hidden) {
+  if (change.type === "add") {
+    if (change.message?.hidden) {
+      return;
+    }
+    const previousRole = (() => {
+      for (let i = change.index - 1; i >= 0; i -= 1) {
+        const message = state.messages[i];
+        if (message && !message.hidden) {
+          return message.role;
+        }
+      }
+      return null;
+    })();
+    const shouldAnimate =
+      change.message?.role === "user" ||
+      (change.message?.role === "assistant" && previousRole !== "assistant");
+    renderMessages(state.messages, ensureActionHandlers(), {
+      animateIndices: shouldAnimate ? [change.index] : undefined,
+    });
     return;
   }
   if (change.type === "remove" && change.message?.hidden) {

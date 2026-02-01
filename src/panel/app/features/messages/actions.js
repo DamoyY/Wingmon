@@ -89,7 +89,11 @@ const collectHiddenIndicesBackward = (startIndex) => {
   return hiddenIndices;
 };
 
-const handleDeleteMessage = async (indices, refreshMessages) => {
+const handleDeleteMessage = async (
+  indices,
+  refreshMessages,
+  animateRemoval,
+) => {
   if (state.sending) {
     throw new Error(t("cannotDeleteDuringResponse"));
   }
@@ -117,6 +121,13 @@ const handleDeleteMessage = async (indices, refreshMessages) => {
       }
     }
   });
+  if (typeof animateRemoval === "function") {
+    try {
+      await animateRemoval(normalized);
+    } catch (error) {
+      console.error("消息删除动画执行失败", error);
+    }
+  }
   const combined = Array.from(
     new Set([...normalized, ...Array.from(hiddenIndices)]),
   ).sort((a, b) => b - a);
@@ -130,13 +141,14 @@ const reportActionError = (error) => {
   setStatus(message);
 };
 
-const createMessageActionHandlers = (refreshMessages) => {
+const createMessageActionHandlers = (refreshMessages, animateRemoval) => {
   if (typeof refreshMessages !== "function") {
     throw new Error("刷新消息回调缺失");
   }
   return {
     onCopy: (indices) => handleCopyMessage(indices),
-    onDelete: (indices) => handleDeleteMessage(indices, refreshMessages),
+    onDelete: (indices) =>
+      handleDeleteMessage(indices, refreshMessages, animateRemoval),
     onError: reportActionError,
   };
 };

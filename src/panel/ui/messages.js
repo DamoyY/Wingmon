@@ -8,6 +8,10 @@ import { combineMessageContents, t } from "../utils/index.js";
 
 const FADE_OUT_DURATION = 100;
 const FADE_OUT_EASING = "cubic-bezier(0.2, 0, 0, 1)";
+const MESSAGE_ENTER_DURATION = 240;
+const MESSAGE_EXIT_DURATION = 200;
+const MESSAGE_ANIMATION_EASING = "cubic-bezier(0.2, 0, 0, 1)";
+const MESSAGE_EDGE_GAP = 12;
 let fadePromise = null;
 let activeAnimation = null;
 const headingClassMap = new Map([
@@ -197,6 +201,7 @@ const buildDisplayMessages = (messages) => {
   }
   const entries = [];
   let assistantGroup = null;
+  let hasToolBridge = false;
   const flushAssistantGroup = () => {
     if (!assistantGroup) {
       return;
@@ -210,21 +215,35 @@ const buildDisplayMessages = (messages) => {
       });
     }
     assistantGroup = null;
+    hasToolBridge = false;
+  };
+  const startAssistantGroup = (content, index) => {
+    assistantGroup = { contents: [content], indices: [index] };
   };
   messages.forEach((msg, index) => {
     if (!msg || typeof msg !== "object") {
       throw new Error("消息格式无效");
     }
     if (msg.hidden) {
+      if (msg.role === "tool" && assistantGroup) {
+        hasToolBridge = true;
+      }
       return;
     }
     const content = resolveMessageContent(msg.content, msg.role);
     if (msg.role === "assistant") {
       if (!assistantGroup) {
-        assistantGroup = { contents: [], indices: [] };
+        startAssistantGroup(content, index);
+        return;
       }
-      assistantGroup.contents.push(content);
-      assistantGroup.indices.push(index);
+      if (hasToolBridge) {
+        assistantGroup.contents.push(content);
+        assistantGroup.indices.push(index);
+        hasToolBridge = false;
+        return;
+      }
+      flushAssistantGroup();
+      startAssistantGroup(content, index);
       return;
     }
     flushAssistantGroup();
@@ -236,6 +255,84 @@ const buildDisplayMessages = (messages) => {
 
 const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const normalizeIndices = (indices) => {
+  if (Number.isInteger(indices)) {
+    return [indices];
+  }
+  if (!Array.isArray(indices) || indices.length === 0) {
+    throw new Error("消息索引无效");
+  }
+  const normalized = indices.filter((index) => Number.isInteger(index));
+  if (normalized.length !== indices.length) {
+    throw new Error("消息索引无效");
+  }
+  return normalized;
+};
+
+const resolveIndicesKey = (indices) => normalizeIndices(indices).join(",");
+
+const resolveMessageRowEdgeOffset = (row, role, container) => {
+  const rowRect = row.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  if (role === "user") {
+    const gap = Math.max(containerRect.right - rowRect.right, 0);
+    return gap + MESSAGE_EDGE_GAP;
+  }
+  const gap = Math.max(rowRect.left - containerRect.left, 0);
+  return -(gap + MESSAGE_EDGE_GAP);
+};
+
+const animateMessageRowEnter = (row) => {
+  if (prefersReducedMotion()) {
+    return;
+  }
+  const container = ensureMessagesElement();
+  const role = row.classList.contains("user") ? "user" : "assistant";
+  const offsetX = resolveMessageRowEdgeOffset(row, role, container);
+  row.animate(
+    [
+      {
+        transform: `translate3d(${offsetX}px, 0, 0)`,
+        opacity: 0,
+      },
+      { transform: "translate3d(0, 0, 0)", opacity: 1 },
+    ],
+    {
+      duration: MESSAGE_ENTER_DURATION,
+      easing: MESSAGE_ANIMATION_EASING,
+      fill: "both",
+    },
+  );
+};
+
+const animateMessageRowExit = async (row) => {
+  if (prefersReducedMotion()) {
+    return;
+  }
+  const container = ensureMessagesElement();
+  const role = row.classList.contains("user") ? "user" : "assistant";
+  const offsetX = resolveMessageRowEdgeOffset(row, role, container);
+  const animation = row.animate(
+    [
+      { transform: "translate3d(0, 0, 0)", opacity: 1 },
+      {
+        transform: `translate3d(${offsetX}px, 0, 0)`,
+        opacity: 0,
+      },
+    ],
+    {
+      duration: MESSAGE_EXIT_DURATION,
+      easing: MESSAGE_ANIMATION_EASING,
+      fill: "both",
+    },
+  );
+  try {
+    await animation.finished;
+  } finally {
+    animation.cancel();
+  }
+};
 
 export const fadeOutMessages = async () => {
   const container = ensureMessagesElement();
@@ -279,7 +376,7 @@ export const resetMessagesFade = () => {
   container.style.opacity = "";
 };
 
-export const renderMessages = (messages, handlers) => {
+export const renderMessages = (messages, handlers, options = {}) => {
   if (!handlers || typeof handlers !== "object") {
     throw new Error("消息操作处理器缺失");
   }
@@ -289,22 +386,52 @@ export const renderMessages = (messages, handlers) => {
   }
   let hasVisibleMessages = false;
   const displayMessages = buildDisplayMessages(messages);
+  const animateKey =
+    options?.animateIndices !== undefined
+      ? resolveIndicesKey(options.animateIndices)
+      : null;
+  const rowsToAnimate = [];
   messagesEl.innerHTML = "";
   displayMessages.forEach((msg) => {
     hasVisibleMessages = true;
     const row = document.createElement("div");
     row.className = `message-row ${msg.role}`;
+    row.dataset.indices = resolveIndicesKey(msg.indices);
     const node = document.createElement("div");
     node.className = `message ${msg.role}`;
     node.appendChild(createMessageContent(msg.content));
     row.appendChild(node);
     row.appendChild(createMessageActions(msg.indices, handlers));
     messagesEl.appendChild(row);
+    if (animateKey && row.dataset.indices === animateKey) {
+      rowsToAnimate.push(row);
+    }
   });
   messagesEl.scrollTop = messagesEl.scrollHeight;
+  rowsToAnimate.forEach((row) => {
+    animateMessageRowEnter(row);
+  });
   const button = ensureNewChatButton();
   button.classList.toggle("hidden", !hasVisibleMessages);
   setEmptyStateVisible(!hasVisibleMessages);
+};
+
+export const animateMessageRemoval = async (indices) => {
+  const container = ensureMessagesElement();
+  if (prefersReducedMotion()) {
+    return false;
+  }
+  const key = resolveIndicesKey(indices);
+  const row = container.querySelector(`.message-row[data-indices="${key}"]`);
+  if (!row) {
+    return false;
+  }
+  try {
+    await animateMessageRowExit(row);
+  } catch (error) {
+    console.error("消息删除动画执行失败", error);
+  }
+  return true;
 };
 
 export const updateLastAssistantMessage = (messages) => {
