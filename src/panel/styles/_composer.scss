@@ -80,6 +80,26 @@
 .stop-button {
   --md-sys-color-primary: var(--md-sys-color-error);
   --md-sys-color-on-primary: var(--md-sys-color-on-error);
+  --md-filled-button-container-height: 35px;
+}
+
+.stop-button__content {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+}
+
+.stop-button__label {
+  flex: 1;
+  text-align: center;
+}
+
+.stop-button__spinner {
+  margin-left: -2px;
+  --md-circular-progress-size: 25px;
+  --md-circular-progress-active-indicator-width: 26;
+  --md-circular-progress-active-indicator-color: var(--md-sys-color-on-error);
 }
 
 #send-with-page {

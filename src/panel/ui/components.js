@@ -10,4 +10,5 @@ import "../../../node_modules/@material/web/select/select-option.js";
 import "../../../node_modules/@material/web/list/list.js";
 import "../../../node_modules/@material/web/list/list-item.js";
 import "../../../node_modules/@material/web/dialog/dialog.js";
+import "../../../node_modules/@material/web/progress/circular-progress.js";
 import "../../../node_modules/@material/web/switch/switch.js";

@@ -158,6 +158,9 @@
     "stop": {
         "message": "停止"
     },
+    "stopping": {
+        "message": "停止中"
+    },
     "promptPlaceholder": {
         "message": "输入要发送的内容"
     },

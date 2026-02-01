@@ -158,6 +158,9 @@
     "stop": {
         "message": "Stop"
     },
+    "stopping": {
+        "message": "Stopping"
+    },
     "promptPlaceholder": {
         "message": "Type your message ..."
     },
