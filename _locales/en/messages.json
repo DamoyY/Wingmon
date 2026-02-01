@@ -14,6 +14,30 @@
     "actionFailed": {
         "message": "Action failed"
     },
+    "requestStopped": {
+        "message": "Stopped"
+    },
+    "requestInvalidStatusReporter": {
+        "message": "Invalid status reporter"
+    },
+    "statusThinking": {
+        "message": "Thinking..."
+    },
+    "statusSearching": {
+        "message": "Searching..."
+    },
+    "statusBrowsing": {
+        "message": "Browsing..."
+    },
+    "statusOperating": {
+        "message": "Operating..."
+    },
+    "statusCoding": {
+        "message": "Coding..."
+    },
+    "statusSpeaking": {
+        "message": "Responding..."
+    },
     "statusOpenSuccess": {
         "message": "**Open Success**"
     },

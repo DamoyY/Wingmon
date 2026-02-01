@@ -13,7 +13,7 @@ import {
 import bindEvents from "./controller.js";
 import { syncSettingsSnapshot } from "../features/settings/controller.js";
 import { refreshSendWithPageButton } from "../features/messages/sendWithPageButton.js";
-import { updateComposerButtonsState } from "../features/chat/composerState.js";
+import { updateComposerButtonsState } from "../features/chat/composerView.js";
 import { renderMessagesView } from "../features/messages/presenter.js";
 import { setLocale, translateDOM } from "../../utils/index.js";
 

@@ -5,11 +5,11 @@ import {
   showKeyView,
 } from "../../../ui/index.js";
 import { renderMessagesView } from "./presenter.js";
+import { clearPromptContent } from "../chat/composerState.js";
 import {
-  clearPromptContent,
   setComposerSending,
   updateComposerButtonsState,
-} from "../chat/composerState.js";
+} from "../chat/composerView.js";
 
 const normalizeStatusMessage = (message) => {
   if (message === undefined || message === null) {

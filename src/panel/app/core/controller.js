@@ -1,29 +1,29 @@
 import { elements } from "../../ui/index.js";
-import { refreshSendWithPageButton } from "../features/messages/sendWithPageButton.js";
 import { updateSettings } from "../../services/index.js";
 import {
-  handleSaveSettings,
-  handleCancelSettings,
-  handleOpenSettings,
-  handleSettingsFieldChange,
-  handleThemeChange,
-  handleThemeColorChange,
-  handleLanguageChange,
-} from "../features/settings/controller.js";
+  handleNewChat,
+  handlePromptInput,
+  handlePromptKeydown,
+} from "../features/chat/index.js";
 import {
+  handleCloseHistory,
+  handleOpenHistory,
+} from "../features/history/index.js";
+import {
+  refreshSendWithPageButton,
   sendMessage,
   sendMessageWithPage,
   stopSending,
-} from "../features/messages/sendFlow.js";
+} from "../features/messages/index.js";
 import {
-  handlePromptKeydown,
-  handlePromptInput,
-} from "../features/chat/promptHandlers.js";
-import handleNewChat from "../features/chat/session.js";
-import {
-  handleOpenHistory,
-  handleCloseHistory,
-} from "../features/history/panel.js";
+  handleCancelSettings,
+  handleLanguageChange,
+  handleOpenSettings,
+  handleSaveSettings,
+  handleSettingsFieldChange,
+  handleThemeChange,
+  handleThemeColorChange,
+} from "../features/settings/index.js";
 
 const bindEvents = () => {
   const {

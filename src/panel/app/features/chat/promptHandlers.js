@@ -1,4 +1,4 @@
-import { updateComposerButtonsState } from "./composerState.js";
+import { updateComposerButtonsState } from "./composerView.js";
 import { sendMessage } from "../messages/sendFlow.js";
 
 export const handlePromptInput = () => {

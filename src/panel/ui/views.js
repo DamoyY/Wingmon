@@ -27,7 +27,7 @@ const setSettingsMode = (isFirstUse) => {
   cancelSettings.classList.toggle("hidden", isFirstUse);
 };
 
-const resolveOutgoingView = () => {
+const resolveActiveView = () => {
   const { historyView, keyView } = elements;
   if (historyView && !historyView.classList.contains("hidden")) {
     return historyView;
@@ -136,7 +136,7 @@ export const showChatView = ({ animate = false } = {}) => {
     throw new Error("视图元素未初始化");
   }
   if (animate) {
-    const outgoingView = resolveOutgoingView();
+    const outgoingView = resolveActiveView();
     return animateSwap({
       incoming: chatView,
       outgoing: outgoingView,

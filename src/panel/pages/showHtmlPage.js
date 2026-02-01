@@ -1,8 +1,7 @@
 import { parse } from "@babel/parser";
 
-import { getHtmlPreviewStorageKey } from "../services/htmlPreview.js";
+import { getHtmlPreview } from "../services/htmlPreview.js";
 
-const storageKey = getHtmlPreviewStorageKey();
 const CDN_BASE_URL = "https://esm.sh/";
 
 const isBareModuleSpecifier = (specifier) => {
@@ -247,19 +246,9 @@ const loadPreview = async () => {
     return;
   }
   try {
-    const result = await chrome.storage.local.get(storageKey);
-    const entries = result?.[storageKey];
-    if (!entries || typeof entries !== "object") {
-      console.error("HTML 预览数据为空");
-      return;
-    }
-    const entry = entries[id];
-    if (!entry || typeof entry !== "object") {
+    const entry = await getHtmlPreview(id);
+    if (!entry) {
       console.error("HTML 预览记录不存在", id);
-      return;
-    }
-    if (typeof entry.code !== "string") {
-      console.error("HTML 预览内容缺失", entry);
       return;
     }
     const normalizedCode = normalizePreviewHtml(entry.code);

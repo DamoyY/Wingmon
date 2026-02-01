@@ -40,12 +40,12 @@
 
 #send,
 #send-with-page {
+  opacity: 0.8;
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 #send:disabled,
 #send-with-page:disabled {
-  opacity: 0.6;
   transform: scale(0.98);
 }
 
@@ -63,7 +63,7 @@
   border-radius: 16px 16px 0 0;
   background: color-mix(
     in srgb,
-    var(--md-sys-color-surface-dim) 30%,
+    var(--md-sys-color-surface-dim) 50%,
     transparent
   );
   backdrop-filter: blur(48px);

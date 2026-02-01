@@ -16,10 +16,24 @@ const toolFiles = (await readdir(toolsDir))
       file.endsWith(".js") && file !== "index.js" && file !== "shared.js",
   )
   .sort();
-const toolImports = toolFiles.map(
-  (file, index) => `import tool${index} from "./${file}";`,
+const toModuleName = (file) => {
+  const baseName = path.basename(file, ".js");
+  const camelName = baseName
+    .replace(/[-_](\w)/g, (_, char) => char.toUpperCase())
+    .replace(/[^a-zA-Z0-9_$]/g, "");
+  if (!camelName || /^\d/.test(camelName)) {
+    return `tool${camelName}`;
+  }
+  return camelName;
+};
+const toolEntries = toolFiles.map((file) => ({
+  file,
+  name: toModuleName(file),
+}));
+const toolImports = toolEntries.map(
+  ({ file, name }) => `import ${name} from "./${file}";`,
 );
-const toolList = toolFiles.map((_, index) => `tool${index}`);
+const toolList = toolEntries.map(({ name }) => name);
 const toolsIndexContent = `${toolImports.join("\n")}\n\nconst toolModules = [\n  ${toolList.join(
   ",\n  ",
 )}\n];\n\nexport default toolModules;\n`;

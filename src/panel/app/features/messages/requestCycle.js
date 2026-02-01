@@ -6,38 +6,47 @@ import {
 } from "../../../tools/index.js";
 import { requestModel } from "../../../api/index.js";
 import { addMessage, state } from "../../../state/index.js";
+import { t } from "../../../utils/index.js";
 import { appendAssistantDelta, renderMessagesView } from "./presenter.js";
+
+const createAbortError = () => {
+  const error = new Error(t("requestStopped"));
+  error.name = "AbortError";
+  return error;
+};
 
 const ensureNotAborted = (signal) => {
   if (signal?.aborted) {
-    throw new Error("已停止");
+    throw createAbortError();
   }
 };
 
 const ensureStatusReporter = (reporter) => {
   if (typeof reporter !== "function") {
-    throw new Error("状态回调无效");
+    throw new Error(t("requestInvalidStatusReporter"));
   }
   return reporter;
 };
 
-const STATUS_TEXT = {
-  thinking: "思索中...",
-  searching: "搜索中...",
-  browsing: "浏览中...",
-  operating: "操作中...",
-  coding: "编码中...",
-  speaking: "表达中...",
+const STATUS_KEYS = {
+  thinking: "statusThinking",
+  searching: "statusSearching",
+  browsing: "statusBrowsing",
+  operating: "statusOperating",
+  coding: "statusCoding",
+  speaking: "statusSpeaking",
   idle: "",
 };
 
+const getStatusText = (statusKey) => (statusKey ? t(statusKey) : "");
+
 const TOOL_STATUS_MAP = {
-  get_page: STATUS_TEXT.browsing,
-  list_tabs: STATUS_TEXT.browsing,
-  click_button: STATUS_TEXT.operating,
-  close_page: STATUS_TEXT.operating,
-  run_console: STATUS_TEXT.coding,
-  show_html: STATUS_TEXT.coding,
+  get_page: STATUS_KEYS.browsing,
+  list_tabs: STATUS_KEYS.browsing,
+  click_button: STATUS_KEYS.operating,
+  close_page: STATUS_KEYS.operating,
+  run_console: STATUS_KEYS.coding,
+  show_html: STATUS_KEYS.coding,
 };
 
 const getToolCallName = (call) => call?.function?.name || call?.name || "";
@@ -60,13 +69,13 @@ const resolveStatusFromToolCalls = (toolCalls) => {
       if (name === "open_page") {
         const argsText = getToolCallArguments(call);
         if (isGoogleSearchOpen(argsText)) {
-          return STATUS_TEXT.searching;
+          return getStatusText(STATUS_KEYS.searching);
         }
-        return STATUS_TEXT.browsing;
+        return getStatusText(STATUS_KEYS.browsing);
       }
       const mapped = TOOL_STATUS_MAP[name];
       if (mapped) {
-        return mapped;
+        return getStatusText(mapped);
       }
     }
   }
@@ -79,13 +88,13 @@ const resolveStatusFromChunk = ({ delta, toolCalls }) => {
     return toolStatus;
   }
   if (delta) {
-    return STATUS_TEXT.speaking;
+    return getStatusText(STATUS_KEYS.speaking);
   }
   return "";
 };
 
 const createStatusTracker = (reportStatus) => {
-  let lastStatus = STATUS_TEXT.idle;
+  let lastStatus = getStatusText(STATUS_KEYS.idle);
   const setStatus = (nextStatus) => {
     const normalized = typeof nextStatus === "string" ? nextStatus : "";
     if (normalized === lastStatus) {
@@ -95,7 +104,7 @@ const createStatusTracker = (reportStatus) => {
     reportStatus(normalized);
   };
   return {
-    setInitial: () => setStatus(STATUS_TEXT.thinking),
+    setInitial: () => setStatus(getStatusText(STATUS_KEYS.thinking)),
     updateFromChunk: (chunk) => {
       if (!chunk) {
         return;

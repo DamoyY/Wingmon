@@ -1,5 +1,5 @@
-import TurndownService from "../../../node_modules/turndown/lib/turndown.browser.es.js";
-import { tables } from "../../../node_modules/turndown-plugin-gfm/lib/turndown-plugin-gfm.browser.es.js";
+import TurndownService from "turndown";
+import { tables } from "turndown-plugin-gfm";
 import { isDataUrl, isSvgUrl } from "./url.js";
 
 const ensureTurndownService = () => {

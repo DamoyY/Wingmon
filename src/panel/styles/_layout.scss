@@ -29,22 +29,6 @@
   pointer-events: none !important;
 }
 
-.view-front {
-  z-index: 2;
-}
-
-.view-layer-top {
-  z-index: 2;
-}
-
-.view-layer-bottom {
-  z-index: 1;
-}
-
-.view-animating {
-  pointer-events: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .view {
     transition: none;

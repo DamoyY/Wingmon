@@ -5,8 +5,10 @@ md-filled-text-field {
 
 #prompt {
   resize: none;
-  --md-filled-text-field-container-color: var(
-    --md-sys-color-surface-container-high
+  --md-filled-text-field-container-color: color-mix(
+    in srgb,
+    var(--md-sys-color-secondary-container) 75%,
+    transparent
   );
   flex: 1 1 auto;
   min-height: 0;
