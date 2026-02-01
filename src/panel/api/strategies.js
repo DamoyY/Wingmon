@@ -35,10 +35,11 @@ const createApiStrategies = (toolAdapter) => ({
       stream: true,
       tools,
     }),
-    stream: async (response, { onDelta }) => {
+    stream: async (response, { onDelta, onChunk }) => {
       let collector = {};
       await streamChatCompletion(response, {
         onDelta,
+        onChunk,
         onToolCallDelta: (deltas) => {
           collector = toolAdapter.addChatToolCallDelta(collector, deltas);
         },
@@ -56,10 +57,11 @@ const createApiStrategies = (toolAdapter) => ({
       tools,
       ...(systemPrompt ? { instructions: systemPrompt } : {}),
     }),
-    stream: async (response, { onDelta }) => {
+    stream: async (response, { onDelta, onChunk }) => {
       let collector = {};
       await streamResponses(response, {
         onDelta,
+        onChunk,
         onToolCallEvent: (payload, eventType) => {
           collector = toolAdapter.addResponsesToolCallEvent(
             collector,

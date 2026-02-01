@@ -40,7 +40,7 @@ export const stopSending = async () => {
     return;
   }
   activeAbortController.abort();
-  reportSendStatus("已停止");
+  reportSendStatus("");
   await saveCurrentConversation();
 };
 
@@ -62,15 +62,14 @@ export const sendMessage = async ({ includePage = false } = {}) => {
   const abortController = new AbortController();
   activeAbortController = abortController;
   setSendUiState(true);
+  reportSendStatus("");
   try {
     await saveCurrentConversation();
     ensureNotAborted(abortController.signal);
     if (includePage) {
-      reportSendStatus("读取页面中…");
       await appendSharedPageContext();
     }
     ensureNotAborted(abortController.signal);
-    reportSendStatus("请求中…");
     const responseStream = createResponseStream({
       settings,
       signal: abortController.signal,
@@ -93,10 +92,11 @@ export const sendMessage = async ({ includePage = false } = {}) => {
     reportSendStatus("");
   } catch (error) {
     if (error?.name === "AbortError" || error?.message === "已停止") {
-      reportSendStatus("已停止");
+      reportSendStatus("");
       return;
     }
     console.error(error?.message || "请求失败");
+    reportSendStatus("");
   } finally {
     setStateValue("sending", false);
     activeAbortController = null;

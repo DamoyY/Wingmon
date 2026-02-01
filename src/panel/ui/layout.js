@@ -17,9 +17,6 @@ const updateChatBarSizes = () => {
   if (!Number.isFinite(topHeight) || topHeight <= 0) {
     throw new Error("Top bar height is invalid.");
   }
-  if (!Number.isFinite(chatViewHeight) || chatViewHeight <= 0) {
-    throw new Error("Chat view height is invalid.");
-  }
   if (!Number.isFinite(bottomHeight) || bottomHeight <= 0) {
     throw new Error("Bottom bar height is invalid.");
   }

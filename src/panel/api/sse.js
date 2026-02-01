@@ -68,7 +68,49 @@ const deltaFromResponses = (payload, eventType) => {
   }
   return deltaFromChat(payload);
 };
-export const streamChatCompletion = (response, { onDelta, onToolCallDelta }) =>
+const toolCallsFromResponses = (payload, eventType) => {
+  const resolvedType = payload?.type || eventType;
+  if (
+    resolvedType === "response.output_item.added" ||
+    resolvedType === "response.output_item.done"
+  ) {
+    const item = payload?.item;
+    if (item?.type === "function_call") {
+      return [
+        {
+          name: item.name,
+          arguments: typeof item.arguments === "string" ? item.arguments : "",
+        },
+      ];
+    }
+  }
+  if (resolvedType === "response.function_call_arguments.delta") {
+    if (payload?.name) {
+      return [
+        {
+          name: payload.name,
+          arguments: typeof payload.delta === "string" ? payload.delta : "",
+        },
+      ];
+    }
+  }
+  if (resolvedType === "response.function_call_arguments.done") {
+    if (payload?.name) {
+      return [
+        {
+          name: payload.name,
+          arguments:
+            typeof payload.arguments === "string" ? payload.arguments : "",
+        },
+      ];
+    }
+  }
+  return [];
+};
+export const streamChatCompletion = (
+  response,
+  { onDelta, onToolCallDelta, onChunk },
+) =>
   streamSse(response, (payload) => {
     const delta = deltaFromChat(payload);
     if (delta) {
@@ -78,8 +120,17 @@ export const streamChatCompletion = (response, { onDelta, onToolCallDelta }) =>
     if (Array.isArray(toolCalls) && onToolCallDelta) {
       onToolCallDelta(toolCalls);
     }
+    if (typeof onChunk === "function") {
+      onChunk({
+        delta,
+        toolCalls: Array.isArray(toolCalls) ? toolCalls : [],
+      });
+    }
   });
-export const streamResponses = (response, { onDelta, onToolCallEvent }) =>
+export const streamResponses = (
+  response,
+  { onDelta, onToolCallEvent, onChunk },
+) =>
   streamSse(response, (payload, eventType) => {
     const delta = deltaFromResponses(payload, eventType);
     if (delta) {
@@ -87,6 +138,12 @@ export const streamResponses = (response, { onDelta, onToolCallEvent }) =>
     }
     if (onToolCallEvent) {
       onToolCallEvent(payload, eventType);
+    }
+    if (typeof onChunk === "function") {
+      onChunk({
+        delta,
+        toolCalls: toolCallsFromResponses(payload, eventType),
+      });
     }
   });
 export const extractResponsesText = (data) => {

@@ -30,6 +30,7 @@ export const initElements = async () => {
       historyView: requireElement("history-view", "historyView"),
       chatView: requireElement("chat-view", "chatView"),
       topBar: requireElement("top-bar", "topBar"),
+      topStatus: requireElement("top-status", "topStatus"),
       bottomBar: requireElement("bottom-bar", "bottomBar"),
       followModeSwitch: requireElement("follow-mode", "followModeSwitch"),
       keyInput: requireElement("api-key-input", "keyInput"),

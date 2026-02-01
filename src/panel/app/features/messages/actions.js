@@ -5,14 +5,6 @@ import {
 } from "../../../services/index.js";
 import { combineMessageContents, t } from "../../../utils/index.js";
 
-const setStatus = (text) => {
-  if (text) {
-    console.info(text);
-  } else {
-    console.info("");
-  }
-};
-
 const persistConversation = async () => {
   if (!state.messages.length) {
     await deleteConversation(state.conversationId);
@@ -54,9 +46,6 @@ const handleCopyMessage = async (indices) => {
     throw new Error("当前环境不支持复制");
   }
   await navigator.clipboard.writeText(text);
-  if (!state.sending) {
-    setStatus(t("copied"));
-  }
 };
 
 const collectHiddenIndicesForward = (startIndex) => {
@@ -138,7 +127,7 @@ const handleDeleteMessage = async (
 
 const reportActionError = (error) => {
   const message = error?.message || t("actionFailed");
-  setStatus(message);
+  console.error(message, error);
 };
 
 const createMessageActionHandlers = (refreshMessages, animateRemoval) => {

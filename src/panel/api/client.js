@@ -8,6 +8,7 @@ const requestModel = async ({
   toolAdapter,
   onDelta,
   onStreamStart,
+  onChunk,
   signal,
 }) => {
   const strategy = getApiStrategy(settings.apiType, toolAdapter);
@@ -33,7 +34,7 @@ const requestModel = async ({
     if (typeof onStreamStart === "function") {
       onStreamStart();
     }
-    const toolCalls = await strategy.stream(response, { onDelta });
+    const toolCalls = await strategy.stream(response, { onDelta, onChunk });
     return { toolCalls, streamed: true };
   }
   const data = await response.json();

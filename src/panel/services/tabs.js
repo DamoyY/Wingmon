@@ -4,11 +4,15 @@ const readyTabs = new Set();
 const failedTabs = new Set();
 const failedTabErrors = new Map();
 const pendingWaits = new Map();
+const pendingPings = new Map();
 let listenersReady = false;
 const contentScriptNotReadyMessage = "页面已完成加载但内容脚本未就绪";
 const waitForReadyFailedMessage =
   "等待页面内容脚本就绪失败：页面已完成加载但未收到响应";
 const internalTabMessage = "浏览器内置页面不支持连接内容脚本";
+const pingRetryBaseDelayMs = 200;
+const pingRetryStepMs = 150;
+const pingRetryMaxDelayMs = 1000;
 
 const resolveFailedTabError = (tabId) =>
   failedTabErrors.get(tabId) || new Error(contentScriptNotReadyMessage);
@@ -48,6 +52,21 @@ const reportContentScriptFailure = (tabId, error) => {
   });
   pendingWaits.delete(tabId);
   return failure;
+};
+
+const resolvePingRetryDelay = (attempt) =>
+  Math.min(
+    pingRetryBaseDelayMs + attempt * pingRetryStepMs,
+    pingRetryMaxDelayMs,
+  );
+
+const cancelPendingPing = (tabId) => {
+  const pending = pendingPings.get(tabId);
+  if (!pending) {
+    return;
+  }
+  pending.cancel();
+  pendingPings.delete(tabId);
 };
 
 const getTabSnapshot = (tabId) =>
@@ -101,6 +120,75 @@ const pingContentScript = (tabId) =>
       resolve();
     });
   });
+
+const waitForContentScriptReady = (tabId, timeoutMs) => {
+  if (readyTabs.has(tabId)) {
+    return Promise.resolve();
+  }
+  if (failedTabs.has(tabId)) {
+    return Promise.reject(resolveFailedTabError(tabId));
+  }
+  const existing = pendingPings.get(tabId);
+  if (existing) {
+    return existing.promise;
+  }
+  const startTime = Date.now();
+  let attempt = 0;
+  let warned = false;
+  let timerId = null;
+  let canceled = false;
+  const promise = new Promise((resolve, reject) => {
+    const attemptPing = () => {
+      if (canceled) {
+        reject(new Error("等待内容脚本已取消"));
+        return;
+      }
+      pingContentScript(tabId)
+        .then(() => {
+          if (canceled) {
+            reject(new Error("等待内容脚本已取消"));
+            return;
+          }
+          markTabReady(tabId);
+          resolve();
+        })
+        .catch((error) => {
+          if (canceled) {
+            reject(new Error("等待内容脚本已取消"));
+            return;
+          }
+          if (!warned) {
+            console.warn(
+              "内容脚本尚未就绪，正在重试",
+              error?.message || contentScriptNotReadyMessage,
+            );
+            warned = true;
+          }
+          if (Date.now() - startTime >= timeoutMs) {
+            const failure = reportContentScriptFailure(tabId, error);
+            reject(failure);
+            return;
+          }
+          const delay = resolvePingRetryDelay(attempt);
+          attempt += 1;
+          timerId = setTimeout(attemptPing, delay);
+        });
+    };
+    attemptPing();
+  });
+  const cancel = () => {
+    canceled = true;
+    if (timerId) {
+      clearTimeout(timerId);
+    }
+  };
+  pendingPings.set(tabId, { promise, cancel });
+  promise.finally(() => {
+    pendingPings.delete(tabId);
+  });
+  return promise;
+};
+
 const registerContentScriptListeners = () => {
   if (listenersReady) {
     return;
@@ -111,6 +199,7 @@ const registerContentScriptListeners = () => {
       readyTabs.delete(tabId);
       failedTabs.delete(tabId);
       failedTabErrors.delete(tabId);
+      cancelPendingPing(tabId);
       return;
     }
     if (changeInfo.status !== "complete") {
@@ -126,16 +215,18 @@ const registerContentScriptListeners = () => {
           if (waiters?.size) {
             reportContentScriptFailure(tabId, new Error(internalTabMessage));
           }
-          return false;
+          return null;
         }
-        return pingContentScript(tabId).then(() => true);
-      })
-      .then((shouldMarkReady) => {
-        if (shouldMarkReady) {
-          markTabReady(tabId);
+        const waiters = pendingWaits.get(tabId);
+        if (!waiters?.size) {
+          return null;
         }
+        return waitForContentScriptReady(tabId, 10000);
       })
       .catch((error) => {
+        if (error?.message === "等待内容脚本已取消") {
+          return;
+        }
         reportContentScriptFailure(tabId, error);
       });
   });
@@ -278,12 +369,17 @@ export const waitForContentScript = async (tabId, timeoutMs = 10000) => {
   const tab = await ensureTabConnectable(tabId);
   if (tab.status === "complete") {
     try {
-      await pingContentScript(tabId);
-      markTabReady(tabId);
+      await waitForContentScriptReady(tabId, timeoutMs);
       return;
     } catch (error) {
-      const failure = reportContentScriptFailure(tabId, error);
-      throw failure;
+      if (error?.message !== "等待内容脚本已取消") {
+        throw error;
+      }
+      const refreshed = await getTabSnapshot(tabId);
+      if (refreshed.status === "complete") {
+        await waitForContentScriptReady(tabId, timeoutMs);
+        return;
+      }
     }
   }
   const waitForReady = () =>

@@ -2,6 +2,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 
 .top-bar {
@@ -22,6 +23,16 @@
 
 .top-bar .header {
   width: 100%;
+}
+
+.top-status {
+  flex: 1;
+  text-align: center;
+  color: var(--md-sys-color-on-surface-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
 }
 
 .title {

@@ -30,7 +30,10 @@ const ensureSettingsPayload = (settings) => {
 
 export const reportSendStatus = (message) => {
   const normalizedMessage = normalizeStatusMessage(message);
-  console.info(normalizedMessage);
+  if (!elements.topStatus) {
+    throw new Error("状态提示元素未初始化");
+  }
+  setText(elements.topStatus, normalizedMessage);
 };
 
 export const ensureSettingsReady = (settings) => {

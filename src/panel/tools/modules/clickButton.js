@@ -54,7 +54,7 @@ const execute = async ({ id }) => {
       return { ...state, errors: [...state.errors, "标签页缺少 TabID"] };
     }
     try {
-      await waitForContentScript(tab.id, 3000);
+      await waitForContentScript(tab.id);
       const result = await sendMessageToTab(tab.id, {
         type: "clickButton",
         id,
