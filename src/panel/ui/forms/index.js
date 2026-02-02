@@ -2,5 +2,5 @@ export {
   default as fillSettingsForm,
   readSettingsFormValues,
   updateSettingsFormValues,
-} from "./forms.js";
+} from "./settingsForms.js";
 export * from "./settingsView.js";

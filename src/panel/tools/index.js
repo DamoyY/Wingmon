@@ -4,5 +4,5 @@ export { default as apiToolAdapter } from "./api-adapter.js";
 export * from "./message-builders.js";
 export * from "./pageReadDedupe.js";
 export * from "./runtime.js";
-export * from "./toolcalls.js";
-export * from "./toolOutput.js";
+export * from "./calls.js";
+export * from "./output.js";

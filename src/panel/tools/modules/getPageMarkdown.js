@@ -5,7 +5,7 @@ import {
   fetchPageMarkdownData,
   shouldFollowMode,
   validateTabIdArgs,
-} from "./toolModuleUtils.js";
+} from "./utils.js";
 
 const parameters = {
   type: "object",

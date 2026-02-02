@@ -1,4 +1,4 @@
-export { default as applyTheme } from "./theme.js";
+export { default as applyTheme } from "./apply.js";
 export {
   default as applyTypography,
   applyMessageHeadingTypography,

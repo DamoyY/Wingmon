@@ -1,12 +1,9 @@
-export * from "./messages.js";
+export * from "./render.js";
 export {
   animateMessageRowEnter,
   animateMessageRemoval,
   fadeOutMessages,
   resetMessagesFade,
-} from "./messageAnimations.js";
-export { default as renderMessageContent } from "./messageContentRenderer.js";
-export {
-  default as normalizeIndices,
-  resolveIndicesKey,
-} from "./messageKeys.js";
+} from "./animations.js";
+export { default as renderMessageContent } from "./contentRenderer.js";
+export { default as normalizeIndices, resolveIndicesKey } from "./keys.js";

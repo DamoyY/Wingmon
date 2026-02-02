@@ -1,7 +1,7 @@
 import { createTab, focusTab, saveHtmlPreview } from "../../services/index.js";
 import { t } from "../../utils/index.js";
 import ToolInputError from "../errors.js";
-import { ensureObjectArgs } from "./toolModuleUtils.js";
+import { ensureObjectArgs } from "./utils.js";
 
 const parameters = {
   type: "object",

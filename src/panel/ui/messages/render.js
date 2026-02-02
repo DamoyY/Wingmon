@@ -1,7 +1,7 @@
 import { elements } from "../core/elements.js";
-import renderMessageContent from "./messageContentRenderer.js";
-import { animateMessageRowEnter } from "./messageAnimations.js";
-import { resolveIndicesKey } from "./messageKeys.js";
+import renderMessageContent from "./contentRenderer.js";
+import { animateMessageRowEnter } from "./animations.js";
+import { resolveIndicesKey } from "./keys.js";
 import { applyMessageHeadingTypography } from "../theme/typography.js";
 import { combineMessageContents, t } from "../../utils/index.js";
 

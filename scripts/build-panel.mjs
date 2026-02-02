@@ -15,6 +15,7 @@ const toolFiles = (await readdir(toolsDir))
     (file) =>
       file.endsWith(".js") &&
       file !== "index.js" &&
+      file !== "utils.js" &&
       file !== "shared.js" &&
       file !== "toolModuleUtils.js",
   )

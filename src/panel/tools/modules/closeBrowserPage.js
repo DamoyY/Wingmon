@@ -1,6 +1,6 @@
 import { t } from "../../utils/index.js";
 import { closeTab } from "../../services/index.js";
-import { validateTabIdArgs } from "./toolModuleUtils.js";
+import { validateTabIdArgs } from "./utils.js";
 
 const parameters = {
   type: "object",

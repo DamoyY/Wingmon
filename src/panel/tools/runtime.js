@@ -6,10 +6,7 @@ import {
   getToolCallName,
   getToolModule,
 } from "./definitions.js";
-import {
-  buildToolErrorOutput,
-  defaultToolSuccessOutput,
-} from "./toolOutput.js";
+import { buildToolErrorOutput, defaultToolSuccessOutput } from "./output.js";
 import ToolInputError from "./errors.js";
 
 const normalizeToolCall = (toolCall) => {
