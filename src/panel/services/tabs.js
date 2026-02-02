@@ -1,72 +1,19 @@
 import { isInternalUrl } from "../utils/index.js";
 
-const readyTabs = new Set();
-const failedTabs = new Set();
-const failedTabErrors = new Map();
 const pendingWaits = new Map();
-const pendingPings = new Map();
 let listenersReady = false;
-const contentScriptNotReadyMessage = "页面已完成加载但内容脚本未就绪";
-const waitForReadyFailedMessage =
-  "等待页面内容脚本就绪失败：页面已完成加载但未收到响应";
 const internalTabMessage = "浏览器内置页面不支持连接内容脚本";
-const pingRetryBaseDelayMs = 200;
-const pingRetryStepMs = 150;
-const pingRetryMaxDelayMs = 1000;
 
-const resolveFailedTabError = (tabId) =>
-  failedTabErrors.get(tabId) || new Error(contentScriptNotReadyMessage);
-
-const markTabReady = (tabId) => {
-  if (failedTabs.has(tabId)) {
-    return;
-  }
-  readyTabs.add(tabId);
+const resolvePendingWaits = (tabId, isComplete) => {
   const waiters = pendingWaits.get(tabId);
   if (!waiters) {
     return;
   }
   waiters.forEach((waiter) => {
     clearTimeout(waiter.timeoutId);
-    waiter.resolve();
+    waiter.resolve(isComplete);
   });
   pendingWaits.delete(tabId);
-};
-
-const reportContentScriptFailure = (tabId, error) => {
-  if (failedTabs.has(tabId)) {
-    return resolveFailedTabError(tabId);
-  }
-  const failure =
-    error instanceof Error ? error : new Error(contentScriptNotReadyMessage);
-  failedTabs.add(tabId);
-  failedTabErrors.set(tabId, failure);
-  console.error(failure.message);
-  const waiters = pendingWaits.get(tabId);
-  if (!waiters) {
-    return failure;
-  }
-  waiters.forEach((waiter) => {
-    clearTimeout(waiter.timeoutId);
-    waiter.reject(new Error(waitForReadyFailedMessage));
-  });
-  pendingWaits.delete(tabId);
-  return failure;
-};
-
-const resolvePingRetryDelay = (attempt) =>
-  Math.min(
-    pingRetryBaseDelayMs + attempt * pingRetryStepMs,
-    pingRetryMaxDelayMs,
-  );
-
-const cancelPendingPing = (tabId) => {
-  const pending = pendingPings.get(tabId);
-  if (!pending) {
-    return;
-  }
-  pending.cancel();
-  pendingPings.delete(tabId);
 };
 
 const getTabSnapshot = (tabId) =>
@@ -75,11 +22,15 @@ const getTabSnapshot = (tabId) =>
       if (chrome.runtime.lastError) {
         const message =
           chrome.runtime.lastError.message || "无法获取标签页状态";
-        reject(new Error(message));
+        const error = new Error(message);
+        console.error(error.message);
+        reject(error);
         return;
       }
       if (!currentTab) {
-        reject(new Error("未找到标签页"));
+        const error = new Error("未找到标签页");
+        console.error(error.message);
+        reject(error);
         return;
       }
       resolve(currentTab);
@@ -90,103 +41,10 @@ const ensureTabConnectable = async (tabId) => {
   const tab = await getTabSnapshot(tabId);
   if (isInternalUrl(tab.url || "")) {
     const error = new Error(internalTabMessage);
-    reportContentScriptFailure(tabId, error);
+    console.error(error.message);
     throw error;
   }
   return tab;
-};
-
-const pingContentScript = (tabId) =>
-  new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tabId, { type: "ping" }, (response) => {
-      if (chrome.runtime.lastError) {
-        const message =
-          chrome.runtime.lastError.message || contentScriptNotReadyMessage;
-        reject(new Error(message));
-        return;
-      }
-      if (!response) {
-        reject(new Error(contentScriptNotReadyMessage));
-        return;
-      }
-      if (response.error) {
-        reject(new Error(response.error));
-        return;
-      }
-      if (response.ok !== true) {
-        reject(new Error(contentScriptNotReadyMessage));
-        return;
-      }
-      resolve();
-    });
-  });
-
-const waitForContentScriptReady = (tabId, timeoutMs) => {
-  if (readyTabs.has(tabId)) {
-    return Promise.resolve();
-  }
-  if (failedTabs.has(tabId)) {
-    return Promise.reject(resolveFailedTabError(tabId));
-  }
-  const existing = pendingPings.get(tabId);
-  if (existing) {
-    return existing.promise;
-  }
-  const startTime = Date.now();
-  let attempt = 0;
-  let warned = false;
-  let timerId = null;
-  let canceled = false;
-  const promise = new Promise((resolve, reject) => {
-    const attemptPing = () => {
-      if (canceled) {
-        reject(new Error("等待内容脚本已取消"));
-        return;
-      }
-      pingContentScript(tabId)
-        .then(() => {
-          if (canceled) {
-            reject(new Error("等待内容脚本已取消"));
-            return;
-          }
-          markTabReady(tabId);
-          resolve();
-        })
-        .catch((error) => {
-          if (canceled) {
-            reject(new Error("等待内容脚本已取消"));
-            return;
-          }
-          if (!warned) {
-            console.warn(
-              "内容脚本尚未就绪，正在重试",
-              error?.message || contentScriptNotReadyMessage,
-            );
-            warned = true;
-          }
-          if (Date.now() - startTime >= timeoutMs) {
-            const failure = reportContentScriptFailure(tabId, error);
-            reject(failure);
-            return;
-          }
-          const delay = resolvePingRetryDelay(attempt);
-          attempt += 1;
-          timerId = setTimeout(attemptPing, delay);
-        });
-    };
-    attemptPing();
-  });
-  const cancel = () => {
-    canceled = true;
-    if (timerId) {
-      clearTimeout(timerId);
-    }
-  };
-  pendingPings.set(tabId, { promise, cancel });
-  promise.finally(() => {
-    pendingPings.delete(tabId);
-  });
-  return promise;
 };
 
 const registerContentScriptListeners = () => {
@@ -195,40 +53,9 @@ const registerContentScriptListeners = () => {
   }
   listenersReady = true;
   chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-    if (changeInfo.status === "loading") {
-      readyTabs.delete(tabId);
-      failedTabs.delete(tabId);
-      failedTabErrors.delete(tabId);
-      cancelPendingPing(tabId);
-      return;
+    if (changeInfo.status === "complete") {
+      resolvePendingWaits(tabId, true);
     }
-    if (changeInfo.status !== "complete") {
-      return;
-    }
-    if (readyTabs.has(tabId) || failedTabs.has(tabId)) {
-      return;
-    }
-    getTabSnapshot(tabId)
-      .then((tab) => {
-        if (isInternalUrl(tab.url || "")) {
-          const waiters = pendingWaits.get(tabId);
-          if (waiters?.size) {
-            reportContentScriptFailure(tabId, new Error(internalTabMessage));
-          }
-          return null;
-        }
-        const waiters = pendingWaits.get(tabId);
-        if (!waiters?.size) {
-          return null;
-        }
-        return waitForContentScriptReady(tabId, 10000);
-      })
-      .catch((error) => {
-        if (error?.message === "等待内容脚本已取消") {
-          return;
-        }
-        reportContentScriptFailure(tabId, error);
-      });
   });
 };
 export const initTabListeners = () => {
@@ -357,39 +184,28 @@ export const sendMessageToTab = (tabId, payload) =>
   );
 export const waitForContentScript = async (tabId, timeoutMs = 10000) => {
   if (typeof tabId !== "number") {
-    throw new Error("TabID 必须是数字");
+    const error = new Error("TabID 必须是数字");
+    console.error(error.message);
+    throw error;
   }
   registerContentScriptListeners();
-  if (readyTabs.has(tabId)) {
-    return;
-  }
-  if (failedTabs.has(tabId)) {
-    throw resolveFailedTabError(tabId);
-  }
   const tab = await ensureTabConnectable(tabId);
   if (tab.status === "complete") {
-    try {
-      await waitForContentScriptReady(tabId, timeoutMs);
-      return;
-    } catch (error) {
-      if (error?.message !== "等待内容脚本已取消") {
-        throw error;
-      }
-      const refreshed = await getTabSnapshot(tabId);
-      if (refreshed.status === "complete") {
-        await waitForContentScriptReady(tabId, timeoutMs);
-        return;
-      }
-    }
+    return true;
   }
   const waitForReady = () =>
     new Promise((resolve, reject) => {
+      let settled = false;
       const waiter = {
         resolve: null,
         reject: null,
         timeoutId: null,
       };
       const cleanup = () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
         clearTimeout(waiter.timeoutId);
         const waiters = pendingWaits.get(tabId);
         if (!waiters) {
@@ -400,20 +216,36 @@ export const waitForContentScript = async (tabId, timeoutMs = 10000) => {
           pendingWaits.delete(tabId);
         }
       };
-      waiter.resolve = () => {
+      waiter.resolve = (isComplete) => {
         cleanup();
-        resolve();
+        resolve(Boolean(isComplete));
       };
       waiter.reject = (error) => {
         cleanup();
         reject(error);
       };
       waiter.timeoutId = setTimeout(() => {
-        waiter.reject(new Error(`页面加载超时（${timeoutMs}ms）`));
+        const error = new Error(
+          `页面在 ${timeoutMs}ms 内未完成加载，继续尝试抓取`,
+        );
+        console.error(error.message);
+        waiter.resolve(false);
       }, timeoutMs);
       const waiters = pendingWaits.get(tabId) || new Set();
       waiters.add(waiter);
       pendingWaits.set(tabId, waiters);
+      getTabSnapshot(tabId)
+        .then((currentTab) => {
+          if (currentTab.status === "complete") {
+            waiter.resolve(true);
+          }
+        })
+        .catch((error) => {
+          const failure =
+            error instanceof Error ? error : new Error("无法获取标签页状态");
+          console.error(failure.message);
+          waiter.reject(failure);
+        });
     });
-  await waitForReady();
+  return waitForReady();
 };
