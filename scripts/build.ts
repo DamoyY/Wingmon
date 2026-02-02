@@ -9,7 +9,8 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { build, type Plugin, type PluginBuild } from "esbuild";
+import { build, type Metafile, type Plugin, type PluginBuild } from "esbuild";
+import JavaScriptObfuscator from "javascript-obfuscator";
 import * as sass from "sass";
 
 type Manifest = {
@@ -17,10 +18,9 @@ type Manifest = {
   icons?: Record<string, unknown>;
 } & Record<string, unknown>;
 
-type ToolEntry = {
-  file: string;
-  name: string;
-};
+type ToolEntry = { file: string; name: string };
+
+type ObfuscatorOptions = Parameters<typeof JavaScriptObfuscator.obfuscate>[1];
 
 const rootDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -29,11 +29,52 @@ const rootDir = path.resolve(
 const outputRoot = path.resolve(rootDir, "..", "dst");
 const outputPublicDir = path.join(outputRoot, "public");
 
+const obfuscatorOptions: ObfuscatorOptions = {
+  controlFlowFlattening: false,
+  deadCodeInjection: true,
+  deadCodeInjectionThreshold: 1,
+  debugProtection: false,
+  compact: true,
+  identifierNamesGenerator: "hexadecimal",
+  numbersToExpressions: false,
+  renameGlobals: false,
+  selfDefending: true,
+  simplify: true,
+  splitStrings: true,
+  splitStringsChunkLength: 5,
+  stringArray: true,
+  stringArrayCallsTransform: false,
+  stringArrayEncoding: ["base64"],
+  stringArrayRotate: true,
+  stringArrayIndexShift: true,
+  stringArrayShuffle: true,
+  stringArrayThreshold: 0.75,
+  stringArrayWrappersChainedCalls: true,
+  stringArrayWrappersCount: 1,
+  stringArrayWrappersType: "variable",
+  transformObjectKeys: false,
+  unicodeEscapeSequence: true,
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
 const isErrnoException = (error: unknown): error is NodeJS.ErrnoException =>
   typeof error === "object" && error !== null && "code" in error;
+
+const nodeModulesPattern = /(^|[\\/])node_modules([\\/]|$)/;
+
+const isNodeModulesPath = (filePath: string): boolean =>
+  nodeModulesPattern.test(path.normalize(filePath));
+
+const shouldObfuscateBuild = (metafile: Metafile | undefined): boolean => {
+  if (!metafile) {
+    throw new Error("构建结果缺少 metafile");
+  }
+  return !Object.keys(metafile.inputs).some((input) =>
+    isNodeModulesPath(input),
+  );
+};
 
 const ensureString = (value: unknown, context: string): string => {
   if (typeof value !== "string") {
@@ -61,6 +102,17 @@ const shouldCopyFile = async (
     }
     throw error;
   }
+};
+
+const obfuscateCode = (source: string): string => {
+  const result = JavaScriptObfuscator.obfuscate(source, obfuscatorOptions);
+  return result.getObfuscatedCode();
+};
+
+const obfuscateFile = async (filePath: string): Promise<void> => {
+  const source = await readFile(filePath, "utf8");
+  const obfuscated = obfuscateCode(source);
+  await writeFile(filePath, obfuscated);
 };
 
 const entryExtensions = [".ts", ".tsx", ".js", ".mjs", ".cjs"] as const;
@@ -148,6 +200,18 @@ const copyDirFlat = async (source: string, target: string): Promise<void> => {
         const html = await readFile(sourcePath, "utf8");
         const rewrittenHtml = rewritePublicHtml(entry.name, html);
         await writeFile(targetPath, rewrittenHtml);
+        return;
+      }
+      if (ext === ".js") {
+        if (isNodeModulesPath(sourcePath)) {
+          if (await shouldCopyFile(sourcePath, targetPath)) {
+            await copyFile(sourcePath, targetPath);
+          }
+          return;
+        }
+        const source = await readFile(sourcePath, "utf8");
+        const obfuscated = obfuscateCode(source);
+        await writeFile(targetPath, obfuscated);
         return;
       }
       if (await shouldCopyFile(sourcePath, targetPath)) {
@@ -265,9 +329,8 @@ const manifest: Manifest = manifestData;
 if (manifest.background !== undefined && !isRecord(manifest.background)) {
   throw new Error("manifest.background 必须是对象");
 }
-const existingBackground = isRecord(manifest.background)
-  ? manifest.background
-  : {};
+const existingBackground =
+  isRecord(manifest.background) ? manifest.background : {};
 manifest.background = {
   ...existingBackground,
   service_worker: "background.js",
@@ -305,7 +368,7 @@ await writeFile(panelCssPath, panelCss);
 
 const panelBundlePath = path.join(outputPublicDir, "panel.bundle.js");
 ensureFlattenTarget(panelBundlePath, "build:panel.bundle.js");
-await build({
+const panelBuildResult = await build({
   entryPoints: [panelEntryPoint],
   bundle: true,
   format: "iife",
@@ -314,12 +377,16 @@ await build({
   target: "esnext",
   outfile: panelBundlePath,
   legalComments: "none",
+  metafile: true,
   plugins: [toolIndexPlugin],
 });
+if (shouldObfuscateBuild(panelBuildResult.metafile)) {
+  await obfuscateFile(panelBundlePath);
+}
 
 const showHtmlBundlePath = path.join(outputPublicDir, "show-html.bundle.js");
 ensureFlattenTarget(showHtmlBundlePath, "build:show-html.bundle.js");
-await build({
+const showHtmlBuildResult = await build({
   entryPoints: [showHtmlEntryPoint],
   bundle: true,
   format: "iife",
@@ -328,12 +395,16 @@ await build({
   target: "esnext",
   outfile: showHtmlBundlePath,
   legalComments: "none",
+  metafile: true,
   plugins: [toolIndexPlugin],
 });
+if (shouldObfuscateBuild(showHtmlBuildResult.metafile)) {
+  await obfuscateFile(showHtmlBundlePath);
+}
 
 const contentBundlePath = path.join(outputPublicDir, "content.bundle.js");
 ensureFlattenTarget(contentBundlePath, "build:content.bundle.js");
-await build({
+const contentBuildResult = await build({
   entryPoints: [contentEntryPoint],
   bundle: true,
   format: "iife",
@@ -342,15 +413,19 @@ await build({
   target: "esnext",
   outfile: contentBundlePath,
   legalComments: "none",
+  metafile: true,
   plugins: [toolIndexPlugin],
 });
+if (shouldObfuscateBuild(contentBuildResult.metafile)) {
+  await obfuscateFile(contentBundlePath);
+}
 
 const runConsoleCommandPath = path.join(
   outputPublicDir,
   "runConsoleCommand.js",
 );
 ensureFlattenTarget(runConsoleCommandPath, "build:runConsoleCommand.js");
-await build({
+const runConsoleCommandBuildResult = await build({
   entryPoints: [sandboxCommandEntryPoint],
   bundle: true,
   format: "iife",
@@ -359,18 +434,27 @@ await build({
   target: "esnext",
   outfile: runConsoleCommandPath,
   legalComments: "none",
+  metafile: true,
 });
+if (shouldObfuscateBuild(runConsoleCommandBuildResult.metafile)) {
+  await obfuscateFile(runConsoleCommandPath);
+}
 
-await build({
+const backgroundBundlePath = path.join(outputRoot, "background.js");
+const backgroundBuildResult = await build({
   entryPoints: [backgroundEntryPoint],
   bundle: true,
   format: "esm",
   minify: true,
   platform: "browser",
   target: "esnext",
-  outfile: path.join(outputRoot, "background.js"),
+  outfile: backgroundBundlePath,
   legalComments: "none",
+  metafile: true,
 });
+if (shouldObfuscateBuild(backgroundBuildResult.metafile)) {
+  await obfuscateFile(backgroundBundlePath);
+}
 
 const md4wWasmSource = path.join(
   rootDir,
