@@ -1,6 +1,6 @@
 import { t } from "../../utils/index.js";
 import { getAllTabs } from "../../services/index.js";
-import { ensureObjectArgs } from "./utils.js";
+import { ensureObjectArgs } from "../validation/index.js";
 
 const parameters = {
   type: "object",

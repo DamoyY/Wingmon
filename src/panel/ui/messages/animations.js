@@ -1,5 +1,5 @@
 import { elements } from "../core/elements.js";
-import { resolveIndicesKey } from "./keys.js";
+import { resolveIndicesKey } from "./messageIndices.js";
 
 const FADE_OUT_DURATION = 100;
 const FADE_OUT_EASING = "cubic-bezier(0.2, 0, 0, 1)";

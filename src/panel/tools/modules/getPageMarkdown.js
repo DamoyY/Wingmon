@@ -1,6 +1,6 @@
 import { isInternalUrl, t } from "../../utils/index.js";
 import { focusTab, getAllTabs } from "../../services/index.js";
-import { validateTabIdArgs } from "./utils.js";
+import { validateTabIdArgs } from "../validation/index.js";
 import {
   buildPageReadResult,
   fetchPageMarkdownData,

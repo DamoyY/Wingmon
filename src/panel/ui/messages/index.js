@@ -6,4 +6,7 @@ export {
   resetMessagesFade,
 } from "./animations.js";
 export { default as renderMessageContent } from "./contentRenderer.js";
-export { default as normalizeIndices, resolveIndicesKey } from "./keys.js";
+export {
+  default as normalizeIndices,
+  resolveIndicesKey,
+} from "./messageIndices.js";
