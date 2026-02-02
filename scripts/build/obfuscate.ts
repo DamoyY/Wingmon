@@ -1,7 +1,7 @@
 import JavaScriptObfuscator from "javascript-obfuscator";
 import { readFile, writeFile } from "node:fs/promises";
 import type { Metafile } from "esbuild";
-import { isNodeModulesPath } from "./utils.js";
+import { isNodeModulesPath } from "./utils.ts";
 
 type ObfuscatorOptions = Parameters<typeof JavaScriptObfuscator.obfuscate>[1];
 

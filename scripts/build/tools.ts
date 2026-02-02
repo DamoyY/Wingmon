@@ -1,7 +1,7 @@
 import path from "node:path";
 import { readdir } from "node:fs/promises";
 import type { Plugin, PluginBuild } from "esbuild";
-import { rootDir } from "./constants.js";
+import { rootDir } from "./constants.ts";
 
 type ToolEntry = { file: string; name: string };
 

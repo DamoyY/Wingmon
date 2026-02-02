@@ -1,7 +1,7 @@
 import path from "node:path";
 import { readFile, writeFile } from "node:fs/promises";
-import { ensureString, isRecord } from "./utils.js";
-import { outputRoot, rootDir } from "./constants.js";
+import { ensureString, isRecord } from "./utils.ts";
+import { outputRoot, rootDir } from "./constants.ts";
 
 type Manifest = {
   background?: Record<string, unknown>;

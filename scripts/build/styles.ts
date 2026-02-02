@@ -1,8 +1,9 @@
 import * as sass from "sass";
 import path from "node:path";
 import { writeFile } from "node:fs/promises";
-import { outputPublicDir, rootDir } from "./constants.js";
-import { ensureFlattenTarget } from "./utils.js";
+import { outputPublicDir, rootDir } from "./constants.ts";
+import { minifyCss } from "./minify.ts";
+import { ensureFlattenTarget } from "./utils.ts";
 
 export const buildStyles = async (): Promise<void> => {
   const sassResult = sass.compile(
@@ -16,6 +17,7 @@ export const buildStyles = async (): Promise<void> => {
 
   const panelCssPath = path.join(outputPublicDir, "panel.css");
   const panelCss = sassResult.css.replace(/url\((["']?)fonts\//g, "url($1");
+  const minifiedCss = minifyCss(panelCss, "panel.css");
   ensureFlattenTarget(panelCssPath, "build:panel.css");
-  await writeFile(panelCssPath, panelCss);
+  await writeFile(panelCssPath, minifiedCss);
 };

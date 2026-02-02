@@ -1,9 +1,9 @@
 import { mkdir } from "node:fs/promises";
-import { copyAssets } from "./build/assets.js";
-import { buildBundles } from "./build/bundler.js";
-import { outputPublicDir, outputRoot } from "./build/constants.js";
-import { buildManifest } from "./build/manifest.js";
-import { buildStyles } from "./build/styles.js";
+import { copyAssets } from "./build/assets.ts";
+import { buildBundles } from "./build/bundler.ts";
+import { outputPublicDir, outputRoot } from "./build/constants.ts";
+import { buildManifest } from "./build/manifest.ts";
+import { buildStyles } from "./build/styles.ts";
 
 await mkdir(outputRoot, { recursive: true });
 await mkdir(outputPublicDir, { recursive: true });

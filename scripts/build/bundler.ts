@@ -1,9 +1,9 @@
 import { build } from "esbuild";
 import path from "node:path";
-import { outputPublicDir, outputRoot, rootDir } from "./constants.js";
-import { ensureFlattenTarget, resolveEntryPath } from "./utils.js";
-import { obfuscateFile, shouldObfuscateBuild } from "./obfuscate.js";
-import { getToolIndexPlugin } from "./tools.js";
+import { outputPublicDir, outputRoot, rootDir } from "./constants.ts";
+import { ensureFlattenTarget, resolveEntryPath } from "./utils.ts";
+import { obfuscateFile, shouldObfuscateBuild } from "./obfuscate.ts";
+import { getToolIndexPlugin } from "./tools.ts";
 
 export const buildBundles = async (): Promise<void> => {
   const toolIndexPlugin = await getToolIndexPlugin();

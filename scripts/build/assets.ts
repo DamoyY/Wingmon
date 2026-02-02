@@ -7,13 +7,14 @@ import {
 } from "node:fs/promises";
 import path from "node:path"; // Import path directly
 import type { Dirent } from "node:fs";
-import { outputPublicDir, outputRoot, rootDir } from "./constants.js";
+import { outputPublicDir, outputRoot, rootDir } from "./constants.ts";
 import {
   ensureFlattenTarget,
   isNodeModulesPath,
   shouldCopyFile,
-} from "./utils.js";
-import { obfuscateCode } from "./obfuscate.js";
+} from "./utils.ts";
+import { obfuscateCode } from "./obfuscate.ts";
+import { minifyHtmlContent } from "./minify.ts";
 
 const rewritePublicHtml = (fileName: string, contents: string): string => {
   if (fileName === "sandbox.html") {
@@ -76,7 +77,8 @@ export const copyDirFlat = async (
       if (ext === ".html") {
         const html = await readFile(sourcePath, "utf8");
         const rewrittenHtml = rewritePublicHtml(entry.name, html);
-        await writeFile(targetPath, rewrittenHtml);
+        const minifiedHtml = await minifyHtmlContent(rewrittenHtml, entry.name);
+        await writeFile(targetPath, minifiedHtml);
         return;
       }
       if (ext === ".js") {
