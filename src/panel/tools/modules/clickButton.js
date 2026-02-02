@@ -5,11 +5,8 @@ import {
   waitForContentScript,
 } from "../../services/index.js";
 import ToolInputError from "../errors.js";
-import {
-  buildPageReadResult,
-  ensureObjectArgs,
-  fetchPageMarkdownData,
-} from "./utils.js";
+import { ensureObjectArgs } from "./utils.js";
+import { buildPageReadResult, fetchPageMarkdownData } from "../pageRead.js";
 
 const parameters = {
   type: "object",

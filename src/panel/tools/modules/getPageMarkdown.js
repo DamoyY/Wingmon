@@ -1,11 +1,11 @@
 import { isInternalUrl, t } from "../../utils/index.js";
 import { focusTab, getAllTabs } from "../../services/index.js";
+import { validateTabIdArgs } from "./utils.js";
 import {
   buildPageReadResult,
   fetchPageMarkdownData,
   shouldFollowMode,
-  validateTabIdArgs,
-} from "./utils.js";
+} from "../pageRead.js";
 
 const parameters = {
   type: "object",
