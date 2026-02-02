@@ -4,9 +4,8 @@
     "lib": ["DOM", "ESNEXT"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "strict": false,
+    "strictNullChecks": true,
     "noEmit": true
   },
-  "include": ["public/**/*.ts", "src/**/*.ts"],
   "exclude": ["node_modules"]
 }

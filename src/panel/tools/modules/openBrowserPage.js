@@ -54,6 +54,7 @@ const parameters = {
     try {
       parsedUrl = new URL(args.url);
     } catch (error) {
+      console.error("url 格式不正确", error);
       throw new ToolInputError("url 格式不正确");
     }
     if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {

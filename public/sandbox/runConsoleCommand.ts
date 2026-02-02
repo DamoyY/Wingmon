@@ -27,13 +27,19 @@ const serializeConsoleResult = (result: unknown): string => {
     }
     return serialized;
   },
-  runConsoleCommand = (command: string) => window.eval(command),
+  runConsoleCommand = (command: string): unknown =>
+    window.eval(command) as unknown,
+  isPromiseLike = (value: unknown): value is Promise<unknown> =>
+    typeof value === "object" &&
+    value !== null &&
+    "then" in value &&
+    typeof (value as { then?: unknown }).then === "function",
   handleRunConsoleCommand = async (
     message: RunConsoleMessage,
     reply: ConsoleReply,
   ) => {
     const command =
-      typeof message?.command === "string" ? message.command.trim() : "";
+      typeof message.command === "string" ? message.command.trim() : "";
     if (!command) {
       window.console.error("command 必须是非空字符串");
       reply({ error: "command 必须是非空字符串" });
@@ -41,7 +47,7 @@ const serializeConsoleResult = (result: unknown): string => {
     }
     try {
       let result = runConsoleCommand(command);
-      if (result instanceof Promise) {
+      if (isPromiseLike(result)) {
         result = await result;
       }
       const output = serializeConsoleResult(result);
@@ -61,14 +67,18 @@ const serializeConsoleResult = (result: unknown): string => {
       const { requestId } = data,
         reply: ConsoleReply = (payload) => {
           const message = { type: RESPONSE_TYPE, requestId, ...payload };
-          event.source?.postMessage(message, "*");
+          if (!event.source) {
+            window.console.error("消息来源缺失");
+            return;
+          }
+          event.source.postMessage(message, "*");
         };
-      if (!requestId) {
+      if (requestId === undefined || requestId === "") {
         window.console.error("requestId 缺失");
         reply({ error: "requestId 缺失" });
         return;
       }
-      handleRunConsoleCommand(data, reply);
+      void handleRunConsoleCommand(data, reply);
     });
   };
 

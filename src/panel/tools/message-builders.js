@@ -47,7 +47,8 @@ const toChatToolCallForRequest = (entry) => ({
     if (!message || !Array.isArray(message.tool_calls)) {
       return message;
     }
-    const { tool_calls: _, ...rest } = message;
+    const rest = { ...message };
+    delete rest.tool_calls;
     return rest;
   },
   buildHistoryPlan = (messages, endIndex) => {
