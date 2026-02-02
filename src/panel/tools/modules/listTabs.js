@@ -1,6 +1,6 @@
 import { t } from "../../utils/index.js";
 import { getAllTabs } from "../../services/index.js";
-import { ensureObjectArgs } from "./shared.js";
+import { ensureObjectArgs } from "./toolModuleUtils.js";
 
 const parameters = {
   type: "object",

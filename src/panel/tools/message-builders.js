@@ -1,4 +1,3 @@
-import { state } from "../state/index.js";
 import {
   getToolCallArguments,
   getToolCallId,
@@ -89,12 +88,18 @@ const buildContextMessages = (messages) =>
     }
     return stripToolCalls(message);
   });
-const buildStructuredMessages = ({ systemPrompt, format }) => {
+const ensureMessages = (messages) => {
+  if (!Array.isArray(messages)) {
+    throw new Error("messages 必须是数组");
+  }
+  return messages;
+};
+const buildStructuredMessages = ({ systemPrompt, format, messages }) => {
   const output = [];
   if (format === "chat" && systemPrompt) {
     output.push({ role: "system", content: systemPrompt });
   }
-  const contextMessages = buildContextMessages(state.messages);
+  const contextMessages = buildContextMessages(ensureMessages(messages));
   const { removeToolCallIds, trimToolResponseIds } =
     collectPageReadDedupeSets(contextMessages);
   contextMessages.forEach((msg) => {
@@ -160,7 +165,7 @@ const buildStructuredMessages = ({ systemPrompt, format }) => {
   });
   return output;
 };
-export const buildChatMessages = (systemPrompt) =>
-  buildStructuredMessages({ systemPrompt, format: "chat" });
-export const buildResponsesInput = () =>
-  buildStructuredMessages({ format: "responses" });
+export const buildChatMessages = (systemPrompt, messages) =>
+  buildStructuredMessages({ systemPrompt, format: "chat", messages });
+export const buildResponsesInput = (messages) =>
+  buildStructuredMessages({ format: "responses", messages });

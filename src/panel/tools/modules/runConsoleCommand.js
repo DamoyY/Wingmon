@@ -1,7 +1,7 @@
 import { t } from "../../utils/index.js";
 import { sendMessageToSandbox } from "../../services/index.js";
 import ToolInputError from "../errors.js";
-import { ensureObjectArgs } from "./shared.js";
+import { ensureObjectArgs } from "./toolModuleUtils.js";
 
 const parameters = {
   type: "object",

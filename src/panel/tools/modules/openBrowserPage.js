@@ -6,7 +6,7 @@ import {
   ensureObjectArgs,
   fetchPageMarkdownData,
   shouldFollowMode,
-} from "./shared.js";
+} from "./toolModuleUtils.js";
 
 const parameters = {
   type: "object",

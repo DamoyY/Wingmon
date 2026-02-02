@@ -7,7 +7,7 @@ import {
   deleteConversation,
   loadConversation,
 } from "../../../services/index.js";
-import { renderMessagesView } from "../messages/presenter.js";
+import { renderMessagesView } from "../messages/index.js";
 
 export const loadConversationIntoState = async (id) => {
   const conversation = await loadConversation(id);

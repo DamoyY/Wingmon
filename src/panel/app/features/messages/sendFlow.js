@@ -13,11 +13,12 @@ import {
   applyStreamedResponse,
 } from "./responseHandlers.js";
 import {
-  ensureSettingsReady,
+  promptSettingsCompletion,
   reportSendStatus,
   setSendUiState,
   syncComposerAfterSend,
 } from "./sendUi.js";
+import ensureSettingsReady from "./settingsValidation.js";
 
 let activeAbortController = null;
 
@@ -54,6 +55,7 @@ export const sendMessage = async ({ includePage = false } = {}) => {
   }
   const settings = await getSettings();
   if (!ensureSettingsReady(settings)) {
+    promptSettingsCompletion(settings);
     return;
   }
   addMessage({ role: "user", content });

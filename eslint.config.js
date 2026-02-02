@@ -15,9 +15,7 @@ module.exports = [
       "public/content.bundle.js",
     ],
   },
-  {
-    linterOptions: { reportUnusedDisableDirectives: "warn" },
-  },
+  { linterOptions: { reportUnusedDisableDirectives: "warn" } },
   ...compat.extends("airbnb-base"),
   ...compat.extends("prettier"),
   {
@@ -59,5 +57,8 @@ module.exports = [
       globals: browserGlobals,
     },
   },
-  { files: ["public/sandbox.js"], rules: { "no-eval": "off" } },
+  {
+    files: ["public/sandbox.js", "public/sandbox/runConsoleCommand.js"],
+    rules: { "no-eval": "off" },
+  },
 ];

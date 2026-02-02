@@ -9,7 +9,7 @@ import {
   buildPageReadResult,
   ensureObjectArgs,
   fetchPageMarkdownData,
-} from "./shared.js";
+} from "./toolModuleUtils.js";
 
 const parameters = {
   type: "object",

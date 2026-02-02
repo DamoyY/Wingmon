@@ -29,9 +29,9 @@ const ensureToolAdapter = (adapter) => {
 
 const createApiStrategies = (toolAdapter) => ({
   chat: {
-    buildRequestBody: (settings, systemPrompt, tools) => ({
+    buildRequestBody: (settings, systemPrompt, tools, messages) => ({
       model: settings.model,
-      messages: toolAdapter.buildChatMessages(systemPrompt),
+      messages: toolAdapter.buildChatMessages(systemPrompt, messages),
       stream: true,
       tools,
     }),
@@ -50,9 +50,9 @@ const createApiStrategies = (toolAdapter) => ({
     extractReply: (data) => data?.choices?.[0]?.message?.content?.trim(),
   },
   responses: {
-    buildRequestBody: (settings, systemPrompt, tools) => ({
+    buildRequestBody: (settings, systemPrompt, tools, messages) => ({
       model: settings.model,
-      input: toolAdapter.buildResponsesInput(),
+      input: toolAdapter.buildResponsesInput(messages),
       stream: true,
       tools,
       ...(systemPrompt ? { instructions: systemPrompt } : {}),

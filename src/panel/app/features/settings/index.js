@@ -6,4 +6,5 @@ export {
   handleThemeChange,
   handleThemeColorChange,
   handleLanguageChange,
+  syncSettingsSnapshot,
 } from "./controller.js";

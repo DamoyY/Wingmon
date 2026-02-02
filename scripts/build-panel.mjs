@@ -13,7 +13,10 @@ const toolsIndexPath = path.join(toolsDir, "index.js");
 const toolFiles = (await readdir(toolsDir))
   .filter(
     (file) =>
-      file.endsWith(".js") && file !== "index.js" && file !== "shared.js",
+      file.endsWith(".js") &&
+      file !== "index.js" &&
+      file !== "shared.js" &&
+      file !== "toolModuleUtils.js",
   )
   .sort();
 const toModuleName = (file) => {

@@ -2,6 +2,7 @@ import { elements } from "./elements.js";
 import renderMessageContent from "./messageContentRenderer.js";
 import { animateMessageRowEnter } from "./messageAnimations.js";
 import { resolveIndicesKey } from "./messageKeys.js";
+import { applyMessageHeadingTypography } from "./typography.js";
 import { combineMessageContents, t } from "../utils/index.js";
 
 const ensureNewChatButton = () => {
@@ -81,7 +82,9 @@ const createMessageActions = (indices, handlers) => {
 const createMessageContent = (content) => {
   const body = document.createElement("div");
   body.className = "message-content md-typescale-body-medium";
-  const { html, text } = renderMessageContent(content);
+  const { html, text } = renderMessageContent(content, {
+    decorateContainer: applyMessageHeadingTypography,
+  });
   body.innerHTML = html;
   body.dataset.renderedText = text;
   return body;
@@ -263,7 +266,9 @@ export const updateLastAssistantMessage = (messages) => {
     return false;
   }
   const previousRenderedText = contentEl.dataset.renderedText || "";
-  const { html, text } = renderMessageContent(lastEntry.content);
+  const { html, text } = renderMessageContent(lastEntry.content, {
+    decorateContainer: applyMessageHeadingTypography,
+  });
   contentEl.innerHTML = html;
   const newRenderedText = text;
   const commonPrefixLength = resolveCommonPrefixLength(

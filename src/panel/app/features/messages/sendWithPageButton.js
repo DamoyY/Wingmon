@@ -1,54 +1,27 @@
-import { elements } from "../../../ui/index.js";
+import { updateSendWithPageButtonState } from "../../../ui/index.js";
 import { getActiveTab } from "../../../services/index.js";
 import { isInternalUrl } from "../../../utils/index.js";
 
 const DEFAULT_PAGE_DISABLED_REASON = "当前标签页不支持携页面发送";
-const DEFAULT_EMPTY_PROMPT_REASON = "请输入内容后发送";
-let pageAvailable = false;
-let pageDisabledReason = DEFAULT_PAGE_DISABLED_REASON;
-let promptHasContent = false;
-
-const ensureSendWithPageButton = () => {
-  const { sendWithPageButton } = elements;
-  if (!sendWithPageButton) {
-    throw new Error("携页面发送按钮未找到");
-  }
-  return sendWithPageButton;
-};
-
-const applySendWithPageState = () => {
-  const sendWithPageButton = ensureSendWithPageButton();
-  if (pageAvailable && promptHasContent) {
-    sendWithPageButton.disabled = false;
-    sendWithPageButton.title = "";
-    return;
-  }
-  sendWithPageButton.disabled = true;
-  if (!pageAvailable) {
-    sendWithPageButton.title =
-      pageDisabledReason || DEFAULT_PAGE_DISABLED_REASON;
-    return;
-  }
-  sendWithPageButton.title = DEFAULT_EMPTY_PROMPT_REASON;
-};
 
 const disableSendWithPageButtonForPage = (reason) => {
-  pageAvailable = false;
-  pageDisabledReason = reason || DEFAULT_PAGE_DISABLED_REASON;
-  applySendWithPageState();
+  updateSendWithPageButtonState({
+    pageAvailable: false,
+    pageDisabledReason: reason || DEFAULT_PAGE_DISABLED_REASON,
+  });
 };
 const enableSendWithPageButtonForPage = () => {
-  pageAvailable = true;
-  pageDisabledReason = "";
-  applySendWithPageState();
+  updateSendWithPageButtonState({
+    pageAvailable: true,
+    pageDisabledReason: "",
+  });
 };
 
 export const setSendWithPagePromptReady = (hasContent) => {
   if (typeof hasContent !== "boolean") {
     throw new Error("发送状态必须为布尔值");
   }
-  promptHasContent = hasContent;
-  applySendWithPageState();
+  updateSendWithPageButtonState({ promptHasContent: hasContent });
 };
 export const updateSendWithPageButtonAvailability = async () => {
   const activeTab = await getActiveTab();

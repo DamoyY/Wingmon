@@ -7,6 +7,7 @@ import {
 import { renderMessagesView } from "./presenter.js";
 import { clearPromptContent } from "../chat/composerState.js";
 import {
+  clearPromptInput,
   setComposerSending,
   updateComposerButtonsState,
 } from "../chat/composerView.js";
@@ -21,13 +22,6 @@ const normalizeStatusMessage = (message) => {
   return message;
 };
 
-const ensureSettingsPayload = (settings) => {
-  if (!settings || typeof settings !== "object") {
-    throw new Error("设置信息无效");
-  }
-  return settings;
-};
-
 export const reportSendStatus = (message) => {
   const normalizedMessage = normalizeStatusMessage(message);
   if (!elements.topStatus) {
@@ -36,22 +30,18 @@ export const reportSendStatus = (message) => {
   setText(elements.topStatus, normalizedMessage);
 };
 
-export const ensureSettingsReady = (settings) => {
-  const { apiKey, baseUrl, model } = ensureSettingsPayload(settings);
-  if (!apiKey || !baseUrl || !model) {
-    showKeyView({ isFirstUse: true });
-    fillSettingsForm(settings);
-    if (!elements.keyStatus) {
-      throw new Error("状态提示元素未初始化");
-    }
-    setText(elements.keyStatus, "请先补全 API Key、Base URL 和模型");
-    return false;
+export const promptSettingsCompletion = (settings) => {
+  showKeyView({ isFirstUse: true });
+  fillSettingsForm(settings);
+  if (!elements.keyStatus) {
+    throw new Error("状态提示元素未初始化");
   }
-  return true;
+  setText(elements.keyStatus, "请先补全 API Key、Base URL 和模型");
 };
 
 export const syncComposerAfterSend = () => {
   clearPromptContent();
+  clearPromptInput();
   updateComposerButtonsState();
   renderMessagesView();
 };

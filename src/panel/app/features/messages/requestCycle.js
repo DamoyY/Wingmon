@@ -143,6 +143,7 @@ const createResponseStream = async function* createResponseStream({
       systemPrompt,
       tools,
       toolAdapter: apiToolAdapter,
+      messages: state.messages,
       onDelta: appendAssistantDelta,
       onStreamStart,
       onChunk: statusTracker.updateFromChunk,

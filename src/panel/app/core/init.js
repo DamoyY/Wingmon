@@ -1,20 +1,27 @@
-import { getSettings, initTabListeners } from "../../services/index.js";
+import {
+  getSettings,
+  initTabListeners,
+  registerSandboxWindowProvider,
+} from "../../services/index.js";
 import { initMarkdownRenderer } from "../../markdown/index.js";
 import {
   applyTheme,
   applyTypography,
   elements,
   fillSettingsForm,
+  getSandboxWindow,
   initElements,
   setupChatLayout,
   showChatView,
   showKeyView,
 } from "../../ui/index.js";
 import bindEvents from "./controller.js";
-import { syncSettingsSnapshot } from "../features/settings/controller.js";
-import { refreshSendWithPageButton } from "../features/messages/sendWithPageButton.js";
-import { updateComposerButtonsState } from "../features/chat/composerView.js";
-import { renderMessagesView } from "../features/messages/presenter.js";
+import { updateComposerButtonsState } from "../features/chat/index.js";
+import {
+  refreshSendWithPageButton,
+  renderMessagesView,
+} from "../features/messages/index.js";
+import { syncSettingsSnapshot } from "../features/settings/index.js";
 import { setLocale, translateDOM } from "../../utils/index.js";
 
 const initPanel = async () => {
@@ -22,6 +29,7 @@ const initPanel = async () => {
   const settingsPromise = getSettings();
 
   await initElements();
+  registerSandboxWindowProvider(getSandboxWindow);
   await initMarkdownRenderer();
   applyTypography();
   const settings = await settingsPromise;

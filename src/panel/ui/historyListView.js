@@ -1,4 +1,4 @@
-import { elements } from "../../../ui/index.js";
+import { elements } from "./elements.js";
 
 const formatDateTime = (timestamp) => {
   const date = new Date(timestamp);
