@@ -1,0 +1,134 @@
+import {
+  copyFile,
+  mkdir,
+  readdir,
+  readFile,
+  writeFile,
+} from "node:fs/promises";
+import path from "node:path"; // Import path directly
+import type { Dirent } from "node:fs";
+import { outputPublicDir, outputRoot, rootDir } from "./constants.js";
+import {
+  ensureFlattenTarget,
+  isNodeModulesPath,
+  shouldCopyFile,
+} from "./utils.js";
+import { obfuscateCode } from "./obfuscate.js";
+
+const rewritePublicHtml = (fileName: string, contents: string): string => {
+  if (fileName === "sandbox.html") {
+    return contents.replaceAll("sandbox/", "");
+  }
+  if (fileName === "panel.html") {
+    return contents.replaceAll("icons/", "");
+  }
+  return contents;
+};
+
+export const copyDir = async (
+  source: string,
+  target: string,
+): Promise<void> => {
+  await mkdir(target, { recursive: true });
+  const entries = await readdir(source, { withFileTypes: true });
+  await Promise.all(
+    entries.map(async (entry: Dirent) => {
+      const sourcePath = path.join(source, entry.name);
+      const targetPath = path.join(target, entry.name);
+      if (entry.isDirectory()) {
+        await copyDir(sourcePath, targetPath);
+        return;
+      }
+      if (entry.isFile()) {
+        const ext = path.extname(entry.name);
+        if (ext === ".ts" || ext === ".tsx") {
+          return;
+        }
+        if (await shouldCopyFile(sourcePath, targetPath)) {
+          await copyFile(sourcePath, targetPath);
+        }
+      }
+    }),
+  );
+};
+
+export const copyDirFlat = async (
+  source: string,
+  target: string,
+): Promise<void> => {
+  const entries = await readdir(source, { withFileTypes: true });
+  await Promise.all(
+    entries.map(async (entry: Dirent) => {
+      const sourcePath = path.join(source, entry.name);
+      if (entry.isDirectory()) {
+        await copyDirFlat(sourcePath, target);
+        return;
+      }
+      if (!entry.isFile()) {
+        return;
+      }
+      const ext = path.extname(entry.name);
+      if (ext === ".ts" || ext === ".tsx") {
+        return;
+      }
+      const targetPath = path.join(target, entry.name);
+      ensureFlattenTarget(targetPath, sourcePath);
+      if (ext === ".html") {
+        const html = await readFile(sourcePath, "utf8");
+        const rewrittenHtml = rewritePublicHtml(entry.name, html);
+        await writeFile(targetPath, rewrittenHtml);
+        return;
+      }
+      if (ext === ".js") {
+        if (isNodeModulesPath(sourcePath)) {
+          if (await shouldCopyFile(sourcePath, targetPath)) {
+            await copyFile(sourcePath, targetPath);
+          }
+          return;
+        }
+        const source = await readFile(sourcePath, "utf8");
+        const obfuscated = obfuscateCode(source);
+        await writeFile(targetPath, obfuscated);
+        return;
+      }
+      if (await shouldCopyFile(sourcePath, targetPath)) {
+        await copyFile(sourcePath, targetPath);
+      }
+    }),
+  );
+};
+
+export const copyAssets = async (): Promise<void> => {
+  // Locale copy
+  await copyDir(
+    path.join(rootDir, "_locales"),
+    path.join(outputRoot, "_locales"),
+  );
+  // Public copy
+  await copyDirFlat(path.join(rootDir, "public"), outputPublicDir);
+
+  // WASM
+  const md4wWasmSource = path.join(
+    rootDir,
+    "node_modules/md4w/js/md4w-fast.wasm",
+  );
+  const md4wWasmTarget = path.join(outputPublicDir, "md4w-fast.wasm");
+  ensureFlattenTarget(md4wWasmTarget, md4wWasmSource);
+  if (await shouldCopyFile(md4wWasmSource, md4wWasmTarget)) {
+    await copyFile(md4wWasmSource, md4wWasmTarget);
+  }
+
+  // Katex Fonts
+  const katexFontsDir = path.join(rootDir, "node_modules/katex/dist/fonts");
+  const katexFonts = await readdir(katexFontsDir);
+  await Promise.all(
+    katexFonts.map(async (file) => {
+      const sourcePath = path.join(katexFontsDir, file);
+      const targetPath = path.join(outputPublicDir, file);
+      ensureFlattenTarget(targetPath, sourcePath);
+      if (await shouldCopyFile(sourcePath, targetPath)) {
+        await copyFile(sourcePath, targetPath);
+      }
+    }),
+  );
+};
