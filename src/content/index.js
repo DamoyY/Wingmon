@@ -1,3 +1,5 @@
+import registerMessageListener from "./messaging/listener.js";
+
 const reportReady = () =>
   new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({ type: "contentScriptReady" }, () => {
@@ -11,15 +13,14 @@ const reportReady = () =>
     });
   });
 const loadListener = async () => {
-  const url = chrome.runtime.getURL("src/content/messaging/listener.js");
-  const module = await import(url);
-  if (!module?.default) {
+  if (typeof registerMessageListener !== "function") {
     throw new Error("内容脚本缺少消息监听注册函数");
   }
-  module.default();
+  registerMessageListener();
   await reportReady();
 };
 loadListener().catch((error) => {
   const message = error?.message || "内容脚本初始化失败";
+  console.error(message);
   throw new Error(message);
 });

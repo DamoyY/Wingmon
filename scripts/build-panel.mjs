@@ -72,6 +72,17 @@ await build({
   legalComments: "none",
 });
 
+await build({
+  entryPoints: [path.join(rootDir, "src/content/index.js")],
+  bundle: true,
+  format: "iife",
+  minify: true,
+  platform: "browser",
+  target: "es2020",
+  outfile: path.join(rootDir, "public/content.bundle.js"),
+  legalComments: "none",
+});
+
 await copyFile(
   path.join(rootDir, "node_modules/md4w/js/md4w-fast.wasm"),
   path.join(rootDir, "public/md4w-fast.wasm"),

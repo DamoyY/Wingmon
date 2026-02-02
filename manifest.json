@@ -44,33 +44,9 @@
         "<all_urls>"
       ],
       "js": [
-        "src/content/index.js"
+        "public/content.bundle.js"
       ],
       "run_at": "document_end"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "src/content/messaging/listener.js",
-        "src/content/handlers/index.js",
-        "src/content/handlers/getPageContent.js",
-        "src/content/handlers/clickButton.js",
-        "src/content/markdown/index.js",
-        "src/content/markdown/converter.js",
-        "src/content/markdown/buttons.js",
-        "src/content/markdown/turndownService.js",
-        "src/content/markdown/url.js",
-        "src/content/markdown/viewport.js",
-        "src/content/dom/index.js",
-        "src/content/dom/buttonIds.js",
-        "src/content/dom/viewportMarker.js",
-        "node_modules/turndown/lib/turndown.browser.es.js",
-        "node_modules/turndown-plugin-gfm/lib/turndown-plugin-gfm.browser.es.js"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
     }
   ]
 }

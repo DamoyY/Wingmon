@@ -19,6 +19,7 @@ const registerMessageListener = () => {
         handleClickButton(message, sendResponse);
       }
     } catch (error) {
+      console.error(error);
       sendResponse({ error: error?.message || "未知错误" });
     }
   });
