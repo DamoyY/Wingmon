@@ -4,15 +4,8 @@
   "version": "0.9.0",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
-  "permissions": [
-    "storage",
-    "sidePanel",
-    "tabs"
-  ],
-  "host_permissions": [
-    "https://*/*",
-    "http://*/*"
-  ],
+  "permissions": ["storage", "sidePanel", "tabs"],
+  "host_permissions": ["https://*/*", "http://*/*"],
   "action": {
     "default_title": "Wingmon"
   },
@@ -27,9 +20,7 @@
     "type": "module"
   },
   "sandbox": {
-    "pages": [
-      "public/sandbox.html"
-    ]
+    "pages": ["public/sandbox.html"]
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval' http://localhost:* http://127.0.0.1:*; object-src 'self';",
@@ -40,12 +31,8 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "public/content.bundle.js"
-      ],
+      "matches": ["<all_urls>"],
+      "js": ["public/content.bundle.js"],
       "run_at": "document_end"
     }
   ]

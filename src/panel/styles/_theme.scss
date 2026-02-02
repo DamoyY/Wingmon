@@ -5,8 +5,9 @@
   --md-sys-shape-corner-extra-small: 12px;
   --md-ref-typeface-brand: "Roboto", system-ui, -apple-system, sans-serif;
   --md-ref-typeface-plain: "Roboto", system-ui, -apple-system, sans-serif;
-  --md-ref-typeface-mono: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
-    Consolas, "Liberation Mono", "Courier New", monospace;
+  --md-ref-typeface-mono:
+    "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
   --theme-transition-duration: 240ms;
   --hljs-foreground: #24292f;
   --hljs-comment: #6e7781;
@@ -33,7 +34,8 @@
 }
 
 :root.theme-transition {
-  transition: background-color var(--theme-transition-duration) ease,
+  transition:
+    background-color var(--theme-transition-duration) ease,
     color var(--theme-transition-duration) ease;
 }
 
@@ -61,7 +63,8 @@
 :root.theme-transition md-text-button,
 :root.theme-transition md-icon-button,
 :root.theme-transition md-switch {
-  transition: background-color var(--theme-transition-duration) ease,
+  transition:
+    background-color var(--theme-transition-duration) ease,
     color var(--theme-transition-duration) ease,
     border-color var(--theme-transition-duration) ease,
     box-shadow var(--theme-transition-duration) ease,

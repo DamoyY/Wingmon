@@ -14,7 +14,9 @@
   inset: 0;
   transform: translateX(0);
   opacity: 1;
-  transition: transform 0.28s ease, opacity 0.28s ease;
+  transition:
+    transform 0.28s ease,
+    opacity 0.28s ease;
   z-index: 0;
 }
 

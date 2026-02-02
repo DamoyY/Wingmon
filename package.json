@@ -2,28 +2,31 @@
   "main": "index.js",
   "scripts": {
     "build": "node scripts/build-panel.mjs",
-    "lint": "node scripts/build-panel.mjs && eslint . --fix"
+    "lint": "node scripts/build-panel.mjs && eslint . --quiet --fix && prettier . --write --log-level warn"
   },
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "@babel/parser": "latest",
-    "@eslint/eslintrc": "latest",
+    "@eslint/js": "latest",
     "@material/material-color-utilities": "latest",
     "@material/web": "latest",
+    "esbuild": "latest",
     "eslint-plugin-prettier": "latest",
     "globals": "latest",
     "highlight.js": "latest",
     "katex": "latest",
     "md4w": "latest",
+    "sass": "latest",
     "turndown": "latest",
-    "turndown-plugin-gfm": "latest"
+    "turndown-plugin-gfm": "latest",
+    "typescript-eslint": "latest"
   },
   "devDependencies": {
-    "esbuild": "latest",
-    "eslint": "latest",
+    "eslint": "^9.39.2",
     "eslint-config-airbnb-base": "latest",
     "eslint-config-prettier": "latest",
     "eslint-plugin-import": "latest",
-    "sass": "latest"
+    "prettier": "latest",
+    "typescript": "latest"
   }
 }

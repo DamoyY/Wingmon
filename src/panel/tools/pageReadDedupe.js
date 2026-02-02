@@ -1,77 +1,73 @@
 import { t } from "../utils/index.js";
 import {
-  toolNames,
-  parseToolArguments,
   getToolCallArguments,
   getToolCallId,
   getToolCallName,
   getToolValidator,
+  parseToolArguments,
+  toolNames,
 } from "./definitions.js";
 
 const extractGetPageTabIdFromCall = (call) => {
-  const argsText = getToolCallArguments(call);
-  let args;
-  try {
-    args = parseToolArguments(argsText || "{}");
-  } catch (error) {
-    const message = error?.message || "未知错误";
-    throw new Error(`get_page 工具参数解析失败：${message}`);
-  }
-  const { tabId } = getToolValidator(toolNames.getPageMarkdown)(args);
-  return tabId;
-};
-
-const extractPageReadTabIdFromOutput = (content, successLabel, toolName) => {
-  if (typeof content !== "string") {
-    throw new Error(`${toolName} 工具响应必须是字符串`);
-  }
-  const trimmed = content.trim();
-  if (!trimmed) {
-    throw new Error(`${toolName} 工具响应不能为空`);
-  }
-  if (!trimmed.startsWith(successLabel)) {
-    return null;
-  }
-  if (trimmed === successLabel) {
-    return null;
-  }
-  const match = trimmed.match(/TabID:\s*["'“”]?(\d+)["'“”]?/);
-  if (!match) {
-    throw new Error(`${toolName} 成功响应缺少 TabID`);
-  }
-  const tabId = Number(match[1]);
-  if (!Number.isInteger(tabId) || tabId <= 0) {
-    throw new Error(`${toolName} 响应 TabID 无效`);
-  }
-  return tabId;
-};
-
-const extractOpenPageTabIdFromOutput = (content) =>
-  extractPageReadTabIdFromOutput(
-    content,
-    t("statusOpenSuccess"),
-    toolNames.openBrowserPage,
-  );
-
-const extractClickButtonTabIdFromMessage = (message) => {
-  const storedTabId = message?.pageReadTabId;
-  if (Number.isInteger(storedTabId) && storedTabId > 0) {
-    return storedTabId;
-  }
-  const tabId = extractPageReadTabIdFromOutput(
-    message?.content,
-    t("statusClickSuccess"),
-    toolNames.clickButton,
-  );
-  if (!tabId) {
-    return null;
-  }
-  return tabId;
-};
-
-const isGetPageSuccessOutput = (content) =>
-  typeof content === "string" &&
-  content.trim().startsWith(t("statusTitleLabel"));
+    const argsText = getToolCallArguments(call);
+    let args;
+    try {
+      args = parseToolArguments(argsText || "{}");
+    } catch (error) {
+      const message = error?.message || "未知错误";
+      throw new Error(`get_page 工具参数解析失败：${message}`);
+    }
+    const { tabId } = getToolValidator(toolNames.getPageMarkdown)(args);
+    return tabId;
+  },
+  extractPageReadTabIdFromOutput = (content, successLabel, toolName) => {
+    if (typeof content !== "string") {
+      throw new Error(`${toolName} 工具响应必须是字符串`);
+    }
+    const trimmed = content.trim();
+    if (!trimmed) {
+      throw new Error(`${toolName} 工具响应不能为空`);
+    }
+    if (!trimmed.startsWith(successLabel)) {
+      return null;
+    }
+    if (trimmed === successLabel) {
+      return null;
+    }
+    const match = trimmed.match(/TabID:\s*["'“”]?(\d+)["'“”]?/);
+    if (!match) {
+      throw new Error(`${toolName} 成功响应缺少 TabID`);
+    }
+    const tabId = Number(match[1]);
+    if (!Number.isInteger(tabId) || tabId <= 0) {
+      throw new Error(`${toolName} 响应 TabID 无效`);
+    }
+    return tabId;
+  },
+  extractOpenPageTabIdFromOutput = (content) =>
+    extractPageReadTabIdFromOutput(
+      content,
+      t("statusOpenSuccess"),
+      toolNames.openBrowserPage,
+    ),
+  extractClickButtonTabIdFromMessage = (message) => {
+    const storedTabId = message?.pageReadTabId;
+    if (Number.isInteger(storedTabId) && storedTabId > 0) {
+      return storedTabId;
+    }
+    const tabId = extractPageReadTabIdFromOutput(
+      message?.content,
+      t("statusClickSuccess"),
+      toolNames.clickButton,
+    );
+    if (!tabId) {
+      return null;
+    }
+    return tabId;
+  },
+  isGetPageSuccessOutput = (content) =>
+    typeof content === "string" &&
+    content.trim().startsWith(t("statusTitleLabel"));
 
 export const collectPageReadDedupeSets = (messages) => {
   const callInfoById = new Map();
@@ -80,8 +76,8 @@ export const collectPageReadDedupeSets = (messages) => {
       return;
     }
     msg.tool_calls.forEach((call) => {
-      const callId = getToolCallId(call);
-      const name = getToolCallName(call);
+      const callId = getToolCallId(call),
+        name = getToolCallName(call);
       if (callInfoById.has(callId)) {
         const existing = callInfoById.get(callId);
         if (existing?.name !== name) {
@@ -105,8 +101,8 @@ export const collectPageReadDedupeSets = (messages) => {
     if (!callId) {
       throw new Error("工具响应缺少 tool_call_id");
     }
-    const info = callInfoById.get(callId);
-    const name = msg.name || info?.name;
+    const info = callInfoById.get(callId),
+      name = msg.name || info?.name;
     if (!name) {
       throw new Error(`工具响应缺少 name：${callId}`);
     }
@@ -159,8 +155,8 @@ export const collectPageReadDedupeSets = (messages) => {
       latestByTabId.set(event.tabId, event);
     }
   });
-  const removeToolCallIds = new Set();
-  const trimToolResponseIds = new Set();
+  const removeToolCallIds = new Set(),
+    trimToolResponseIds = new Set();
   readEvents.forEach((event) => {
     const latest = latestByTabId.get(event.tabId);
     if (!latest || latest.callId === event.callId) {

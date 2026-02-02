@@ -1,6 +1,7 @@
 .history-view-header {
   display: grid;
-  grid-template-columns: var(--md-icon-button-container-height, 40px) 1fr
+  grid-template-columns:
+    var(--md-icon-button-container-height, 40px) 1fr
     var(--md-icon-button-container-height, 40px);
   align-items: center;
   gap: 8px;

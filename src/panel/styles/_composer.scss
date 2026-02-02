@@ -15,7 +15,9 @@
   --md-sys-color-primary: var(--md-sys-color-tertiary);
   --md-sys-color-on-primary: var(--md-sys-color-on-tertiary);
   --md-sys-color-primary-container: var(--md-sys-color-tertiary-container);
-  --md-sys-color-on-primary-container: var(--md-sys-color-on-tertiary-container);
+  --md-sys-color-on-primary-container: var(
+    --md-sys-color-on-tertiary-container
+  );
   --md-switch-track-height: 24px;
   --md-switch-handle-height: 12px;
   --md-switch-handle-width: 12px;
@@ -41,7 +43,10 @@
 #send,
 #send-with-page {
   opacity: 0.8;
-  transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease,
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    color 0.2s ease,
     background-color 0.2s ease;
 }
 

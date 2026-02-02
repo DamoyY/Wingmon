@@ -1,19 +1,18 @@
 const ensureDomReady = () => {
-  if (document.readyState !== "loading") {
-    return Promise.resolve();
-  }
-  return new Promise((resolve) => {
-    document.addEventListener("DOMContentLoaded", resolve, { once: true });
-  });
-};
-
-const requireElement = (id, label) => {
-  const element = document.getElementById(id);
-  if (!element) {
-    throw new Error(`${label}元素未找到`);
-  }
-  return element;
-};
+    if (document.readyState !== "loading") {
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      document.addEventListener("DOMContentLoaded", resolve, { once: true });
+    });
+  },
+  requireElement = (id, label) => {
+    const element = document.getElementById(id);
+    if (!element) {
+      throw new Error(`${label}元素未找到`);
+    }
+    return element;
+  };
 
 export const elements = {};
 

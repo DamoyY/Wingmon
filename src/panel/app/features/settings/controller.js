@@ -1,13 +1,13 @@
 import {
   applyTheme,
+  clearSettingsStatus,
   fillSettingsForm,
   readSettingsFormValues,
+  setSaveButtonVisible,
+  setSettingsStatus,
   showChatView,
   showKeyView,
   updateSettingsFormValues,
-  clearSettingsStatus,
-  setSaveButtonVisible,
-  setSettingsStatus,
 } from "../../../ui/index.js";
 import { setLocale, translateDOM } from "../../../utils/index.js";
 import { getSettings, updateSettings } from "../../../services/index.js";
@@ -36,8 +36,8 @@ export const handleSettingsFieldChange = () => {
 };
 
 export const handleSaveSettings = async () => {
-  const formValues = readSettingsFormValues();
-  const required = validateRequiredSettings(formValues);
+  const formValues = readSettingsFormValues(),
+    required = validateRequiredSettings(formValues);
   if (!required.valid) {
     setSettingsStatus(required.message);
     return;
@@ -89,11 +89,11 @@ export const handleThemeChange = async () => {
     setSettingsStatus(error.message);
     return;
   }
-  const theme = applyTheme(themePayload.theme, themePayload.themeColor);
-  const next = await updateSettings({
-    theme,
-    themeColor: themePayload.themeColor,
-  });
+  const theme = applyTheme(themePayload.theme, themePayload.themeColor),
+    next = await updateSettings({
+      theme,
+      themeColor: themePayload.themeColor,
+    });
   updateSettingsFormValues({ themeColor: next.themeColor });
   syncSettingsSnapshot(next);
 };
@@ -108,11 +108,11 @@ export const handleThemeColorChange = async () => {
     setSettingsStatus(error.message);
     return;
   }
-  const theme = applyTheme(themePayload.theme, themePayload.themeColor);
-  const next = await updateSettings({
-    theme,
-    themeColor: themePayload.themeColor,
-  });
+  const theme = applyTheme(themePayload.theme, themePayload.themeColor),
+    next = await updateSettings({
+      theme,
+      themeColor: themePayload.themeColor,
+    });
   updateSettingsFormValues({ themeColor: next.themeColor });
   syncSettingsSnapshot(next);
 };

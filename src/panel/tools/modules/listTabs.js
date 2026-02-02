@@ -3,30 +3,27 @@ import { getAllTabs } from "../../services/index.js";
 import { ensureObjectArgs } from "../validation/index.js";
 
 const parameters = {
-  type: "object",
-  properties: {},
-  additionalProperties: false,
-};
-
-const buildListTabsOutput = (tabs) =>
-  tabs
-    .map((tab) => {
-      const title = tab.title || t("statusNoTitle");
-      const url = tab.url || t("statusNoAddress");
-      const { id } = tab;
-      return `${t("statusTitle")}: "${title}"\nURL: "${url}"\n${t("statusTabId")}: "${id}"`;
-    })
-    .join("\n\n");
-
-const validateArgs = (args) => {
-  ensureObjectArgs(args);
-  return {};
-};
-
-const execute = async () => {
-  const tabs = await getAllTabs();
-  return buildListTabsOutput(tabs);
-};
+    type: "object",
+    properties: {},
+    additionalProperties: false,
+  },
+  buildListTabsOutput = (tabs) =>
+    tabs
+      .map((tab) => {
+        const title = tab.title || t("statusNoTitle"),
+          url = tab.url || t("statusNoAddress"),
+          { id } = tab;
+        return `${t("statusTitle")}: "${title}"\nURL: "${url}"\n${t("statusTabId")}: "${id}"`;
+      })
+      .join("\n\n"),
+  validateArgs = (args) => {
+    ensureObjectArgs(args);
+    return {};
+  },
+  execute = async () => {
+    const tabs = await getAllTabs();
+    return buildListTabsOutput(tabs);
+  };
 
 export default {
   key: "listTabs",

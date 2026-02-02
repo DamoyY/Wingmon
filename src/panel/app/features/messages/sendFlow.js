@@ -23,18 +23,21 @@ import ensureSettingsReady from "./settingsValidation.js";
 let activeAbortController = null;
 
 const ensureNotAborted = (signal) => {
-  if (signal?.aborted) {
-    throw new Error("已停止");
-  }
-};
-
-const saveCurrentConversation = async () => {
-  if (!state.messages.length) {
-    return;
-  }
-  touchUpdatedAt();
-  await saveConversation(state.conversationId, state.messages, state.updatedAt);
-};
+    if (signal?.aborted) {
+      throw new Error("已停止");
+    }
+  },
+  saveCurrentConversation = async () => {
+    if (!state.messages.length) {
+      return;
+    }
+    touchUpdatedAt();
+    await saveConversation(
+      state.conversationId,
+      state.messages,
+      state.updatedAt,
+    );
+  };
 
 export const stopSending = async () => {
   if (!activeAbortController) {
@@ -73,22 +76,22 @@ export const sendMessage = async ({ includePage = false } = {}) => {
     }
     ensureNotAborted(abortController.signal);
     const responseStream = createResponseStream({
-      settings,
-      signal: abortController.signal,
-      onStatus: reportSendStatus,
-    });
-    const consumeResponses = async () => {
-      const { value, done } = await responseStream.next();
-      if (done) {
-        return;
-      }
-      if (value.streamed) {
-        applyStreamedResponse(value.toolCalls, value.assistantIndex);
-      } else {
-        applyNonStreamedResponse(value.reply, value.toolCalls);
-      }
-      await consumeResponses();
-    };
+        settings,
+        signal: abortController.signal,
+        onStatus: reportSendStatus,
+      }),
+      consumeResponses = async () => {
+        const { value, done } = await responseStream.next();
+        if (done) {
+          return;
+        }
+        if (value.streamed) {
+          applyStreamedResponse(value.toolCalls, value.assistantIndex);
+        } else {
+          applyNonStreamedResponse(value.reply, value.toolCalls);
+        }
+        await consumeResponses();
+      };
     await consumeResponses();
     await saveCurrentConversation();
     reportSendStatus("");

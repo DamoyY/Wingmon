@@ -4,109 +4,109 @@ export const streamSse = async (response, onPayload) => {
   if (!response.body) {
     throw new Error("无法读取流式响应");
   }
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder("utf-8");
-  let buffer = "";
-  let currentEvent = "";
-  let shouldStop = false;
+  const reader = response.body.getReader(),
+    decoder = new TextDecoder("utf-8");
+  let buffer = "",
+    currentEvent = "",
+    shouldStop = false;
   const handleLine = (line) => {
-    if (shouldStop) {
-      return;
-    }
-    const trimmed = line.trim();
-    if (!trimmed) {
+      if (shouldStop) {
+        return;
+      }
+      const trimmed = line.trim();
+      if (!trimmed) {
+        currentEvent = "";
+        return;
+      }
+      if (trimmed.startsWith("event:")) {
+        currentEvent = trimmed.replace(/^event:\s*/, "").trim();
+        return;
+      }
+      if (!trimmed.startsWith("data:")) {
+        return;
+      }
+      const data = trimmed.replace(/^data:\s*/, "");
+      if (data === "[DONE]") {
+        shouldStop = true;
+        return;
+      }
+      const payload = parseJson(data);
+      if (payload?.error?.message) {
+        throw new Error(payload.error.message);
+      }
+      onPayload(payload, currentEvent);
       currentEvent = "";
-      return;
-    }
-    if (trimmed.startsWith("event:")) {
-      currentEvent = trimmed.replace(/^event:\s*/, "").trim();
-      return;
-    }
-    if (!trimmed.startsWith("data:")) {
-      return;
-    }
-    const data = trimmed.replace(/^data:\s*/, "");
-    if (data === "[DONE]") {
-      shouldStop = true;
-      return;
-    }
-    const payload = parseJson(data);
-    if (payload?.error?.message) {
-      throw new Error(payload.error.message);
-    }
-    onPayload(payload, currentEvent);
-    currentEvent = "";
-  };
-  const readChunk = async () => {
-    const { value, done } = await reader.read();
-    if (done || shouldStop) {
-      return;
-    }
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split(/\r?\n/);
-    buffer = lines.pop() || "";
-    lines.forEach(handleLine);
-    if (shouldStop) {
-      return;
-    }
-    await readChunk();
-  };
+    },
+    readChunk = async () => {
+      const { value, done } = await reader.read();
+      if (done || shouldStop) {
+        return;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() || "";
+      lines.forEach(handleLine);
+      if (shouldStop) {
+        return;
+      }
+      await readChunk();
+    };
   await readChunk();
 };
 const deltaFromChat = (payload) =>
-  payload?.choices?.[0]?.delta?.content ||
-  payload?.choices?.[0]?.text ||
-  payload?.choices?.[0]?.message?.content ||
-  "";
-const deltaFromResponses = (payload, eventType) => {
-  const resolvedType = payload?.type || eventType;
-  if (resolvedType === "response.output_text.delta") {
-    return payload?.delta || payload?.text || "";
-  }
-  if (resolvedType === "response.refusal.delta") {
-    return payload?.delta || "";
-  }
-  return deltaFromChat(payload);
-};
-const toolCallsFromResponses = (payload, eventType) => {
-  const resolvedType = payload?.type || eventType;
-  if (
-    resolvedType === "response.output_item.added" ||
-    resolvedType === "response.output_item.done"
-  ) {
-    const item = payload?.item;
-    if (item?.type === "function_call") {
-      return [
-        {
-          name: item.name,
-          arguments: typeof item.arguments === "string" ? item.arguments : "",
-        },
-      ];
+    payload?.choices?.[0]?.delta?.content ||
+    payload?.choices?.[0]?.text ||
+    payload?.choices?.[0]?.message?.content ||
+    "",
+  deltaFromResponses = (payload, eventType) => {
+    const resolvedType = payload?.type || eventType;
+    if (resolvedType === "response.output_text.delta") {
+      return payload?.delta || payload?.text || "";
     }
-  }
-  if (resolvedType === "response.function_call_arguments.delta") {
-    if (payload?.name) {
-      return [
-        {
-          name: payload.name,
-          arguments: typeof payload.delta === "string" ? payload.delta : "",
-        },
-      ];
+    if (resolvedType === "response.refusal.delta") {
+      return payload?.delta || "";
     }
-  }
-  if (resolvedType === "response.function_call_arguments.done") {
-    if (payload?.name) {
-      return [
-        {
-          name: payload.name,
-          arguments:
-            typeof payload.arguments === "string" ? payload.arguments : "",
-        },
-      ];
+    return deltaFromChat(payload);
+  },
+  toolCallsFromResponses = (payload, eventType) => {
+    const resolvedType = payload?.type || eventType;
+    if (
+      resolvedType === "response.output_item.added" ||
+      resolvedType === "response.output_item.done"
+    ) {
+      const item = payload?.item;
+      if (item?.type === "function_call") {
+        return [
+          {
+            name: item.name,
+            arguments: typeof item.arguments === "string" ? item.arguments : "",
+          },
+        ];
+      }
     }
-  }
-  return [];
-};
+    if (resolvedType === "response.function_call_arguments.delta") {
+      if (payload?.name) {
+        return [
+          {
+            name: payload.name,
+            arguments: typeof payload.delta === "string" ? payload.delta : "",
+          },
+        ];
+      }
+    }
+    if (resolvedType === "response.function_call_arguments.done") {
+      if (payload?.name) {
+        return [
+          {
+            name: payload.name,
+            arguments:
+              typeof payload.arguments === "string" ? payload.arguments : "",
+          },
+        ];
+      }
+    }
+    return [];
+  };
 export const streamChatCompletion = (
   response,
   { onDelta, onToolCallDelta, onChunk },
@@ -150,8 +150,8 @@ export const extractResponsesText = (data) => {
   if (typeof data?.output_text === "string") {
     return data.output_text.trim();
   }
-  const output = Array.isArray(data?.output) ? data.output : [];
-  const texts = [];
+  const output = Array.isArray(data?.output) ? data.output : [],
+    texts = [];
   output.forEach((item) => {
     if (item?.type !== "message" || !Array.isArray(item.content)) {
       return;

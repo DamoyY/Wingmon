@@ -2,20 +2,19 @@ import { updateSendWithPageButtonState } from "../../../ui/index.js";
 import { getActiveTab } from "../../../services/index.js";
 import { isInternalUrl } from "../../../utils/index.js";
 
-const DEFAULT_PAGE_DISABLED_REASON = "当前标签页不支持携页面发送";
-
-const disableSendWithPageButtonForPage = (reason) => {
-  updateSendWithPageButtonState({
-    pageAvailable: false,
-    pageDisabledReason: reason || DEFAULT_PAGE_DISABLED_REASON,
-  });
-};
-const enableSendWithPageButtonForPage = () => {
-  updateSendWithPageButtonState({
-    pageAvailable: true,
-    pageDisabledReason: "",
-  });
-};
+const DEFAULT_PAGE_DISABLED_REASON = "当前标签页不支持携页面发送",
+  disableSendWithPageButtonForPage = (reason) => {
+    updateSendWithPageButtonState({
+      pageAvailable: false,
+      pageDisabledReason: reason || DEFAULT_PAGE_DISABLED_REASON,
+    });
+  },
+  enableSendWithPageButtonForPage = () => {
+    updateSendWithPageButtonState({
+      pageAvailable: true,
+      pageDisabledReason: "",
+    });
+  };
 
 export const setSendWithPagePromptReady = (hasContent) => {
   if (typeof hasContent !== "boolean") {
@@ -24,9 +23,8 @@ export const setSendWithPagePromptReady = (hasContent) => {
   updateSendWithPageButtonState({ promptHasContent: hasContent });
 };
 export const updateSendWithPageButtonAvailability = async () => {
-  const activeTab = await getActiveTab();
-  const activeUrl =
-    typeof activeTab?.url === "string" ? activeTab.url.trim() : "";
+  const activeTab = await getActiveTab(),
+    activeUrl = typeof activeTab?.url === "string" ? activeTab.url.trim() : "";
   if (!activeUrl) {
     disableSendWithPageButtonForPage("当前标签页缺少 URL");
     return;

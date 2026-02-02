@@ -7,37 +7,37 @@ export const state = {
   systemPrompt: null,
   updatedAt: Date.now(),
 };
-const stateSubscribers = new Map();
-const ensureSubscriberSet = (key) => {
-  if (!stateSubscribers.has(key)) {
-    stateSubscribers.set(key, new Set());
-  }
-  return stateSubscribers.get(key);
-};
-const ensureStateKey = (key) => {
-  if (typeof key !== "string" || !key.trim()) {
-    throw new Error("状态订阅键无效");
-  }
-  if (!Object.prototype.hasOwnProperty.call(state, key)) {
-    throw new Error(`未知状态字段：${key}`);
-  }
-  return key;
-};
-const notifyStateChange = (key, detail = {}) => {
-  const resolvedKey = ensureStateKey(key);
-  const listeners = stateSubscribers.get(resolvedKey);
-  if (!listeners || !listeners.size) {
-    return;
-  }
-  const payload = { key: resolvedKey, state, ...detail };
-  listeners.forEach((listener) => {
-    try {
-      listener(payload);
-    } catch (error) {
-      console.error("状态订阅回调执行失败", error);
+const stateSubscribers = new Map(),
+  ensureSubscriberSet = (key) => {
+    if (!stateSubscribers.has(key)) {
+      stateSubscribers.set(key, new Set());
     }
-  });
-};
+    return stateSubscribers.get(key);
+  },
+  ensureStateKey = (key) => {
+    if (typeof key !== "string" || !key.trim()) {
+      throw new Error("状态订阅键无效");
+    }
+    if (!Object.hasOwn(state, key)) {
+      throw new Error(`未知状态字段：${key}`);
+    }
+    return key;
+  },
+  notifyStateChange = (key, detail = {}) => {
+    const resolvedKey = ensureStateKey(key),
+      listeners = stateSubscribers.get(resolvedKey);
+    if (!listeners || !listeners.size) {
+      return;
+    }
+    const payload = { key: resolvedKey, state, ...detail };
+    listeners.forEach((listener) => {
+      try {
+        listener(payload);
+      } catch (error) {
+        console.error("状态订阅回调执行失败", error);
+      }
+    });
+  };
 export const subscribeState = (key, listener) => {
   const resolvedKey = ensureStateKey(key);
   if (typeof listener !== "function") {
@@ -53,8 +53,8 @@ export const subscribeState = (key, listener) => {
   };
 };
 export const setStateValue = (key, value, detail = {}) => {
-  const resolvedKey = ensureStateKey(key);
-  const previous = state[resolvedKey];
+  const resolvedKey = ensureStateKey(key),
+    previous = state[resolvedKey];
   if (Object.is(previous, value)) {
     return value;
   }
@@ -68,24 +68,24 @@ export const setStateValue = (key, value, detail = {}) => {
   return value;
 };
 const hasMessageContent = (content) =>
-  typeof content === "string" && Boolean(content.trim());
-const resolveMessageHidden = (message) => {
-  if (message?.role === "tool") {
-    return true;
-  }
-  if (message?.role === "assistant" && !hasMessageContent(message.content)) {
-    return true;
-  }
-  return false;
-};
-const normalizeMessage = (message) => {
-  if (!message || typeof message !== "object") {
-    throw new Error("消息格式无效");
-  }
-  const normalized = { ...message };
-  normalized.hidden = resolveMessageHidden(normalized);
-  return normalized;
-};
+    typeof content === "string" && Boolean(content.trim()),
+  resolveMessageHidden = (message) => {
+    if (message?.role === "tool") {
+      return true;
+    }
+    if (message?.role === "assistant" && !hasMessageContent(message.content)) {
+      return true;
+    }
+    return false;
+  },
+  normalizeMessage = (message) => {
+    if (!message || typeof message !== "object") {
+      throw new Error("消息格式无效");
+    }
+    const normalized = { ...message };
+    normalized.hidden = resolveMessageHidden(normalized);
+    return normalized;
+  };
 export const addMessage = (message) => {
   const normalized = normalizeMessage(message);
   state.messages.push(normalized);
@@ -100,12 +100,12 @@ export const updateMessage = (index, patch) => {
   if (!Number.isInteger(index) || index < 0 || index >= state.messages.length) {
     throw new Error("消息索引无效");
   }
-  const current = state.messages[index];
-  const next =
-    typeof patch === "function"
-      ? patch({ ...current })
-      : { ...current, ...patch };
-  const normalized = normalizeMessage(next);
+  const current = state.messages[index],
+    next =
+      typeof patch === "function"
+        ? patch({ ...current })
+        : { ...current, ...patch },
+    normalized = normalizeMessage(next);
   state.messages[index] = normalized;
   notifyStateChange("messages", {
     type: "update",

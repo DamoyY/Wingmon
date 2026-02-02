@@ -1,64 +1,45 @@
-const { FlatCompat } = require("@eslint/eslintrc");
-const globals = require("globals");
-const prettierPlugin = require("eslint-plugin-prettier");
-
-const compat = new FlatCompat({ baseDirectory: __dirname });
-const browserGlobals = { ...globals.browser, ...globals.webextensions };
-module.exports = [
+import { defineConfig } from "eslint/config";
+import prettierPlugin from "eslint-plugin-prettier/recommended";
+import path from "path";
+import { fileURLToPath } from "url";
+import tseslint from "typescript-eslint";
+import js from "@eslint/js";
+import globals from "globals";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+export default defineConfig(
   {
-    ignores: [
-      "node_modules/**",
-      "docs/**",
-      "public/system_prompt.md",
-      "public/panel.bundle.js",
-      "public/show-html.bundle.js",
-      "public/content.bundle.js",
-    ],
-  },
-  { linterOptions: { reportUnusedDisableDirectives: "warn" } },
-  ...compat.extends("airbnb-base"),
-  ...compat.extends("prettier"),
-  {
-    plugins: { prettier: prettierPlugin },
-    rules: { "prettier/prettier": "error" },
-  },
-  {
-    files: ["scripts/**/*.mjs"],
+    name: "global-setup",
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
-      globals: globals.node,
-    },
-    rules: {
-      "import/no-extraneous-dependencies": ["error", { devDependencies: true }],
+      globals: { ...globals.browser, ...globals.webextensions },
     },
   },
   {
-    files: ["src/**/*.js"],
-    languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      globals: browserGlobals,
-    },
+    name: "js/all-as-warn",
+    extends: [js.configs.all],
+    rules: Object.fromEntries(
+      Object.entries(js.configs.all.rules).map(([ruleName]) => [
+        ruleName,
+        "warn",
+      ]),
+    ),
+  },
+  { name: "js/recommended-as-error", extends: [js.configs.recommended] },
+  {
+    name: "custom-rules",
     rules: {
-      "import/extensions": [
-        "error",
-        "ignorePackages",
-        { js: "always", mjs: "always", cjs: "always" },
-      ],
       "no-console": "off",
+      "import/extensions": "off",
+      "no-magic-numbers": "off",
     },
   },
   {
-    files: ["public/**/*.js"],
+    files: ["**/*.ts"],
+    extends: [...tseslint.configs.strictTypeChecked],
     languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "script",
-      globals: browserGlobals,
+      parserOptions: { projectService: true, tsconfigRootDir: __dirname },
     },
   },
-  {
-    files: ["public/sandbox.js", "public/sandbox/runConsoleCommand.js"],
-    rules: { "no-eval": "off" },
-  },
-];
+  prettierPlugin,
+);

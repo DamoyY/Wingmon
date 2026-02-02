@@ -1,215 +1,215 @@
 {
-    "extensionName": {
-        "message": "Wingmon"
-    },
-    "extensionDescription": {
-        "message": "Chat with Wingmon in the browser sidebar."
-    },
-    "copied": {
-        "message": "Copied"
-    },
-    "cannotDeleteDuringResponse": {
-        "message": "Cannot delete messages while responding"
-    },
-    "actionFailed": {
-        "message": "Action failed"
-    },
-    "requestStopped": {
-        "message": "Stopped"
-    },
-    "requestInvalidStatusReporter": {
-        "message": "Invalid status reporter"
-    },
-    "statusThinking": {
-        "message": "Thinking..."
-    },
-    "statusSearching": {
-        "message": "Searching..."
-    },
-    "statusBrowsing": {
-        "message": "Browsing..."
-    },
-    "statusOperating": {
-        "message": "Operating..."
-    },
-    "statusCoding": {
-        "message": "Coding..."
-    },
-    "statusSpeaking": {
-        "message": "Responding..."
-    },
-    "statusOpenSuccess": {
-        "message": "**Open Success**"
-    },
-    "statusClickSuccess": {
-        "message": "**Click Success**"
-    },
-    "statusReadFailedInternal": {
-        "message": "**Read Failed:**\nThis page is an internal browser page and cannot be read."
-    },
-    "statusTitleLabel": {
-        "message": "**Title:**"
-    },
-    "statusUrlLabel": {
-        "message": "**URL:**"
-    },
-    "statusContentLabel": {
-        "message": "**Content:**"
-    },
-    "statusTitle": {
-        "message": "Title"
-    },
-    "statusTabId": {
-        "message": "TabID"
-    },
-    "statusContent": {
-        "message": "Content"
-    },
-    "statusAlreadyExists": {
-        "message": "Failed, the same page already exists in the browser, TabID: \"$1\""
-    },
-    "statusSuccess": {
-        "message": "Success"
-    },
-    "statusFailed": {
-        "message": "Failed"
-    },
-    "statusNoTitle": {
-        "message": "No Title"
-    },
-    "statusNoAddress": {
-        "message": "No Address"
-    },
-    "statusToolCallFailed": {
-        "message": "Tool call failed: $1"
-    },
-    "toolOpenPage": {
-        "message": "Open a specific webpage in the current browser"
-    },
-    "toolClickButton": {
-        "message": "Click a specified button on the current page"
-    },
-    "toolGetPage": {
-        "message": "Read the content of a page"
-    },
-    "toolClosePage": {
-        "message": "Close a tab"
-    },
-    "toolRunConsole": {
-        "message": "Execute a console command in the Sandbox Page and get the results"
-    },
-    "toolListTabs": {
-        "message": "List the titles, URLs, and TabIDs of all currently open tabs"
-    },
-    "toolShowHtml": {
-        "message": "The HTML provided to this tool will be opened in the user's browser"
-    },
-    "toolParamFocus": {
-        "message": "Whether to switch browser focus to this page"
-    },
-    "toolParamId": {
-        "message": "The ID of the button to click"
-    },
-    "toolParamCode": {
-        "message": "HTML code"
-    },
-    "panelTitle": {
-        "message": "LLM Sidebar"
-    },
-    "back": {
-        "message": "Back"
-    },
-    "settings": {
-        "message": "Settings"
-    },
-    "save": {
-        "message": "Save"
-    },
-    "settingsHint": {
-        "message": "For first-time use, please enter API Key, Base URL, and Model. These are only stored locally."
-    },
-    "apiKey": {
-        "message": "API Key"
-    },
-    "baseUrl": {
-        "message": "Base URL"
-    },
-    "model": {
-        "message": "Model"
-    },
-    "apiType": {
-        "message": "API Type"
-    },
-    "language": {
-        "message": "Language"
-    },
-    "theme": {
-        "message": "Theme"
-    },
-    "themeAuto": {
-        "message": "Auto"
-    },
-    "themeLight": {
-        "message": "Light"
-    },
-    "themeDark": {
-        "message": "Dark"
-    },
-    "themeColor": {
-        "message": "Theme Color"
-    },
-    "history": {
-        "message": "History"
-    },
-    "historyEmpty": {
-        "message": "No history yet"
-    },
-    "historyDeleteConfirm": {
-        "message": "Are you sure you want to delete this record?"
-    },
-    "newChat": {
-        "message": "New Chat"
-    },
-    "followMode": {
-        "message": "Follow Mode"
-    },
-    "sendWithPage": {
-        "message": "Send with Page"
-    },
-    "send": {
-        "message": "Send"
-    },
-    "stop": {
-        "message": "Stop"
-    },
-    "stopping": {
-        "message": "Stopping"
-    },
-    "promptPlaceholder": {
-        "message": "Type your message ..."
-    },
-    "confirm": {
-        "message": "Confirm"
-    },
-    "cancel": {
-        "message": "Cancel"
-    },
-    "ok": {
-        "message": "OK"
-    },
-    "copy": {
-        "message": "Copy"
-    },
-    "delete": {
-        "message": "Delete"
-    },
-    "error": {
-        "message": "Error"
-    },
-    "success": {
-        "message": "Success"
-    },
-    "failed": {
-        "message": "Failed"
-    }
+  "extensionName": {
+    "message": "Wingmon"
+  },
+  "extensionDescription": {
+    "message": "Chat with Wingmon in the browser sidebar."
+  },
+  "copied": {
+    "message": "Copied"
+  },
+  "cannotDeleteDuringResponse": {
+    "message": "Cannot delete messages while responding"
+  },
+  "actionFailed": {
+    "message": "Action failed"
+  },
+  "requestStopped": {
+    "message": "Stopped"
+  },
+  "requestInvalidStatusReporter": {
+    "message": "Invalid status reporter"
+  },
+  "statusThinking": {
+    "message": "Thinking..."
+  },
+  "statusSearching": {
+    "message": "Searching..."
+  },
+  "statusBrowsing": {
+    "message": "Browsing..."
+  },
+  "statusOperating": {
+    "message": "Operating..."
+  },
+  "statusCoding": {
+    "message": "Coding..."
+  },
+  "statusSpeaking": {
+    "message": "Responding..."
+  },
+  "statusOpenSuccess": {
+    "message": "**Open Success**"
+  },
+  "statusClickSuccess": {
+    "message": "**Click Success**"
+  },
+  "statusReadFailedInternal": {
+    "message": "**Read Failed:**\nThis page is an internal browser page and cannot be read."
+  },
+  "statusTitleLabel": {
+    "message": "**Title:**"
+  },
+  "statusUrlLabel": {
+    "message": "**URL:**"
+  },
+  "statusContentLabel": {
+    "message": "**Content:**"
+  },
+  "statusTitle": {
+    "message": "Title"
+  },
+  "statusTabId": {
+    "message": "TabID"
+  },
+  "statusContent": {
+    "message": "Content"
+  },
+  "statusAlreadyExists": {
+    "message": "Failed, the same page already exists in the browser, TabID: \"$1\""
+  },
+  "statusSuccess": {
+    "message": "Success"
+  },
+  "statusFailed": {
+    "message": "Failed"
+  },
+  "statusNoTitle": {
+    "message": "No Title"
+  },
+  "statusNoAddress": {
+    "message": "No Address"
+  },
+  "statusToolCallFailed": {
+    "message": "Tool call failed: $1"
+  },
+  "toolOpenPage": {
+    "message": "Open a specific webpage in the current browser"
+  },
+  "toolClickButton": {
+    "message": "Click a specified button on the current page"
+  },
+  "toolGetPage": {
+    "message": "Read the content of a page"
+  },
+  "toolClosePage": {
+    "message": "Close a tab"
+  },
+  "toolRunConsole": {
+    "message": "Execute a console command in the Sandbox Page and get the results"
+  },
+  "toolListTabs": {
+    "message": "List the titles, URLs, and TabIDs of all currently open tabs"
+  },
+  "toolShowHtml": {
+    "message": "The HTML provided to this tool will be opened in the user's browser"
+  },
+  "toolParamFocus": {
+    "message": "Whether to switch browser focus to this page"
+  },
+  "toolParamId": {
+    "message": "The ID of the button to click"
+  },
+  "toolParamCode": {
+    "message": "HTML code"
+  },
+  "panelTitle": {
+    "message": "LLM Sidebar"
+  },
+  "back": {
+    "message": "Back"
+  },
+  "settings": {
+    "message": "Settings"
+  },
+  "save": {
+    "message": "Save"
+  },
+  "settingsHint": {
+    "message": "For first-time use, please enter API Key, Base URL, and Model. These are only stored locally."
+  },
+  "apiKey": {
+    "message": "API Key"
+  },
+  "baseUrl": {
+    "message": "Base URL"
+  },
+  "model": {
+    "message": "Model"
+  },
+  "apiType": {
+    "message": "API Type"
+  },
+  "language": {
+    "message": "Language"
+  },
+  "theme": {
+    "message": "Theme"
+  },
+  "themeAuto": {
+    "message": "Auto"
+  },
+  "themeLight": {
+    "message": "Light"
+  },
+  "themeDark": {
+    "message": "Dark"
+  },
+  "themeColor": {
+    "message": "Theme Color"
+  },
+  "history": {
+    "message": "History"
+  },
+  "historyEmpty": {
+    "message": "No history yet"
+  },
+  "historyDeleteConfirm": {
+    "message": "Are you sure you want to delete this record?"
+  },
+  "newChat": {
+    "message": "New Chat"
+  },
+  "followMode": {
+    "message": "Follow Mode"
+  },
+  "sendWithPage": {
+    "message": "Send with Page"
+  },
+  "send": {
+    "message": "Send"
+  },
+  "stop": {
+    "message": "Stop"
+  },
+  "stopping": {
+    "message": "Stopping"
+  },
+  "promptPlaceholder": {
+    "message": "Type your message ..."
+  },
+  "confirm": {
+    "message": "Confirm"
+  },
+  "cancel": {
+    "message": "Cancel"
+  },
+  "ok": {
+    "message": "OK"
+  },
+  "copy": {
+    "message": "Copy"
+  },
+  "delete": {
+    "message": "Delete"
+  },
+  "error": {
+    "message": "Error"
+  },
+  "success": {
+    "message": "Success"
+  },
+  "failed": {
+    "message": "Failed"
+  }
 }

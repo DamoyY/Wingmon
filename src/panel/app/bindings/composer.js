@@ -12,13 +12,13 @@ import {
 
 const bindComposerEvents = () => {
   const {
-    sendButton,
-    sendWithPageButton,
-    stopButton,
-    promptEl,
-    newChatButton,
-  } = elements;
-  const handlePromptKeydown = createPromptKeydownHandler(sendMessage);
+      sendButton,
+      sendWithPageButton,
+      stopButton,
+      promptEl,
+      newChatButton,
+    } = elements,
+    handlePromptKeydown = createPromptKeydownHandler(sendMessage);
   sendButton.addEventListener("click", sendMessage);
   sendWithPageButton.addEventListener("click", sendMessageWithPage);
   stopButton.addEventListener("click", stopSending);

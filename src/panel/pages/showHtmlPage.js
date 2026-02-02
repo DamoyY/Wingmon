@@ -12,8 +12,8 @@ const loadPreview = async () => {
       console.error("HTML 预览记录不存在", id);
       return;
     }
-    const normalizedCode = normalizePreviewHtml(entry.code);
-    const iframe = document.createElement("iframe");
+    const normalizedCode = normalizePreviewHtml(entry.code),
+      iframe = document.createElement("iframe");
     iframe.src = "sandbox.html";
     iframe.style.cssText =
       "width: 100vw; height: 100vh; border: none; position: fixed; top: 0; left: 0; display: block;";

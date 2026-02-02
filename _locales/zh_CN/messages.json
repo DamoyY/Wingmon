@@ -1,215 +1,215 @@
 {
-    "extensionName": {
-        "message": "Wingmon"
-    },
-    "extensionDescription": {
-        "message": "在浏览器侧边栏与 Wingmon 对话。"
-    },
-    "copied": {
-        "message": "已复制"
-    },
-    "cannotDeleteDuringResponse": {
-        "message": "回复中，暂时无法删除消息"
-    },
-    "actionFailed": {
-        "message": "操作失败"
-    },
-    "requestStopped": {
-        "message": "已停止"
-    },
-    "requestInvalidStatusReporter": {
-        "message": "状态回调无效"
-    },
-    "statusThinking": {
-        "message": "思索中..."
-    },
-    "statusSearching": {
-        "message": "搜索中..."
-    },
-    "statusBrowsing": {
-        "message": "浏览中..."
-    },
-    "statusOperating": {
-        "message": "操作中..."
-    },
-    "statusCoding": {
-        "message": "编码中..."
-    },
-    "statusSpeaking": {
-        "message": "表达中..."
-    },
-    "statusOpenSuccess": {
-        "message": "**打开成功**"
-    },
-    "statusClickSuccess": {
-        "message": "**点击成功**"
-    },
-    "statusReadFailedInternal": {
-        "message": "**读取失败：**\n该页面为浏览器内部页面，无法读取。"
-    },
-    "statusTitleLabel": {
-        "message": "**标题：**"
-    },
-    "statusUrlLabel": {
-        "message": "**URL：**"
-    },
-    "statusContentLabel": {
-        "message": "**内容：**"
-    },
-    "statusTitle": {
-        "message": "标题"
-    },
-    "statusTabId": {
-        "message": "TabID"
-    },
-    "statusContent": {
-        "message": "内容"
-    },
-    "statusAlreadyExists": {
-        "message": "失败，浏览器中已存在相同页面，TabID：\"$1\""
-    },
-    "statusSuccess": {
-        "message": "成功"
-    },
-    "statusFailed": {
-        "message": "失败"
-    },
-    "statusNoTitle": {
-        "message": "无标题"
-    },
-    "statusNoAddress": {
-        "message": "无地址"
-    },
-    "statusToolCallFailed": {
-        "message": "工具调用失败：$1"
-    },
-    "toolOpenPage": {
-        "message": "在当前浏览器打开指定网页"
-    },
-    "toolClickButton": {
-        "message": "点击当前页面上指定的 button"
-    },
-    "toolGetPage": {
-        "message": "读取页面内容"
-    },
-    "toolClosePage": {
-        "message": "关闭标签页"
-    },
-    "toolRunConsole": {
-        "message": "在 Sandbox Page 中执行控制台命令并获取结果"
-    },
-    "toolListTabs": {
-        "message": "列出所有当前已打开的标签页的标题、URL 和 TabID"
-    },
-    "toolShowHtml": {
-        "message": "输入该工具的HTML会在用户的浏览器中被打开"
-    },
-    "toolParamFocus": {
-        "message": "是否将浏览器焦点切换至此页面"
-    },
-    "toolParamId": {
-        "message": "要点击的 button 的 ID"
-    },
-    "toolParamCode": {
-        "message": "HTML 代码"
-    },
-    "panelTitle": {
-        "message": "LLM 侧边栏"
-    },
-    "back": {
-        "message": "返回"
-    },
-    "settings": {
-        "message": "设置"
-    },
-    "save": {
-        "message": "保存"
-    },
-    "settingsHint": {
-        "message": "首次使用需要输入 API Key、Base URL 和模型，仅保存在本地。"
-    },
-    "apiKey": {
-        "message": "API Key"
-    },
-    "baseUrl": {
-        "message": "Base URL"
-    },
-    "model": {
-        "message": "模型"
-    },
-    "apiType": {
-        "message": "API 类型"
-    },
-    "language": {
-        "message": "语言"
-    },
-    "theme": {
-        "message": "主题"
-    },
-    "themeAuto": {
-        "message": "自动"
-    },
-    "themeLight": {
-        "message": "亮色"
-    },
-    "themeDark": {
-        "message": "暗色"
-    },
-    "themeColor": {
-        "message": "主题色"
-    },
-    "history": {
-        "message": "历史记录"
-    },
-    "historyEmpty": {
-        "message": "暂无历史记录"
-    },
-    "historyDeleteConfirm": {
-        "message": "确定要删除这条记录吗？"
-    },
-    "newChat": {
-        "message": "新建对话"
-    },
-    "followMode": {
-        "message": "跟随模式"
-    },
-    "sendWithPage": {
-        "message": "携页面发送"
-    },
-    "send": {
-        "message": "发送"
-    },
-    "stop": {
-        "message": "停止"
-    },
-    "stopping": {
-        "message": "停止中"
-    },
-    "promptPlaceholder": {
-        "message": "输入要发送的内容"
-    },
-    "confirm": {
-        "message": "确认"
-    },
-    "cancel": {
-        "message": "取消"
-    },
-    "ok": {
-        "message": "确定"
-    },
-    "copy": {
-        "message": "复制"
-    },
-    "delete": {
-        "message": "删除"
-    },
-    "error": {
-        "message": "错误"
-    },
-    "success": {
-        "message": "成功"
-    },
-    "failed": {
-        "message": "失败"
-    }
+  "extensionName": {
+    "message": "Wingmon"
+  },
+  "extensionDescription": {
+    "message": "在浏览器侧边栏与 Wingmon 对话。"
+  },
+  "copied": {
+    "message": "已复制"
+  },
+  "cannotDeleteDuringResponse": {
+    "message": "回复中，暂时无法删除消息"
+  },
+  "actionFailed": {
+    "message": "操作失败"
+  },
+  "requestStopped": {
+    "message": "已停止"
+  },
+  "requestInvalidStatusReporter": {
+    "message": "状态回调无效"
+  },
+  "statusThinking": {
+    "message": "思索中..."
+  },
+  "statusSearching": {
+    "message": "搜索中..."
+  },
+  "statusBrowsing": {
+    "message": "浏览中..."
+  },
+  "statusOperating": {
+    "message": "操作中..."
+  },
+  "statusCoding": {
+    "message": "编码中..."
+  },
+  "statusSpeaking": {
+    "message": "表达中..."
+  },
+  "statusOpenSuccess": {
+    "message": "**打开成功**"
+  },
+  "statusClickSuccess": {
+    "message": "**点击成功**"
+  },
+  "statusReadFailedInternal": {
+    "message": "**读取失败：**\n该页面为浏览器内部页面，无法读取。"
+  },
+  "statusTitleLabel": {
+    "message": "**标题：**"
+  },
+  "statusUrlLabel": {
+    "message": "**URL：**"
+  },
+  "statusContentLabel": {
+    "message": "**内容：**"
+  },
+  "statusTitle": {
+    "message": "标题"
+  },
+  "statusTabId": {
+    "message": "TabID"
+  },
+  "statusContent": {
+    "message": "内容"
+  },
+  "statusAlreadyExists": {
+    "message": "失败，浏览器中已存在相同页面，TabID：\"$1\""
+  },
+  "statusSuccess": {
+    "message": "成功"
+  },
+  "statusFailed": {
+    "message": "失败"
+  },
+  "statusNoTitle": {
+    "message": "无标题"
+  },
+  "statusNoAddress": {
+    "message": "无地址"
+  },
+  "statusToolCallFailed": {
+    "message": "工具调用失败：$1"
+  },
+  "toolOpenPage": {
+    "message": "在当前浏览器打开指定网页"
+  },
+  "toolClickButton": {
+    "message": "点击当前页面上指定的 button"
+  },
+  "toolGetPage": {
+    "message": "读取页面内容"
+  },
+  "toolClosePage": {
+    "message": "关闭标签页"
+  },
+  "toolRunConsole": {
+    "message": "在 Sandbox Page 中执行控制台命令并获取结果"
+  },
+  "toolListTabs": {
+    "message": "列出所有当前已打开的标签页的标题、URL 和 TabID"
+  },
+  "toolShowHtml": {
+    "message": "输入该工具的HTML会在用户的浏览器中被打开"
+  },
+  "toolParamFocus": {
+    "message": "是否将浏览器焦点切换至此页面"
+  },
+  "toolParamId": {
+    "message": "要点击的 button 的 ID"
+  },
+  "toolParamCode": {
+    "message": "HTML 代码"
+  },
+  "panelTitle": {
+    "message": "LLM 侧边栏"
+  },
+  "back": {
+    "message": "返回"
+  },
+  "settings": {
+    "message": "设置"
+  },
+  "save": {
+    "message": "保存"
+  },
+  "settingsHint": {
+    "message": "首次使用需要输入 API Key、Base URL 和模型，仅保存在本地。"
+  },
+  "apiKey": {
+    "message": "API Key"
+  },
+  "baseUrl": {
+    "message": "Base URL"
+  },
+  "model": {
+    "message": "模型"
+  },
+  "apiType": {
+    "message": "API 类型"
+  },
+  "language": {
+    "message": "语言"
+  },
+  "theme": {
+    "message": "主题"
+  },
+  "themeAuto": {
+    "message": "自动"
+  },
+  "themeLight": {
+    "message": "亮色"
+  },
+  "themeDark": {
+    "message": "暗色"
+  },
+  "themeColor": {
+    "message": "主题色"
+  },
+  "history": {
+    "message": "历史记录"
+  },
+  "historyEmpty": {
+    "message": "暂无历史记录"
+  },
+  "historyDeleteConfirm": {
+    "message": "确定要删除这条记录吗？"
+  },
+  "newChat": {
+    "message": "新建对话"
+  },
+  "followMode": {
+    "message": "跟随模式"
+  },
+  "sendWithPage": {
+    "message": "携页面发送"
+  },
+  "send": {
+    "message": "发送"
+  },
+  "stop": {
+    "message": "停止"
+  },
+  "stopping": {
+    "message": "停止中"
+  },
+  "promptPlaceholder": {
+    "message": "输入要发送的内容"
+  },
+  "confirm": {
+    "message": "确认"
+  },
+  "cancel": {
+    "message": "取消"
+  },
+  "ok": {
+    "message": "确定"
+  },
+  "copy": {
+    "message": "复制"
+  },
+  "delete": {
+    "message": "删除"
+  },
+  "error": {
+    "message": "错误"
+  },
+  "success": {
+    "message": "成功"
+  },
+  "failed": {
+    "message": "失败"
+  }
 }

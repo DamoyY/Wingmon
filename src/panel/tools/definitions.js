@@ -2,10 +2,10 @@ import { parseJson } from "../utils/index.js";
 import toolModules from "./modules/index.js";
 import ToolInputError from "./errors.js";
 
-const TOOL_STRICT = true;
-const validatedTools = [];
-const toolModuleByName = new Map();
-const toolNames = {};
+const TOOL_STRICT = true,
+  validatedTools = [],
+  toolModuleByName = new Map(),
+  toolNames = {};
 toolModules.forEach((tool) => {
   if (!tool || typeof tool !== "object") {
     throw new Error("工具模块无效");

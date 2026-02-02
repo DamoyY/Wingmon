@@ -5,20 +5,18 @@ import {
   waitForContentScript,
 } from "../services/index.js";
 
-const pageContentRetryBaseDelayMs = 200;
-const pageContentRetryMaxDelayMs = 2000;
-const pageContentRetryTimeoutMs = 10000;
-
-const resolvePageContentRetryDelay = (attempt) =>
-  Math.min(
-    pageContentRetryBaseDelayMs * 2 ** attempt,
-    pageContentRetryMaxDelayMs,
-  );
-
-const waitForDelay = (delayMs) =>
-  new Promise((resolve) => {
-    setTimeout(resolve, delayMs);
-  });
+const pageContentRetryBaseDelayMs = 200,
+  pageContentRetryMaxDelayMs = 2000,
+  pageContentRetryTimeoutMs = 10000,
+  resolvePageContentRetryDelay = (attempt) =>
+    Math.min(
+      pageContentRetryBaseDelayMs * 2 ** attempt,
+      pageContentRetryMaxDelayMs,
+    ),
+  waitForDelay = (delayMs) =>
+    new Promise((resolve) => {
+      setTimeout(resolve, delayMs);
+    });
 
 export const buildPageReadResult = ({
   headerLines,
@@ -34,18 +32,20 @@ export const buildPageReadResult = ({
 };
 
 export const fetchPageMarkdownData = async (tabId) => {
-  const isComplete = await waitForContentScript(tabId);
-  const fetchOnce = async () => {
-    const pageData = await sendMessageToTab(tabId, { type: "getPageContent" });
-    if (!pageData || typeof pageData.content !== "string") {
-      throw new Error("页面内容为空");
-    }
-    return {
-      title: pageData.title || "",
-      url: pageData.url || "",
-      content: pageData.content,
+  const isComplete = await waitForContentScript(tabId),
+    fetchOnce = async () => {
+      const pageData = await sendMessageToTab(tabId, {
+        type: "getPageContent",
+      });
+      if (!pageData || typeof pageData.content !== "string") {
+        throw new Error("页面内容为空");
+      }
+      return {
+        title: pageData.title || "",
+        url: pageData.url || "",
+        content: pageData.content,
+      };
     };
-  };
   if (!isComplete) {
     try {
       return await fetchOnce();
@@ -56,27 +56,27 @@ export const fetchPageMarkdownData = async (tabId) => {
       throw failure;
     }
   }
-  const startTime = Date.now();
-  const attemptFetch = async (attemptIndex) => {
-    try {
-      return await fetchOnce();
-    } catch (error) {
-      const failure =
-        error instanceof Error ? error : new Error("页面内容获取失败");
-      const attemptsMade = attemptIndex + 1;
-      const elapsedMs = Date.now() - startTime;
-      const delayMs = resolvePageContentRetryDelay(attemptIndex);
-      if (elapsedMs + delayMs >= pageContentRetryTimeoutMs) {
-        console.error("页面内容获取失败，已达到重试上限", failure);
-        throw new Error(
-          `页面内容获取失败，已重试 ${attemptsMade} 次：${failure.message}`,
-        );
+  const startTime = Date.now(),
+    attemptFetch = async (attemptIndex) => {
+      try {
+        return await fetchOnce();
+      } catch (error) {
+        const failure =
+            error instanceof Error ? error : new Error("页面内容获取失败"),
+          attemptsMade = attemptIndex + 1,
+          elapsedMs = Date.now() - startTime,
+          delayMs = resolvePageContentRetryDelay(attemptIndex);
+        if (elapsedMs + delayMs >= pageContentRetryTimeoutMs) {
+          console.error("页面内容获取失败，已达到重试上限", failure);
+          throw new Error(
+            `页面内容获取失败，已重试 ${attemptsMade} 次：${failure.message}`,
+          );
+        }
+        console.error("页面内容获取失败，准备重试", failure);
+        await waitForDelay(delayMs);
+        return attemptFetch(attemptIndex + 1);
       }
-      console.error("页面内容获取失败，准备重试", failure);
-      await waitForDelay(delayMs);
-      return attemptFetch(attemptIndex + 1);
-    }
-  };
+    };
   return attemptFetch(0);
 };
 

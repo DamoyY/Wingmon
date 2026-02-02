@@ -1,37 +1,37 @@
 import { addMessage, state, updateMessage } from "../state/index.js";
 
 const normalizeToolCall = ({
-  id,
-  callId,
-  name,
-  argumentsText,
-  defaultArguments,
-}) => {
-  if (!name) {
-    return null;
-  }
-  const resolvedId = callId || id;
-  const resolvedArguments =
-    typeof argumentsText === "string" ? argumentsText : defaultArguments;
-  return {
-    id: resolvedId,
-    type: "function",
-    function: { name, arguments: resolvedArguments },
-    call_id: resolvedId,
-  };
-};
-const normalizeToolCallList = (items, mapper) =>
-  items.map((item) => normalizeToolCall(mapper(item))).filter(Boolean);
+    id,
+    callId,
+    name,
+    argumentsText,
+    defaultArguments,
+  }) => {
+    if (!name) {
+      return null;
+    }
+    const resolvedId = callId || id,
+      resolvedArguments =
+        typeof argumentsText === "string" ? argumentsText : defaultArguments;
+    return {
+      id: resolvedId,
+      type: "function",
+      function: { name, arguments: resolvedArguments },
+      call_id: resolvedId,
+    };
+  },
+  normalizeToolCallList = (items, mapper) =>
+    items.map((item) => normalizeToolCall(mapper(item))).filter(Boolean);
 export const addChatToolCallDelta = (collector, deltas) => {
   const next = { ...collector };
   deltas.forEach((delta) => {
-    const index = typeof delta.index === "number" ? delta.index : 0;
-    const existing = next[index] || {
-      id: delta.id,
-      type: delta.type || "function",
-      function: { name: delta.function?.name || "", arguments: "" },
-    };
-    const updated = { ...existing, function: { ...existing.function } };
+    const index = typeof delta.index === "number" ? delta.index : 0,
+      existing = next[index] || {
+        id: delta.id,
+        type: delta.type || "function",
+        function: { name: delta.function?.name || "", arguments: "" },
+      },
+      updated = { ...existing, function: { ...existing.function } };
     if (delta.id) {
       updated.id = delta.id;
     }
@@ -58,8 +58,8 @@ export const finalizeChatToolCalls = (collector) =>
     argumentsText: call.function?.arguments,
   }));
 export const addResponsesToolCallEvent = (collector, payload, eventType) => {
-  const next = { ...collector };
-  const resolvedType = payload?.type || eventType;
+  const next = { ...collector },
+    resolvedType = payload?.type || eventType;
   if (resolvedType === "response.output_item.added") {
     if (payload?.item?.type === "function_call") {
       next[payload.output_index] = { ...payload.item };
@@ -146,10 +146,10 @@ export const attachToolCallsToAssistant = (toolCalls, assistantIndex) => {
     return;
   }
   const index =
-    typeof assistantIndex === "number"
-      ? assistantIndex
-      : state.messages.length - 1;
-  const target = state.messages[index];
+      typeof assistantIndex === "number"
+        ? assistantIndex
+        : state.messages.length - 1,
+    target = state.messages[index];
   if (target && target.role === "assistant") {
     updateMessage(index, { tool_calls: toolCalls });
     return;

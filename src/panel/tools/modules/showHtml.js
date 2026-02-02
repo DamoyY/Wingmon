@@ -4,29 +4,27 @@ import ToolInputError from "../errors.js";
 import { ensureObjectArgs } from "../validation/index.js";
 
 const parameters = {
-  type: "object",
-  properties: { code: { type: "string" } },
-  required: ["code"],
-  additionalProperties: false,
-};
-
-const validateArgs = (args) => {
-  ensureObjectArgs(args);
-  if (typeof args.code !== "string" || !args.code.trim()) {
-    throw new ToolInputError("code 必须是非空字符串");
-  }
-  return { code: args.code };
-};
-
-const execute = async ({ code }) => {
-  const previewId = await saveHtmlPreview({ code });
-  const url = chrome.runtime.getURL(
-    `public/show-html.html?id=${encodeURIComponent(previewId)}`,
-  );
-  const tab = await createTab(url, true);
-  await focusTab(tab.id);
-  return "成功";
-};
+    type: "object",
+    properties: { code: { type: "string" } },
+    required: ["code"],
+    additionalProperties: false,
+  },
+  validateArgs = (args) => {
+    ensureObjectArgs(args);
+    if (typeof args.code !== "string" || !args.code.trim()) {
+      throw new ToolInputError("code 必须是非空字符串");
+    }
+    return { code: args.code };
+  },
+  execute = async ({ code }) => {
+    const previewId = await saveHtmlPreview({ code }),
+      url = chrome.runtime.getURL(
+        `public/show-html.html?id=${encodeURIComponent(previewId)}`,
+      ),
+      tab = await createTab(url, true);
+    await focusTab(tab.id);
+    return "成功";
+  };
 
 export default {
   key: "showHtml",

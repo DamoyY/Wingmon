@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ESNEXT",
+    "lib": ["DOM", "ESNEXT"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": false,
+    "noEmit": true
+  },
+  "include": ["public/**/*.ts", "src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

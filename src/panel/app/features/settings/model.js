@@ -2,32 +2,30 @@ import { normalizeTheme, normalizeThemeColor } from "../../../utils/index.js";
 
 let settingsSnapshot = null;
 
-const trimString = (value) => (typeof value === "string" ? value.trim() : "");
-
-const normalizeThemeColorSafe = (value) => {
-  if (typeof value !== "string") {
-    return "";
-  }
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return "";
-  }
-  try {
-    return normalizeThemeColor(trimmed);
-  } catch (error) {
-    console.error("主题色归一化失败", error);
-    return trimmed;
-  }
-};
-
-const normalizeSettings = (settings) => ({
-  apiKey: trimString(settings.apiKey),
-  baseUrl: trimString(settings.baseUrl),
-  model: trimString(settings.model),
-  apiType: settings.apiType ?? "chat",
-  theme: normalizeTheme(settings.theme ?? "auto"),
-  themeColor: normalizeThemeColorSafe(settings.themeColor),
-});
+const trimString = (value) => (typeof value === "string" ? value.trim() : ""),
+  normalizeThemeColorSafe = (value) => {
+    if (typeof value !== "string") {
+      return "";
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return "";
+    }
+    try {
+      return normalizeThemeColor(trimmed);
+    } catch (error) {
+      console.error("主题色归一化失败", error);
+      return trimmed;
+    }
+  },
+  normalizeSettings = (settings) => ({
+    apiKey: trimString(settings.apiKey),
+    baseUrl: trimString(settings.baseUrl),
+    model: trimString(settings.model),
+    apiType: settings.apiType ?? "chat",
+    theme: normalizeTheme(settings.theme ?? "auto"),
+    themeColor: normalizeThemeColorSafe(settings.themeColor),
+  });
 
 export const syncSettingsSnapshotState = (settings) => {
   settingsSnapshot = normalizeSettings(settings);

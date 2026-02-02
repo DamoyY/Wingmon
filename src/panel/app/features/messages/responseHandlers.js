@@ -1,4 +1,4 @@
-import { removeMessage, addMessage, state } from "../../../state/index.js";
+import { addMessage, removeMessage, state } from "../../../state/index.js";
 import { attachToolCallsToAssistant } from "../../../tools/index.js";
 import { renderMessagesView } from "./presenter.js";
 
@@ -9,9 +9,9 @@ export const applyStreamedResponse = (toolCalls, assistantIndex) => {
   if (!Number.isInteger(assistantIndex)) {
     throw new Error("流式回复缺少消息索引");
   }
-  const pendingToolCalls = normalizeToolCalls(toolCalls);
-  const assistantMessage = state.messages[assistantIndex];
-  const hasText = Boolean(assistantMessage?.content?.trim());
+  const pendingToolCalls = normalizeToolCalls(toolCalls),
+    assistantMessage = state.messages[assistantIndex],
+    hasText = Boolean(assistantMessage?.content?.trim());
   if (pendingToolCalls.length) {
     attachToolCallsToAssistant(pendingToolCalls, assistantIndex);
   }

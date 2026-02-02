@@ -2,62 +2,58 @@ import { isInternalUrl } from "../utils/index.js";
 
 const pendingWaits = new Map();
 let listenersReady = false;
-const internalTabMessage = "浏览器内置页面不支持连接内容脚本";
-
-const resolvePendingWaits = (tabId, isComplete) => {
-  const waiters = pendingWaits.get(tabId);
-  if (!waiters) {
-    return;
-  }
-  waiters.forEach((waiter) => {
-    clearTimeout(waiter.timeoutId);
-    waiter.resolve(isComplete);
-  });
-  pendingWaits.delete(tabId);
-};
-
-const getTabSnapshot = (tabId) =>
-  new Promise((resolve, reject) => {
-    chrome.tabs.get(tabId, (currentTab) => {
-      if (chrome.runtime.lastError) {
-        const message =
-          chrome.runtime.lastError.message || "无法获取标签页状态";
-        const error = new Error(message);
-        console.error(error.message);
-        reject(error);
-        return;
-      }
-      if (!currentTab) {
-        const error = new Error("未找到标签页");
-        console.error(error.message);
-        reject(error);
-        return;
-      }
-      resolve(currentTab);
-    });
-  });
-
-const ensureTabConnectable = async (tabId) => {
-  const tab = await getTabSnapshot(tabId);
-  if (isInternalUrl(tab.url || "")) {
-    const error = new Error(internalTabMessage);
-    console.error(error.message);
-    throw error;
-  }
-  return tab;
-};
-
-const registerContentScriptListeners = () => {
-  if (listenersReady) {
-    return;
-  }
-  listenersReady = true;
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-    if (changeInfo.status === "complete") {
-      resolvePendingWaits(tabId, true);
+const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
+  resolvePendingWaits = (tabId, isComplete) => {
+    const waiters = pendingWaits.get(tabId);
+    if (!waiters) {
+      return;
     }
-  });
-};
+    waiters.forEach((waiter) => {
+      clearTimeout(waiter.timeoutId);
+      waiter.resolve(isComplete);
+    });
+    pendingWaits.delete(tabId);
+  },
+  getTabSnapshot = (tabId) =>
+    new Promise((resolve, reject) => {
+      chrome.tabs.get(tabId, (currentTab) => {
+        if (chrome.runtime.lastError) {
+          const message =
+              chrome.runtime.lastError.message || "无法获取标签页状态",
+            error = new Error(message);
+          console.error(error.message);
+          reject(error);
+          return;
+        }
+        if (!currentTab) {
+          const error = new Error("未找到标签页");
+          console.error(error.message);
+          reject(error);
+          return;
+        }
+        resolve(currentTab);
+      });
+    }),
+  ensureTabConnectable = async (tabId) => {
+    const tab = await getTabSnapshot(tabId);
+    if (isInternalUrl(tab.url || "")) {
+      const error = new Error(internalTabMessage);
+      console.error(error.message);
+      throw error;
+    }
+    return tab;
+  },
+  registerContentScriptListeners = () => {
+    if (listenersReady) {
+      return;
+    }
+    listenersReady = true;
+    chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+      if (changeInfo.status === "complete") {
+        resolvePendingWaits(tabId, true);
+      }
+    });
+  };
 export const initTabListeners = () => {
   registerContentScriptListeners();
 };
@@ -197,25 +193,25 @@ export const waitForContentScript = async (tabId, timeoutMs = 10000) => {
     new Promise((resolve, reject) => {
       let settled = false;
       const waiter = {
-        resolve: null,
-        reject: null,
-        timeoutId: null,
-      };
-      const cleanup = () => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        clearTimeout(waiter.timeoutId);
-        const waiters = pendingWaits.get(tabId);
-        if (!waiters) {
-          return;
-        }
-        waiters.delete(waiter);
-        if (!waiters.size) {
-          pendingWaits.delete(tabId);
-        }
-      };
+          resolve: null,
+          reject: null,
+          timeoutId: null,
+        },
+        cleanup = () => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          clearTimeout(waiter.timeoutId);
+          const waiters = pendingWaits.get(tabId);
+          if (!waiters) {
+            return;
+          }
+          waiters.delete(waiter);
+          if (!waiters.size) {
+            pendingWaits.delete(tabId);
+          }
+        };
       waiter.resolve = (isComplete) => {
         cleanup();
         resolve(Boolean(isComplete));

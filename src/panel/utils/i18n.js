@@ -1,8 +1,8 @@
 let currentLocaleMessages = null;
 const loadLocaleMessages = async (locale) => {
   try {
-    const url = chrome.runtime.getURL(`_locales/${locale}/messages.json`);
-    const response = await fetch(url);
+    const url = chrome.runtime.getURL(`_locales/${locale}/messages.json`),
+      response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to load messages for locale: ${locale}`);
     }
@@ -38,9 +38,9 @@ export function t(key, substitutions) {
 }
 export function translateDOM() {
   document.querySelectorAll("[data-i18n]").forEach((element) => {
-    const el = element;
-    const key = el.getAttribute("data-i18n");
-    const message = t(key);
+    const el = element,
+      key = el.getAttribute("data-i18n"),
+      message = t(key);
     if (message && message !== key) {
       el.textContent = message;
     }
@@ -48,9 +48,9 @@ export function translateDOM() {
   const translatableAttrs = ["placeholder", "title", "label", "aria-label"];
   translatableAttrs.forEach((attr) => {
     document.querySelectorAll(`[data-i18n-${attr}]`).forEach((element) => {
-      const el = element;
-      const key = el.getAttribute(`data-i18n-${attr}`);
-      const message = t(key);
+      const el = element,
+        key = el.getAttribute(`data-i18n-${attr}`),
+        message = t(key);
       if (message && message !== key) {
         el.setAttribute(attr, message);
       }

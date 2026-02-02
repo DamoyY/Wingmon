@@ -1,5 +1,5 @@
-const STORAGE_KEY = "chat_history";
-const MAX_HISTORY = 50;
+const MAX_HISTORY = 50,
+  STORAGE_KEY = "chat_history";
 
 export const getHistory = async () => {
   const result = await chrome.storage.local.get(STORAGE_KEY);
@@ -10,9 +10,9 @@ export const saveConversation = async (id, messages, updatedAt) => {
   if (!messages.length) {
     return;
   }
-  const history = await getHistory();
-  const existingIndex = history.findIndex((item) => item.id === id);
-  const conversation = { id, messages, updatedAt };
+  const history = await getHistory(),
+    existingIndex = history.findIndex((item) => item.id === id),
+    conversation = { id, messages, updatedAt };
   if (existingIndex >= 0) {
     history[existingIndex] = conversation;
   } else {
@@ -25,8 +25,8 @@ export const saveConversation = async (id, messages, updatedAt) => {
 };
 
 export const loadConversation = async (id) => {
-  const history = await getHistory();
-  const conversation = history.find((item) => item.id === id);
+  const history = await getHistory(),
+    conversation = history.find((item) => item.id === id);
   if (!conversation) {
     throw new Error("对话记录不存在");
   }
@@ -34,7 +34,7 @@ export const loadConversation = async (id) => {
 };
 
 export const deleteConversation = async (id) => {
-  const history = await getHistory();
-  const filtered = history.filter((item) => item.id !== id);
+  const history = await getHistory(),
+    filtered = history.filter((item) => item.id !== id);
   await chrome.storage.local.set({ [STORAGE_KEY]: filtered });
 };

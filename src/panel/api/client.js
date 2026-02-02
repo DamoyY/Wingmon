@@ -12,16 +12,14 @@ const requestModel = async ({
   onChunk,
   signal,
 }) => {
-  const strategy = getApiStrategy(settings.apiType, toolAdapter);
-  const requestBody = strategy.buildRequestBody(
-    settings,
-    systemPrompt,
-    tools,
-    messages,
-  );
-  const response = await fetch(
-    buildEndpoint(settings.baseUrl, settings.apiType),
-    {
+  const strategy = getApiStrategy(settings.apiType, toolAdapter),
+    requestBody = strategy.buildRequestBody(
+      settings,
+      systemPrompt,
+      tools,
+      messages,
+    ),
+    response = await fetch(buildEndpoint(settings.baseUrl, settings.apiType), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -29,8 +27,7 @@ const requestModel = async ({
       },
       body: JSON.stringify(requestBody),
       signal,
-    },
-  );
+    });
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(errorText || "请求失败");
@@ -43,9 +40,9 @@ const requestModel = async ({
     const toolCalls = await strategy.stream(response, { onDelta, onChunk });
     return { toolCalls, streamed: true };
   }
-  const data = await response.json();
-  const toolCalls = strategy.extractToolCalls(data);
-  const reply = strategy.extractReply(data);
+  const data = await response.json(),
+    toolCalls = strategy.extractToolCalls(data),
+    reply = strategy.extractReply(data);
   return { toolCalls, reply, streamed: false };
 };
 export default requestModel;
