@@ -1,28 +1,47 @@
 import { setStateValue, state } from "../state/index.js";
+import { systemPromptContent } from "./systemPromptContent.ts";
 import { getActiveTab } from "./tabs.js";
 
-const loadSystemPrompt = async () => {
-    if (state.systemPrompt !== null) {
-      return state.systemPrompt;
+type SystemPromptState = {
+  systemPrompt: string | null;
+};
+
+type ChromeI18n = {
+  getUILanguage: () => string;
+};
+
+type ChromeApi = {
+  i18n: ChromeI18n;
+};
+
+type ActiveTab = {
+  id?: number;
+};
+
+type SetStateValue = (key: "systemPrompt", value: string) => void;
+type GetActiveTab = () => Promise<ActiveTab | null>;
+
+const chromeApi = chrome as ChromeApi;
+const systemPromptState = state as SystemPromptState;
+const setSystemPromptValue = setStateValue as SetStateValue;
+const getActiveTabSafe = getActiveTab as GetActiveTab;
+
+const loadSystemPrompt = (): string => {
+    if (systemPromptState.systemPrompt !== null) {
+      return systemPromptState.systemPrompt;
     }
-    const response = await fetch(
-      chrome.runtime.getURL("public/system_prompt.md"),
-    );
-    if (!response.ok) {
-      throw new Error(`系统提示加载失败：${response.status}`);
-    }
-    const content = (await response.text()) || "";
-    setStateValue("systemPrompt", content);
+    const content = systemPromptContent || "";
+    setSystemPromptValue("systemPrompt", content);
     return content;
   },
-  formatTime = (date) => {
+  formatTime = (date: Date): string => {
     if (!(date instanceof Date)) {
       throw new Error("时间格式化失败：无效的日期对象");
     }
     if (Number.isNaN(date.getTime())) {
       throw new Error("时间格式化失败：日期无效");
     }
-    return date.toLocaleString(chrome.i18n.getUILanguage(), {
+    return date.toLocaleString(chromeApi.i18n.getUILanguage(), {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -31,21 +50,21 @@ const loadSystemPrompt = async () => {
       hour12: false,
     });
   },
-  resolveUserAgent = () => {
-    const ua = navigator?.userAgent;
+  resolveUserAgent = (): string => {
+    const ua = navigator.userAgent;
     if (typeof ua !== "string" || !ua.trim()) {
       throw new Error("无法获取 User Agent");
     }
     return ua;
   },
-  resolveFocusTabId = async () => {
-    const activeTab = await getActiveTab();
+  resolveFocusTabId = async (): Promise<string> => {
+    const activeTab = await getActiveTabSafe();
     if (!activeTab || typeof activeTab.id !== "number") {
       throw new Error("无法获取当前标签页 TabID");
     }
     return String(activeTab.id);
   },
-  applyDynamicTags = async (template) => {
+  applyDynamicTags = async (template: string): Promise<string> => {
     let output = template;
     if (output.includes("{time}")) {
       output = output.replaceAll("{time}", formatTime(new Date()));
@@ -59,8 +78,8 @@ const loadSystemPrompt = async () => {
     }
     return output;
   },
-  buildSystemPrompt = async () => {
-    const raw = await loadSystemPrompt();
+  buildSystemPrompt = async (): Promise<string> => {
+    const raw = loadSystemPrompt();
     if (!raw) {
       return "";
     }

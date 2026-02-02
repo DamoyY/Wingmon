@@ -68,6 +68,9 @@ export const copyDirFlat = async (
       if (!entry.isFile()) {
         return;
       }
+      if (entry.name === "system_prompt.md") {
+        return;
+      }
       const ext = path.extname(entry.name);
       if (ext === ".ts" || ext === ".tsx") {
         return;

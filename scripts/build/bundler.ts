@@ -7,6 +7,7 @@ import { getToolIndexPlugin } from "./tools.ts";
 
 export const buildBundles = async (): Promise<void> => {
   const toolIndexPlugin = await getToolIndexPlugin();
+  const loader = { ".md": "text" };
 
   const panelEntryPoint = await resolveEntryPath(
     path.join(rootDir, "src/panel/index"),
@@ -36,6 +37,7 @@ export const buildBundles = async (): Promise<void> => {
     outfile: panelBundlePath,
     legalComments: "none",
     metafile: true,
+    loader,
     plugins: [toolIndexPlugin],
   });
   if (shouldObfuscateBuild(panelBuildResult.metafile)) {
@@ -54,6 +56,7 @@ export const buildBundles = async (): Promise<void> => {
     outfile: showHtmlBundlePath,
     legalComments: "none",
     metafile: true,
+    loader,
     plugins: [toolIndexPlugin],
   });
   if (shouldObfuscateBuild(showHtmlBuildResult.metafile)) {
@@ -72,6 +75,7 @@ export const buildBundles = async (): Promise<void> => {
     outfile: contentBundlePath,
     legalComments: "none",
     metafile: true,
+    loader,
     plugins: [toolIndexPlugin],
   });
   if (shouldObfuscateBuild(contentBuildResult.metafile)) {
@@ -93,6 +97,7 @@ export const buildBundles = async (): Promise<void> => {
     outfile: runConsoleCommandPath,
     legalComments: "none",
     metafile: true,
+    loader,
   });
   if (shouldObfuscateBuild(runConsoleCommandBuildResult.metafile)) {
     await obfuscateFile(runConsoleCommandPath);
@@ -109,6 +114,7 @@ export const buildBundles = async (): Promise<void> => {
     outfile: backgroundBundlePath,
     legalComments: "none",
     metafile: true,
+    loader,
   });
   if (shouldObfuscateBuild(backgroundBuildResult.metafile)) {
     await obfuscateFile(backgroundBundlePath);

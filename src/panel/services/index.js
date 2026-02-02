@@ -6,5 +6,5 @@ export {
   registerSandboxWindowProvider,
 } from "./sandbox.js";
 export * from "./settings.js";
-export { default as buildSystemPrompt } from "./systemPrompt.js";
+export { default as buildSystemPrompt } from "./systemPrompt.ts";
 export * from "./tabs.js";
