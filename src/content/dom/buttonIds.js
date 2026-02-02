@@ -1,35 +1,59 @@
-const ID_LENGTH = 6;
-const ID_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
-const MAX_RETRY = 200;
-const createRandomId = () => {
-  if (!globalThis.crypto || !globalThis.crypto.getRandomValues) {
-    throw new Error("浏览器不支持安全随机数生成");
+const HASH_LENGTH = 6;
+const getDomPath = (element, root) => {
+  if (!element || !element.tagName) {
+    throw new Error("按钮节点无效");
   }
-  const bytes = new Uint8Array(ID_LENGTH);
-  globalThis.crypto.getRandomValues(bytes);
-  return Array.from(bytes)
-    .map((value) => ID_ALPHABET[value % ID_ALPHABET.length])
-    .join("");
+  if (!root || !root.tagName) {
+    throw new Error("根节点无效");
+  }
+  if (!root.contains(element)) {
+    throw new Error("按钮不在根节点之内");
+  }
+  const segments = [];
+  let current = element;
+  while (current && current.tagName) {
+    const tag = current.tagName.toLowerCase();
+    let index = 1;
+    let sibling = current.previousElementSibling;
+    while (sibling) {
+      if (sibling.tagName && sibling.tagName.toLowerCase() === tag) {
+        index += 1;
+      }
+      sibling = sibling.previousElementSibling;
+    }
+    segments.push(`${tag}:nth-of-type(${index})`);
+    if (current === root) {
+      break;
+    }
+    current = current.parentElement;
+  }
+  if (!segments.length || segments[segments.length - 1] === undefined) {
+    throw new Error("无法生成按钮的 DOM 路径");
+  }
+  return segments.reverse().join(">");
+};
+const hashPath = (path) => {
+  let hash = 0;
+  for (let i = 0; i < path.length; i += 1) {
+    hash = (hash * 131 + path.charCodeAt(i)) % 4294967296;
+  }
+  const encoded = Math.floor(hash).toString(36).padStart(8, "0");
+  return encoded.slice(-HASH_LENGTH);
 };
 const assignLlmIds = (root) => {
   const buttons = root.querySelectorAll(
     'button, input[type="button"], input[type="submit"]',
   );
   const usedIds = new Set();
+  const totalButtons = buttons.length;
   buttons.forEach((button) => {
-    let resolvedId = "";
-    for (let attempt = 0; attempt < MAX_RETRY; attempt += 1) {
-      const candidate = createRandomId();
-      if (!usedIds.has(candidate)) {
-        resolvedId = candidate;
-        usedIds.add(candidate);
-        break;
-      }
+    const path = getDomPath(button, root);
+    const id = hashPath(path);
+    if (usedIds.has(id)) {
+      throw new Error(`按钮 ID 冲突：${id}，按钮总量：${totalButtons}`);
     }
-    if (!resolvedId) {
-      throw new Error("生成按钮 ID 失败：随机 ID 重复次数过多");
-    }
-    button.setAttribute("data-llm-id", resolvedId);
+    usedIds.add(id);
+    button.setAttribute("data-llm-id", id);
   });
 };
 export default assignLlmIds;
