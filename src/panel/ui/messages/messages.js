@@ -1,9 +1,9 @@
-import { elements } from "./elements.js";
+import { elements } from "../core/elements.js";
 import renderMessageContent from "./messageContentRenderer.js";
 import { animateMessageRowEnter } from "./messageAnimations.js";
 import { resolveIndicesKey } from "./messageKeys.js";
-import { applyMessageHeadingTypography } from "./typography.js";
-import { combineMessageContents, t } from "../utils/index.js";
+import { applyMessageHeadingTypography } from "../theme/typography.js";
+import { combineMessageContents, t } from "../../utils/index.js";
 
 const ensureNewChatButton = () => {
   if (!elements.newChatButton) {
@@ -281,9 +281,3 @@ export const updateLastAssistantMessage = (messages) => {
   messagesEl.scrollTop = messagesEl.scrollHeight;
   return true;
 };
-
-export {
-  animateMessageRemoval,
-  fadeOutMessages,
-  resetMessagesFade,
-} from "./messageAnimations.js";

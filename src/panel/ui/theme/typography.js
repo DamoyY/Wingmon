@@ -1,4 +1,4 @@
-import { styles as typescaleStyles } from "../../../node_modules/@material/web/typography/md-typescale-styles.js";
+import { styles as typescaleStyles } from "../../../../node_modules/@material/web/typography/md-typescale-styles.js";
 
 const headingClassMap = new Map([
   ["H1", "md-typescale-headline-medium"],

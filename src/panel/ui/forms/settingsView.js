@@ -1,5 +1,5 @@
-import { elements } from "./elements.js";
-import setText from "./text.js";
+import { elements } from "../core/elements.js";
+import setText from "../core/text.js";
 
 const ensureElement = (element, label) => {
   if (!element) {

@@ -1,4 +1,4 @@
-import { elements } from "./elements.js";
+import { elements } from "../core/elements.js";
 
 const formatDateTime = (timestamp) => {
   const date = new Date(timestamp);

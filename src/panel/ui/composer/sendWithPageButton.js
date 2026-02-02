@@ -1,4 +1,4 @@
-import { elements } from "./elements.js";
+import { elements } from "../core/elements.js";
 
 const DEFAULT_PAGE_DISABLED_REASON = "当前标签页不支持携页面发送";
 const DEFAULT_EMPTY_PROMPT_REASON = "请输入内容后发送";

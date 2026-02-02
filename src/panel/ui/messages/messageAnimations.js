@@ -1,4 +1,4 @@
-import { elements } from "./elements.js";
+import { elements } from "../core/elements.js";
 import { resolveIndicesKey } from "./messageKeys.js";
 
 const FADE_OUT_DURATION = 100;

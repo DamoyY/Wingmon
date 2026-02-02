@@ -1,5 +1,5 @@
-import { elements } from "./elements.js";
-import { normalizeTheme, normalizeThemeColor } from "../utils/index.js";
+import { elements } from "../core/elements.js";
+import { normalizeTheme, normalizeThemeColor } from "../../utils/index.js";
 
 const selectValue = (selectEl, value) => {
   selectEl.select(value);

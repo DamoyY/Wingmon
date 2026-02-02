@@ -1,4 +1,4 @@
-import { elements } from "./elements.js";
+import { elements } from "../core/elements.js";
 
 const BUTTON_VISIBILITY_DURATION = 180;
 const BUTTON_VISIBILITY_EASING = "cubic-bezier(0.2, 0, 0, 1)";

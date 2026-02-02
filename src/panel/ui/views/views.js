@@ -1,5 +1,5 @@
-import { elements } from "./elements.js";
-import setText from "./text.js";
+import { elements } from "../core/elements.js";
+import setText from "../core/text.js";
 
 const ANIMATION_DURATION = 320;
 const ANIMATION_EASING = "cubic-bezier(0.2, 0, 0, 1)";

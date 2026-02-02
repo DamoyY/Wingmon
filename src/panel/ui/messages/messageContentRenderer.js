@@ -2,7 +2,7 @@ import {
   renderMarkdown,
   highlightCodeBlocks,
   renderMath,
-} from "../markdown/index.js";
+} from "../../markdown/index.js";
 
 const resolveDecorator = (decorator) => {
   if (decorator === undefined || decorator === null) {

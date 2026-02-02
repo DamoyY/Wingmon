@@ -10,7 +10,7 @@ import {
   DEFAULT_THEME_COLOR,
   normalizeTheme,
   normalizeThemeColor,
-} from "../utils/index.js";
+} from "../../utils/index.js";
 
 let currentThemeColor = DEFAULT_THEME_COLOR;
 let hasAppliedTheme = false;
