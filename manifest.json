@@ -16,7 +16,7 @@
     "128": "public/icons/icon-128.png"
   },
   "background": {
-    "service_worker": "src/background/index.js",
+    "service_worker": "background/index.js",
     "type": "module"
   },
   "sandbox": {
