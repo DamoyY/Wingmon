@@ -1,5 +1,6 @@
 import {
   addMessage,
+  removeMessage,
   setStateValue,
   state,
   touchUpdatedAt,
@@ -17,7 +18,7 @@ import {
   reportSendStatus,
   setSendUiState,
   syncComposerAfterSend,
-} from "./sendUi.js";
+} from "./sendUi.ts";
 import ensureSettingsReady from "./settingsValidation.js";
 
 let activeAbortController = null;
@@ -26,6 +27,23 @@ const ensureNotAborted = (signal) => {
     if (signal?.aborted) {
       throw new Error("已停止");
     }
+  },
+  clearPendingAssistant = (assistantIndex) => {
+    if (!Number.isInteger(assistantIndex)) {
+      return;
+    }
+    const message = state.messages[assistantIndex];
+    if (!message || message.role !== "assistant" || message.pending !== true) {
+      return;
+    }
+    const hasContent =
+        typeof message.content === "string" && message.content.trim(),
+      hasToolCalls =
+        Array.isArray(message.tool_calls) && message.tool_calls.length;
+    if (hasContent || hasToolCalls) {
+      return;
+    }
+    removeMessage(assistantIndex);
   },
   saveCurrentConversation = async () => {
     if (!state.messages.length) {
@@ -61,8 +79,11 @@ export const sendMessage = async ({ includePage = false } = {}) => {
     promptSettingsCompletion(settings);
     return;
   }
+  let pendingAssistantIndex = null;
   addMessage({ role: "user", content });
   syncComposerAfterSend();
+  addMessage({ role: "assistant", content: "", pending: true });
+  pendingAssistantIndex = state.messages.length - 1;
   setStateValue("sending", true);
   const abortController = new AbortController();
   activeAbortController = abortController;
@@ -79,6 +100,7 @@ export const sendMessage = async ({ includePage = false } = {}) => {
         settings,
         signal: abortController.signal,
         onStatus: reportSendStatus,
+        assistantIndex: pendingAssistantIndex,
       }),
       consumeResponses = async () => {
         const { value, done } = await responseStream.next();
@@ -88,7 +110,11 @@ export const sendMessage = async ({ includePage = false } = {}) => {
         if (value.streamed) {
           applyStreamedResponse(value.toolCalls, value.assistantIndex);
         } else {
-          applyNonStreamedResponse(value.reply, value.toolCalls);
+          applyNonStreamedResponse(
+            value.reply,
+            value.toolCalls,
+            value.assistantIndex,
+          );
         }
         await consumeResponses();
       };
@@ -97,10 +123,12 @@ export const sendMessage = async ({ includePage = false } = {}) => {
     reportSendStatus("");
   } catch (error) {
     if (error?.name === "AbortError" || error?.message === "已停止") {
+      clearPendingAssistant(pendingAssistantIndex);
       reportSendStatus("");
       return;
     }
     console.error(error?.message || "请求失败");
+    clearPendingAssistant(pendingAssistantIndex);
     reportSendStatus("");
   } finally {
     setStateValue("sending", false);

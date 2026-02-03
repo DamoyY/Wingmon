@@ -119,13 +119,25 @@ export const appendAssistantDelta = (delta) => {
     return;
   }
   ensureMessagesSubscription();
-  const lastIndex = state.messages.length - 1,
-    last = state.messages[lastIndex];
-  if (!last || last.role !== "assistant") {
-    addMessage({ role: "assistant", content: delta });
-    return;
+  let targetIndex = null;
+  for (let i = state.messages.length - 1; i >= 0; i -= 1) {
+    const message = state.messages[i];
+    if (message?.role === "assistant" && message.pending === true) {
+      targetIndex = i;
+      break;
+    }
   }
-  updateMessage(lastIndex, {
-    content: `${last.content || ""}${delta}`,
+  if (targetIndex === null) {
+    const lastIndex = state.messages.length - 1,
+      last = state.messages[lastIndex];
+    if (!last || last.role !== "assistant") {
+      addMessage({ role: "assistant", content: delta });
+      return;
+    }
+    targetIndex = lastIndex;
+  }
+  const target = state.messages[targetIndex];
+  updateMessage(targetIndex, {
+    content: `${target?.content || ""}${delta}`,
   });
 };

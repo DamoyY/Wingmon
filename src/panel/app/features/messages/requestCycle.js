@@ -82,6 +82,16 @@ const createAbortError = () => {
     }
     return "";
   },
+  resolvePendingAssistantIndex = (assistantIndex) => {
+    if (!Number.isInteger(assistantIndex)) {
+      return null;
+    }
+    const message = state.messages[assistantIndex];
+    if (!message || message.role !== "assistant" || message.pending !== true) {
+      return null;
+    }
+    return assistantIndex;
+  },
   createStatusTracker = (reportStatus) => {
     let lastStatus = getStatusText(STATUS_KEYS.idle);
     const setStatus = (nextStatus) => {
@@ -111,16 +121,24 @@ const createAbortError = () => {
     settings,
     signal,
     onStatus,
+    assistantIndex: initialAssistantIndex,
   }) {
     const reportStatus = ensureStatusReporter(onStatus),
       statusTracker = createStatusTracker(reportStatus);
     statusTracker.setInitial();
-    const requestNext = async function* requestNext() {
+    const requestNext = async function* requestNext({
+      assistantIndex: overrideAssistantIndex,
+    } = {}) {
       ensureNotAborted(signal);
-      let assistantIndex = null;
+      let assistantIndex = resolvePendingAssistantIndex(overrideAssistantIndex);
       const onStreamStart = () => {
+          const resolvedIndex = resolvePendingAssistantIndex(assistantIndex);
+          if (resolvedIndex !== null) {
+            assistantIndex = resolvedIndex;
+            return;
+          }
           assistantIndex = state.messages.length;
-          addMessage({ role: "assistant", content: "" });
+          addMessage({ role: "assistant", content: "", pending: true });
           renderMessagesView();
         },
         systemPrompt = await buildSystemPrompt(),
@@ -151,7 +169,7 @@ const createAbortError = () => {
       ensureNotAborted(signal);
       yield* requestNext();
     };
-    yield* requestNext();
+    yield* requestNext({ assistantIndex: initialAssistantIndex });
   };
 
 export default createResponseStream;

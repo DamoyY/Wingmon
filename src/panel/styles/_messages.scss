@@ -65,6 +65,12 @@
   line-height: 1.6;
 }
 
+.message-status.status {
+  margin-top: 10px;
+  text-align: right;
+  color: var(--md-sys-color-on-tertiary-fixed);
+}
+
 .message p {
   margin: 0 0 8px;
 }

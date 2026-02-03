@@ -1,4 +1,4 @@
-export * from "./render.js";
+export * from "./render.ts";
 export {
   animateMessageRowEnter,
   animateMessageRemoval,

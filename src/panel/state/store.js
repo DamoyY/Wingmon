@@ -69,12 +69,14 @@ export const setStateValue = (key, value, detail = {}) => {
 };
 const hasMessageContent = (content) =>
     typeof content === "string" && Boolean(content.trim()),
+  isPendingAssistant = (message) =>
+    message?.role === "assistant" && message?.pending === true,
   resolveMessageHidden = (message) => {
     if (message?.role === "tool") {
       return true;
     }
     if (message?.role === "assistant" && !hasMessageContent(message.content)) {
-      return true;
+      return !isPendingAssistant(message);
     }
     return false;
   },

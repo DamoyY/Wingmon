@@ -37,7 +37,7 @@ export const initElements = async (): Promise<Record<string, HTMLElement>> => {
       historyView: requireElement("history-view", "historyView"),
       chatView: requireElement("chat-view", "chatView"),
       topBar: requireElement("top-bar", "topBar"),
-      topStatus: requireElement("top-status", "topStatus"),
+      topTitle: requireElement("top-title", "topTitle"),
       bottomBar: requireElement("bottom-bar", "bottomBar"),
       followModeSwitch: requireElement("follow-mode", "followModeSwitch"),
       keyInput: requireElement("api-key-input", "keyInput"),

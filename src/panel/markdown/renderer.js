@@ -50,7 +50,11 @@ const ensureInitialized = () => {
   },
   renderMarkdown = (content) => {
     ensureInitialized();
-    const html = mdToHtml(content || "", { parseFlags });
+    const text = content || "";
+    if (!text) {
+      return "";
+    }
+    const html = mdToHtml(text, { parseFlags });
     return sanitizeRenderedHtml(html);
   };
 

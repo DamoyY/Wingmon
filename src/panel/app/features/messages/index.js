@@ -6,7 +6,7 @@ export {
   reportSendStatus,
   setSendUiState,
   syncComposerAfterSend,
-} from "./sendUi.js";
+} from "./sendUi.ts";
 export { default as ensureSettingsReady } from "./settingsValidation.js";
 export {
   refreshSendWithPageButton,
