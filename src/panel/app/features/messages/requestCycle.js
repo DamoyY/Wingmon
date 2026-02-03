@@ -39,6 +39,7 @@ const createAbortError = () => {
     get_page: STATUS_KEYS.browsing,
     list_tabs: STATUS_KEYS.browsing,
     click_button: STATUS_KEYS.operating,
+    enter_text: STATUS_KEYS.operating,
     close_page: STATUS_KEYS.operating,
     run_console: STATUS_KEYS.coding,
     show_html: STATUS_KEYS.coding,

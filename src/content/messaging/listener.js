@@ -1,4 +1,8 @@
-import { handleClickButton, handleGetPageContent } from "../handlers/index.js";
+import {
+  handleClickButton,
+  handleEnterText,
+  handleGetPageContent,
+} from "../handlers/index.js";
 
 const registerMessageListener = () => {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -17,6 +21,10 @@ const registerMessageListener = () => {
       }
       if (message?.type === "clickButton") {
         handleClickButton(message, sendResponse);
+        return;
+      }
+      if (message?.type === "enterText") {
+        handleEnterText(message, sendResponse);
       }
     } catch (error) {
       console.error(error);

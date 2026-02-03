@@ -84,10 +84,13 @@
     "message": "Tool call failed: $1"
   },
   "toolOpenPage": {
-    "message": "Open a specific webpage in the current browser"
+    "message": "Open specific webpage in browser"
   },
   "toolClickButton": {
-    "message": "Click a specified button on the current page"
+    "message": "Click the specified button"
+  },
+  "toolEnterText": {
+    "message": "Enter text in the specified input field."
   },
   "toolGetPage": {
     "message": "Read the content of a page"
@@ -109,6 +112,12 @@
   },
   "toolParamId": {
     "message": "The ID of the button to click"
+  },
+  "toolParamInputId": {
+    "message": "The ID of the input to fill"
+  },
+  "toolParamContent": {
+    "message": "The text to enter"
   },
   "toolParamCode": {
     "message": "HTML code"

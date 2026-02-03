@@ -1,0 +1,176 @@
+type EnterTextMessage = {
+  id?: unknown;
+  content?: unknown;
+};
+
+const EXCLUDED_INPUT_TYPES = new Set([
+  "hidden",
+  "submit",
+  "button",
+  "reset",
+  "image",
+  "file",
+  "checkbox",
+  "radio",
+  "range",
+  "color",
+]);
+const TEXT_INPUT_ROLES = new Set(["textbox", "searchbox", "combobox"]);
+
+const normalizeInputId = (
+  message: EnterTextMessage | null | undefined,
+): string => {
+  const id = typeof message?.id === "string" ? message.id.trim() : "";
+  if (!id) {
+    throw new Error("id 必须是非空字符串");
+  }
+  if (!/^[0-9a-z]+$/i.test(id)) {
+    throw new Error("id 仅支持字母数字");
+  }
+  return id.toLowerCase();
+};
+
+const normalizeInputContent = (
+  message: EnterTextMessage | null | undefined,
+): string => {
+  if (typeof message?.content !== "string") {
+    throw new Error("content 必须是字符串");
+  }
+  return message.content;
+};
+
+const isEditableElement = (element: Element): boolean => {
+  if (element instanceof HTMLInputElement) {
+    if (element.disabled || element.readOnly) {
+      return false;
+    }
+    return !EXCLUDED_INPUT_TYPES.has(element.type);
+  }
+  if (element instanceof HTMLTextAreaElement) {
+    if (element.disabled || element.readOnly) {
+      return false;
+    }
+    return true;
+  }
+  if (element instanceof HTMLSelectElement) {
+    if (element.disabled) {
+      return false;
+    }
+    return true;
+  }
+  const htmlElement = element as HTMLElement;
+  if (htmlElement.inert) {
+    return false;
+  }
+  if (htmlElement.isContentEditable) {
+    return true;
+  }
+  const role = htmlElement.getAttribute("role");
+  if (role && TEXT_INPUT_ROLES.has(role)) {
+    return true;
+  }
+  return false;
+};
+
+const findSingleInput = (normalizedId: string): Element | null => {
+  const matches = Array.from(
+    document.querySelectorAll(`[data-llm-id="${normalizedId}"]`),
+  );
+  if (!matches.length) {
+    return null;
+  }
+  const editableMatches = matches.filter(isEditableElement);
+  if (!editableMatches.length) {
+    throw new Error(`找到 id 为 ${normalizedId} 的控件但不可输入`);
+  }
+  if (editableMatches.length > 1) {
+    throw new Error(`找到多个 id 为 ${normalizedId} 的输入框`);
+  }
+  return editableMatches[0];
+};
+
+const dispatchInputEvents = (target: HTMLElement): void => {
+  target.dispatchEvent(new Event("input", { bubbles: true }));
+  target.dispatchEvent(new Event("change", { bubbles: true }));
+};
+
+const setInputValue = (
+  target: HTMLInputElement | HTMLTextAreaElement,
+  value: string,
+): void => {
+  const prototype =
+      target instanceof HTMLInputElement
+        ? HTMLInputElement.prototype
+        : HTMLTextAreaElement.prototype,
+    descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
+  if (!descriptor?.set) {
+    throw new Error("无法设置输入框值");
+  }
+  descriptor.set.call(target, value);
+  dispatchInputEvents(target);
+};
+
+const setSelectValue = (select: HTMLSelectElement, value: string): void => {
+  const options = Array.from(select.options);
+  let matched = options.find((option) => option.value === value);
+  if (!matched) {
+    const trimmed = value.trim();
+    if (trimmed) {
+      matched = options.find((option) => option.text.trim() === trimmed);
+    }
+  }
+  if (!matched) {
+    throw new Error("未找到匹配的下拉选项");
+  }
+  select.value = matched.value;
+  dispatchInputEvents(select);
+};
+
+const setEditableText = (target: HTMLElement, value: string): void => {
+  target.textContent = value;
+  dispatchInputEvents(target);
+};
+
+const fillInput = (target: Element, value: string): void => {
+  if (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement
+  ) {
+    setInputValue(target, value);
+    return;
+  }
+  if (target instanceof HTMLSelectElement) {
+    setSelectValue(target, value);
+    return;
+  }
+  setEditableText(target as HTMLElement, value);
+};
+
+const handleEnterText = (
+  message: EnterTextMessage,
+  sendResponse: (response: {
+    ok?: boolean;
+    error?: string;
+    reason?: string;
+  }) => void,
+): void => {
+  try {
+    const normalizedId = normalizeInputId(message),
+      content = normalizeInputContent(message),
+      target = findSingleInput(normalizedId);
+    if (!target) {
+      const errorMessage = `未找到 id 为 ${normalizedId} 的输入框`;
+      console.error(errorMessage);
+      sendResponse({ ok: false, reason: "not_found" });
+      return;
+    }
+    fillInput(target, content);
+    sendResponse({ ok: true });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "输入失败";
+    console.error(errorMessage);
+    sendResponse({ error: errorMessage });
+  }
+};
+
+export default handleEnterText;

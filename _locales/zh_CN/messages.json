@@ -87,7 +87,10 @@
     "message": "在当前浏览器打开指定网页"
   },
   "toolClickButton": {
-    "message": "点击当前页面上指定的 button"
+    "message": "点击指定的 button"
+  },
+  "toolEnterText": {
+    "message": "在指定的的输入框中输入文本"
   },
   "toolGetPage": {
     "message": "读取页面内容"
@@ -109,6 +112,12 @@
   },
   "toolParamId": {
     "message": "要点击的 button 的 ID"
+  },
+  "toolParamInputId": {
+    "message": "要输入的输入框 ID"
+  },
+  "toolParamContent": {
+    "message": "要输入的文本"
   },
   "toolParamCode": {
     "message": "HTML 代码"
