@@ -14,7 +14,12 @@ import {
 } from "../chat/composerView.js";
 
 type SettingsFormValues = Parameters<typeof fillSettingsForm>[0];
-type MessageRecord = { role?: string; status?: string };
+type MessageRecord = {
+  role?: string;
+  status?: string;
+  pending?: boolean;
+  hidden?: boolean;
+};
 type MessageState = { messages: Array<MessageRecord | undefined> };
 
 const normalizeStatusMessage = (message: unknown): string => {
@@ -29,13 +34,25 @@ const normalizeStatusMessage = (message: unknown): string => {
 
 const resolveStatusTargetIndex = (): number | null => {
   const { messages } = state as MessageState;
+  let lastAssistantIndex: number | null = null;
+  let lastVisibleAssistantIndex: number | null = null;
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const message = messages[i];
-    if (message?.role === "assistant") {
+    if (message?.role !== "assistant") {
+      continue;
+    }
+    const isHidden = message.hidden === true;
+    if (message.pending === true && !isHidden) {
       return i;
     }
+    if (lastAssistantIndex === null) {
+      lastAssistantIndex = i;
+    }
+    if (!isHidden && lastVisibleAssistantIndex === null) {
+      lastVisibleAssistantIndex = i;
+    }
   }
-  return null;
+  return lastVisibleAssistantIndex ?? lastAssistantIndex;
 };
 
 const updateAssistantStatus = (index: number, status: string): void => {
