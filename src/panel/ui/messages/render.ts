@@ -59,6 +59,11 @@ type RenderOptions = {
   animateIndices?: number[];
 };
 
+const MESSAGE_REANIMATE_WINDOW = 200;
+
+let pendingAnimateKey: string | null = null;
+let pendingAnimateExpiresAt = 0;
+
 const ensureNewChatButton = (): HTMLElement => {
     const { newChatButton } = elements as Partial<typeof elements>;
     if (!newChatButton) {
@@ -350,6 +355,15 @@ const ensureNewChatButton = (): HTMLElement => {
     return entries;
   };
 
+const resolvePendingAnimateKey = (now: number): string | null => {
+  if (!pendingAnimateKey || now > pendingAnimateExpiresAt) {
+    pendingAnimateKey = null;
+    pendingAnimateExpiresAt = 0;
+    return null;
+  }
+  return pendingAnimateKey;
+};
+
 export const renderMessages = (
   messages: MessageList,
   handlers: MessageActionHandlers | null | undefined,
@@ -363,12 +377,22 @@ export const renderMessages = (
     throw new Error("消息容器未找到");
   }
   let hasVisibleMessages = false;
+  const now = Date.now();
   const displayMessages = buildDisplayMessages(messages),
     animateKey =
       options.animateIndices !== undefined
         ? resolveIndicesKeySafe(options.animateIndices)
         : null,
+    carryoverKey = resolvePendingAnimateKey(now),
+    shouldRefreshCarryover = Boolean(carryoverKey) && !animateKey,
+    animateKeys = new Set<string>(),
     rowsToAnimate: HTMLElement[] = [];
+  if (animateKey) {
+    animateKeys.add(animateKey);
+  }
+  if (carryoverKey) {
+    animateKeys.add(carryoverKey);
+  }
   messagesEl.innerHTML = "";
   displayMessages.forEach((msg) => {
     hasVisibleMessages = true;
@@ -385,10 +409,18 @@ export const renderMessages = (
     row.appendChild(node);
     row.appendChild(createMessageActions(msg.indices, handlers));
     messagesEl.appendChild(row);
-    if (animateKey && row.dataset.indices === animateKey) {
-      rowsToAnimate.push(row);
+    if (animateKeys.size && row.dataset.indices) {
+      if (animateKeys.has(row.dataset.indices)) {
+        rowsToAnimate.push(row);
+      }
     }
   });
+  if (animateKey) {
+    pendingAnimateKey = animateKey;
+    pendingAnimateExpiresAt = now + MESSAGE_REANIMATE_WINDOW;
+  } else if (shouldRefreshCarryover) {
+    pendingAnimateExpiresAt = now + MESSAGE_REANIMATE_WINDOW;
+  }
   messagesEl.scrollTop = messagesEl.scrollHeight;
   rowsToAnimate.forEach((row) => {
     animateMessageRowEnterSafe(row);

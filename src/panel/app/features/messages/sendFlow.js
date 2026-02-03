@@ -119,8 +119,8 @@ export const sendMessage = async ({ includePage = false } = {}) => {
         await consumeResponses();
       };
     await consumeResponses();
-    await saveCurrentConversation();
     reportSendStatus("");
+    await saveCurrentConversation();
   } catch (error) {
     if (error?.name === "AbortError" || error?.message === "已停止") {
       clearPendingAssistant(pendingAssistantIndex);
