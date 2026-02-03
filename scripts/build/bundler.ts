@@ -21,8 +21,8 @@ export const buildBundles = async (): Promise<void> => {
   const backgroundEntryPoint = await resolveEntryPath(
     path.join(rootDir, "src/background/index"),
   );
-  const sandboxCommandEntryPoint = await resolveEntryPath(
-    path.join(rootDir, "public/sandbox/runConsoleCommand"),
+  const sandboxEntryPoint = await resolveEntryPath(
+    path.join(rootDir, "public/sandbox/index"),
   );
 
   const panelBundlePath = path.join(outputPublicDir, "panel.bundle.js");
@@ -82,25 +82,22 @@ export const buildBundles = async (): Promise<void> => {
     await obfuscateFile(contentBundlePath);
   }
 
-  const runConsoleCommandPath = path.join(
-    outputPublicDir,
-    "runConsoleCommand.js",
-  );
-  ensureFlattenTarget(runConsoleCommandPath, "build:runConsoleCommand.js");
-  const runConsoleCommandBuildResult = await build({
-    entryPoints: [sandboxCommandEntryPoint],
+  const sandboxBundlePath = path.join(outputPublicDir, "sandbox.bundle.js");
+  ensureFlattenTarget(sandboxBundlePath, "build:sandbox.bundle.js");
+  const sandboxBuildResult = await build({
+    entryPoints: [sandboxEntryPoint],
     bundle: true,
     format: "iife",
     minify: true,
     platform: "browser",
     target: "esnext",
-    outfile: runConsoleCommandPath,
+    outfile: sandboxBundlePath,
     legalComments: "none",
     metafile: true,
     loader,
   });
-  if (shouldObfuscateBuild(runConsoleCommandBuildResult.metafile)) {
-    await obfuscateFile(runConsoleCommandPath);
+  if (shouldObfuscateBuild(sandboxBuildResult.metafile)) {
+    await obfuscateFile(sandboxBundlePath);
   }
 
   const backgroundBundlePath = path.join(outputRoot, "background.js");
