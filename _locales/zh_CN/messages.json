@@ -158,6 +158,36 @@
   "themeColor": {
     "message": "主题色"
   },
+  "themeVariant": {
+    "message": "色彩风格"
+  },
+  "themeVariantNeutral": {
+    "message": "中性"
+  },
+  "themeVariantTonalSpot": {
+    "message": "柔和"
+  },
+  "themeVariantVibrant": {
+    "message": "鲜艳"
+  },
+  "themeVariantExpressive": {
+    "message": "表现力"
+  },
+  "themeVariantFidelity": {
+    "message": "忠实"
+  },
+  "themeVariantContent": {
+    "message": "内容"
+  },
+  "themeVariantMonochrome": {
+    "message": "单色"
+  },
+  "themeVariantRainbow": {
+    "message": "彩虹"
+  },
+  "themeVariantFruitSalad": {
+    "message": "果盘"
+  },
   "history": {
     "message": "历史记录"
   },

@@ -1,6 +1,6 @@
-import { updateSendWithPageButtonState } from "../../../ui/index.js";
+import { updateSendWithPageButtonState } from "../../../ui/index.ts";
 import { getActiveTab } from "../../../services/index.js";
-import { isInternalUrl } from "../../../utils/index.js";
+import { isInternalUrl } from "../../../utils/index.ts";
 
 const DEFAULT_PAGE_DISABLED_REASON = "当前标签页不支持携页面发送",
   disableSendWithPageButtonForPage = (reason) => {

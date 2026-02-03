@@ -2,7 +2,7 @@ import {
   elements,
   setComposerButtonsSending,
   setSendButtonEnabled,
-} from "../../../ui/index.js";
+} from "../../../ui/index.ts";
 import { setSendWithPagePromptReady } from "../messages/sendWithPageButton.js";
 import { hasPromptContent } from "./composerState.js";
 

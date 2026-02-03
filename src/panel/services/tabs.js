@@ -1,4 +1,4 @@
-import { isInternalUrl } from "../utils/index.js";
+import { isInternalUrl } from "../utils/index.ts";
 
 const pendingWaits = new Map();
 let listenersReady = false;

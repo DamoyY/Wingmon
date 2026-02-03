@@ -158,6 +158,36 @@
   "themeColor": {
     "message": "Theme Color"
   },
+  "themeVariant": {
+    "message": "Variant"
+  },
+  "themeVariantNeutral": {
+    "message": "Neutral"
+  },
+  "themeVariantTonalSpot": {
+    "message": "Tonal Spot"
+  },
+  "themeVariantVibrant": {
+    "message": "Vibrant"
+  },
+  "themeVariantExpressive": {
+    "message": "Expressive"
+  },
+  "themeVariantFidelity": {
+    "message": "Fidelity"
+  },
+  "themeVariantContent": {
+    "message": "Content"
+  },
+  "themeVariantMonochrome": {
+    "message": "Monochrome"
+  },
+  "themeVariantRainbow": {
+    "message": "Rainbow"
+  },
+  "themeVariantFruitSalad": {
+    "message": "Fruit Salad"
+  },
   "history": {
     "message": "History"
   },

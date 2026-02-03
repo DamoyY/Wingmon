@@ -3,7 +3,7 @@ import {
   deleteConversation,
   saveConversation,
 } from "../../../services/index.js";
-import { combineMessageContents, t } from "../../../utils/index.js";
+import { combineMessageContents, t } from "../../../utils/index.ts";
 
 const persistConversation = async () => {
     if (!state.messages.length) {

@@ -8,7 +8,7 @@ import {
   animateMessageRemoval,
   renderMessages,
   updateLastAssistantMessage,
-} from "../../../ui/index.js";
+} from "../../../ui/index.ts";
 import createMessageActionHandlers from "./actions.js";
 
 let actionHandlers = null,

@@ -1,4 +1,4 @@
-import { t } from "../../utils/index.js";
+import { t } from "../../utils/index.ts";
 import { getAllTabs } from "../../services/index.js";
 import { ensureObjectArgs } from "../validation/index.js";
 

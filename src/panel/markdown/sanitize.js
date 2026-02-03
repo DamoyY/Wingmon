@@ -1,4 +1,4 @@
-import { normalizeUrl } from "../utils/index.js";
+import { normalizeUrl } from "../utils/index.ts";
 
 export const isSafeUrl = (url) => {
   const normalized = normalizeUrl(url);

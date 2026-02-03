@@ -14,7 +14,7 @@ import {
   setupChatLayout,
   showChatView,
   showKeyView,
-} from "../../ui/index.js";
+} from "../../ui/index.ts";
 import bindEvents from "./controller.js";
 import { updateComposerButtonsState } from "../features/chat/index.js";
 import {
@@ -22,7 +22,7 @@ import {
   renderMessagesView,
 } from "../features/messages/index.js";
 import { syncSettingsSnapshot } from "../features/settings/index.js";
-import { setLocale, translateDOM } from "../../utils/index.js";
+import { setLocale, translateDOM } from "../../utils/index.ts";
 
 const initPanel = async () => {
   initTabListeners();
@@ -36,7 +36,7 @@ const initPanel = async () => {
   await setLocale(settings.language || "en");
   translateDOM();
   fillSettingsForm(settings);
-  applyTheme(settings.theme, settings.themeColor);
+  applyTheme(settings.theme, settings.themeColor, settings.themeVariant);
   if (!elements.followModeSwitch) {
     throw new Error("跟随模式开关未初始化");
   }

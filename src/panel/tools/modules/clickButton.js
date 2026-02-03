@@ -1,4 +1,4 @@
-import { isInternalUrl, t } from "../../utils/index.js";
+import { isInternalUrl, t } from "../../utils/index.ts";
 import {
   getAllTabs,
   sendMessageToTab,

@@ -10,15 +10,30 @@ import {
   DEFAULT_THEME_COLOR,
   normalizeTheme,
   normalizeThemeColor,
-} from "../../utils/index.js";
+  normalizeThemeVariant,
+  DEFAULT_THEME_VARIANT,
+} from "../../utils/index.ts";
 
 type ThemeMode = "light" | "dark" | "auto";
 type ApplyCallback = () => void;
 type ThemeColorInput = string | null | undefined;
+type ThemeVariantInput = string | null | undefined;
 type DocumentWithViewTransition = Document & {
   startViewTransition?: (callback: () => void) => void;
 };
 type DynamicColorItem = ReturnType<MaterialDynamicColors["surfaceVariant"]>;
+
+const variantMap = {
+  monochrome: Variant.MONOCHROME,
+  neutral: Variant.NEUTRAL,
+  tonal_spot: Variant.TONAL_SPOT,
+  vibrant: Variant.VIBRANT,
+  expressive: Variant.EXPRESSIVE,
+  fidelity: Variant.FIDELITY,
+  content: Variant.CONTENT,
+  rainbow: Variant.RAINBOW,
+  fruit_salad: Variant.FRUIT_SALAD,
+} as const;
 
 const normalizeThemeSafe = normalizeTheme as (
   value: ThemeColorInput,
@@ -26,9 +41,15 @@ const normalizeThemeSafe = normalizeTheme as (
 const normalizeThemeColorSafe = normalizeThemeColor as (
   value: ThemeColorInput,
 ) => string;
+const normalizeThemeVariantSafe = normalizeThemeVariant as (
+  value: ThemeVariantInput,
+) => keyof typeof variantMap;
 const defaultThemeColor = DEFAULT_THEME_COLOR as string;
+const defaultThemeVariant = DEFAULT_THEME_VARIANT as string;
 
 let currentThemeColor: string = defaultThemeColor;
+let currentThemeVariant: keyof typeof variantMap =
+  defaultThemeVariant as keyof typeof variantMap;
 let hasAppliedTheme = false;
 const THEME_TRANSITION_CLASS = "theme-transition";
 const THEME_TRANSITION_DURATION = 240;
@@ -74,7 +95,7 @@ const shouldReduceMotion = (): boolean => {
   buildDynamicScheme = (isDark: boolean): DynamicScheme =>
     new DynamicScheme({
       sourceColorHct: Hct.fromInt(argbFromHex(currentThemeColor)),
-      variant: Variant.NEUTRAL,
+      variant: variantMap[currentThemeVariant],
       isDark,
       contrastLevel: 0,
       specVersion: "2025",
@@ -147,9 +168,11 @@ const stopAutoThemeSync = (): void => {
   applyTheme = (
     theme: ThemeColorInput,
     themeColor: ThemeColorInput = currentThemeColor,
+    themeVariant: ThemeVariantInput = currentThemeVariant,
   ): ThemeMode => {
     const normalized = normalizeThemeSafe(theme);
     currentThemeColor = normalizeThemeColorSafe(themeColor);
+    currentThemeVariant = normalizeThemeVariantSafe(themeVariant);
     stopAutoThemeSync();
     if (normalized === "auto") {
       startAutoThemeSync();

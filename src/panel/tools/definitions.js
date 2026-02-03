@@ -1,4 +1,4 @@
-import { parseJson } from "../utils/index.js";
+import { parseJson } from "../utils/index.ts";
 import toolModules from "./modules/index.js";
 import ToolInputError from "./errors.js";
 

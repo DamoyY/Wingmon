@@ -6,7 +6,7 @@ import {
 } from "../../../tools/index.js";
 import { requestModel } from "../../../api/index.js";
 import { addMessage, state } from "../../../state/index.js";
-import { t } from "../../../utils/index.js";
+import { t } from "../../../utils/index.ts";
 import { appendAssistantDelta, renderMessagesView } from "./presenter.js";
 
 const createAbortError = () => {

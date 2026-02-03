@@ -1,5 +1,5 @@
 import { createTab, focusTab, saveHtmlPreview } from "../../services/index.js";
-import { t } from "../../utils/index.js";
+import { t } from "../../utils/index.ts";
 import ToolInputError from "../errors.js";
 import { ensureObjectArgs } from "../validation/index.js";
 

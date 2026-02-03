@@ -1,14 +1,14 @@
-import { elements } from "../core/elements.js";
-import setText from "../core/text.js";
+import { elements } from "../core/elements.ts";
+import setText from "../core/text.ts";
 
 const ANIMATION_DURATION = 320,
   ANIMATION_EASING = "cubic-bezier(0.2, 0, 0, 1)";
 
 let isAnimating = false;
 
-const prefersReducedMotion = () =>
+const prefersReducedMotion = (): boolean =>
     window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  resetViewStyles = (view) => {
+  resetViewStyles = (view: HTMLElement): void => {
     const target = view,
       { style } = target;
     style.transform = "";
@@ -16,23 +16,27 @@ const prefersReducedMotion = () =>
     style.zIndex = "";
     style.pointerEvents = "";
   },
-  setSettingsMode = (isFirstUse) => {
-    const { settingsHint, cancelSettings } = elements;
+  setSettingsMode = (isFirstUse: boolean): void => {
+    const { settingsHint, cancelSettings } = elements as Partial<
+      typeof elements
+    >;
     if (!settingsHint || !cancelSettings) {
       throw new Error("设置视图元素未初始化");
     }
     settingsHint.classList.toggle("hidden", !isFirstUse);
     cancelSettings.classList.toggle("hidden", isFirstUse);
   },
-  resolveActiveView = () => {
-    const { historyView, keyView } = elements;
+  resolveActiveView = (): HTMLElement => {
+    const { historyView, keyView } = elements as Partial<typeof elements>;
     if (historyView && !historyView.classList.contains("hidden")) {
       return historyView;
     }
     if (keyView && !keyView.classList.contains("hidden")) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       return keyView;
     }
-    return keyView;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return keyView!;
   },
   animateSwap = async ({
     incoming,
@@ -40,7 +44,13 @@ const prefersReducedMotion = () =>
     incomingFrom,
     outgoingTo,
     onComplete,
-  }) => {
+  }: {
+    incoming: HTMLElement;
+    outgoing: HTMLElement;
+    incomingFrom: string;
+    outgoingTo: string;
+    onComplete?: () => void;
+  }): Promise<void> => {
     if (isAnimating) {
       return;
     }
@@ -103,8 +113,13 @@ const prefersReducedMotion = () =>
     }
   };
 
-export const showKeyView = ({ isFirstUse = false, animate = false } = {}) => {
-  const { keyView, chatView, historyView, keyStatus } = elements;
+export const showKeyView = ({
+  isFirstUse = false,
+  animate = false,
+}: { isFirstUse?: boolean; animate?: boolean } = {}): Promise<void> => {
+  const { keyView, chatView, historyView, keyStatus } = elements as Partial<
+    typeof elements
+  >;
   if (!keyView || !chatView || !historyView || !keyStatus) {
     throw new Error("视图元素未初始化");
   }
@@ -129,8 +144,12 @@ export const showKeyView = ({ isFirstUse = false, animate = false } = {}) => {
   return Promise.resolve();
 };
 
-export const showChatView = ({ animate = false } = {}) => {
-  const { keyView, historyView, chatView, promptEl } = elements;
+export const showChatView = ({
+  animate = false,
+}: { animate?: boolean } = {}): Promise<void> => {
+  const { keyView, historyView, chatView, promptEl } = elements as Partial<
+    typeof elements
+  >;
   if (!keyView || !historyView || !chatView || !promptEl) {
     throw new Error("视图元素未初始化");
   }
@@ -156,8 +175,12 @@ export const showChatView = ({ animate = false } = {}) => {
   return Promise.resolve();
 };
 
-export const showHistoryView = ({ animate = false } = {}) => {
-  const { keyView, historyView, chatView } = elements;
+export const showHistoryView = ({
+  animate = false,
+}: { animate?: boolean } = {}): Promise<void> => {
+  const { keyView, historyView, chatView } = elements as Partial<
+    typeof elements
+  >;
   if (!keyView || !historyView || !chatView) {
     throw new Error("视图元素未初始化");
   }

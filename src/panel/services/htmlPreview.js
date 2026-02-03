@@ -1,4 +1,4 @@
-import { createRandomId } from "../utils/index.js";
+import { createRandomId } from "../utils/index.ts";
 
 const STORAGE_KEY = "html_previews",
   MAX_PREVIEWS = 20,

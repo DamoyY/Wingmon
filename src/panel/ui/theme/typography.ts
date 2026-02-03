@@ -1,6 +1,10 @@
-import { styles as typescaleStyles } from "../../../../node_modules/@material/web/typography/md-typescale-styles.js";
+import { styles as typescaleStyles } from "@material/web/typography/md-typescale-styles.js";
 
-const headingClassMap = new Map([
+interface CSSResult {
+  styleSheet?: CSSStyleSheet;
+}
+
+const headingClassMap = new Map<string, string>([
     ["H1", "md-typescale-headline-medium"],
     ["H2", "md-typescale-headline-small"],
     ["H3", "md-typescale-title-large"],
@@ -8,34 +12,34 @@ const headingClassMap = new Map([
     ["H5", "md-typescale-title-small"],
     ["H6", "md-typescale-body-medium"],
   ]),
-  ensureElement = (element, label) => {
+  ensureElement = (element: unknown, label: string): Element => {
     if (!(element instanceof Element)) {
       throw new Error(`${label}无效`);
     }
     return element;
   },
-  ensureStylesheet = () => {
-    const styleSheet = typescaleStyles?.styleSheet;
+  ensureStylesheet = (): CSSStyleSheet => {
+    const styleSheet = (typescaleStyles as unknown as CSSResult).styleSheet;
     if (!styleSheet) {
       throw new Error("无法加载 Material Typography 样式表");
     }
     return styleSheet;
   },
-  ensureAdoptedStyleSheets = () => {
+  ensureAdoptedStyleSheets = (): readonly CSSStyleSheet[] => {
     if (!Array.isArray(document.adoptedStyleSheets)) {
       throw new Error("当前环境不支持 adoptedStyleSheets");
     }
     return document.adoptedStyleSheets;
   },
-  applyTypography = () => {
+  applyTypography = (): void => {
     const styleSheet = ensureStylesheet(),
       sheets = ensureAdoptedStyleSheets();
-    if (!sheets.includes(styleSheet)) {
+    if (!sheets.some((s) => s === styleSheet)) {
       document.adoptedStyleSheets = [...sheets, styleSheet];
     }
   };
 
-export const applyMessageHeadingTypography = (container) => {
+export const applyMessageHeadingTypography = (container: unknown): void => {
   const target = ensureElement(container, "消息内容容器");
   target.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((heading) => {
     const className = headingClassMap.get(heading.tagName);

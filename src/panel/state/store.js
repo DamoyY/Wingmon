@@ -1,4 +1,4 @@
-import { createRandomId } from "../utils/index.js";
+import { createRandomId } from "../utils/index.ts";
 
 export const state = {
   conversationId: createRandomId("conv"),

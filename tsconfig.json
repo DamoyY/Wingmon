@@ -5,7 +5,8 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strictNullChecks": true,
-    "noEmit": true
+    "noEmit": true,
+    "allowImportingTsExtensions": true
   },
   "exclude": ["node_modules"]
 }

@@ -1,4 +1,4 @@
-import { isInternalUrl, t } from "../../utils/index.js";
+import { isInternalUrl, t } from "../../utils/index.ts";
 import { focusTab, getAllTabs } from "../../services/index.js";
 import { validateTabIdArgs } from "../validation/index.js";
 import {

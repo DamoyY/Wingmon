@@ -2,7 +2,7 @@ import { argbFromHex, hexFromArgb } from "@material/material-color-utilities";
 
 export const DEFAULT_THEME_COLOR = "#63a002";
 
-const normalizeThemeColor = (value) => {
+const normalizeThemeColor = (value: unknown): string => {
   if (value === null || value === undefined) {
     return DEFAULT_THEME_COLOR;
   }

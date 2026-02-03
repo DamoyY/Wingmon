@@ -5,6 +5,7 @@ export {
   handleSettingsFieldChange,
   handleThemeChange,
   handleThemeColorChange,
+  handleThemeVariantChange,
   handleLanguageChange,
   syncSettingsSnapshot,
-} from "./controller.js";
+} from "./controller.ts";

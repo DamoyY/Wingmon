@@ -8,16 +8,16 @@ import {
   showChatView,
   showKeyView,
   updateSettingsFormValues,
-} from "../../../ui/index.js";
-import { setLocale, translateDOM } from "../../../utils/index.js";
-import { getSettings, updateSettings } from "../../../services/index.js";
+} from "../../../ui/index.ts";
+import { setLocale, translateDOM } from "../../../utils/index.ts";
+import { getSettings, updateSettings } from "../../../services/settings.ts";
 import {
   buildThemePayload,
   isSettingsComplete,
   isSettingsDirty,
   syncSettingsSnapshotState,
   validateRequiredSettings,
-} from "./model.js";
+} from "./model.ts";
 
 const updateSaveButtonVisibility = () => {
   const formValues = readSettingsFormValues();
@@ -26,7 +26,14 @@ const updateSaveButtonVisibility = () => {
   );
 };
 
-export const syncSettingsSnapshot = (settings) => {
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return "操作失败，请稍后重试";
+};
+
+export const syncSettingsSnapshot = (settings: Record<string, unknown>) => {
   syncSettingsSnapshotState(settings);
   updateSaveButtonVisibility();
 };
@@ -42,19 +49,22 @@ export const handleSaveSettings = async () => {
     setSettingsStatus(required.message);
     return;
   }
-  let themePayload = null;
+  let themePayload: ReturnType<typeof buildThemePayload> | null = null;
   try {
     themePayload = buildThemePayload(formValues);
   } catch (error) {
-    setSettingsStatus(error.message);
+    setSettingsStatus(getErrorMessage(error));
     return;
   }
   const next = await updateSettings({
     ...required.payload,
     ...themePayload,
   });
-  updateSettingsFormValues({ themeColor: next.themeColor });
-  applyTheme(next.theme, next.themeColor);
+  updateSettingsFormValues({
+    themeColor: next.themeColor,
+    themeVariant: next.themeVariant,
+  });
+  applyTheme(next.theme, next.themeColor, next.themeVariant);
   syncSettingsSnapshot(next);
   await showChatView({ animate: true });
 };
@@ -63,7 +73,7 @@ export const handleCancelSettings = async () => {
   const settings = await getSettings();
   fillSettingsForm(settings);
   clearSettingsStatus();
-  applyTheme(settings.theme, settings.themeColor);
+  applyTheme(settings.theme, settings.themeColor, settings.themeVariant);
   await setLocale(settings.language || "en");
   translateDOM();
   syncSettingsSnapshot(settings);
@@ -82,38 +92,81 @@ export const handleOpenSettings = async () => {
 export const handleThemeChange = async () => {
   clearSettingsStatus();
   const formValues = readSettingsFormValues();
-  let themePayload = null;
+  let themePayload: ReturnType<typeof buildThemePayload> | null = null;
   try {
     themePayload = buildThemePayload(formValues);
   } catch (error) {
-    setSettingsStatus(error.message);
+    setSettingsStatus(getErrorMessage(error));
     return;
   }
-  const theme = applyTheme(themePayload.theme, themePayload.themeColor),
+  const theme = applyTheme(
+      themePayload.theme,
+      themePayload.themeColor,
+      themePayload.themeVariant,
+    ),
     next = await updateSettings({
       theme,
       themeColor: themePayload.themeColor,
+      themeVariant: themePayload.themeVariant,
     });
-  updateSettingsFormValues({ themeColor: next.themeColor });
+  updateSettingsFormValues({
+    themeColor: next.themeColor,
+    themeVariant: next.themeVariant,
+  });
   syncSettingsSnapshot(next);
 };
 
 export const handleThemeColorChange = async () => {
   clearSettingsStatus();
   const formValues = readSettingsFormValues();
-  let themePayload = null;
+  let themePayload: ReturnType<typeof buildThemePayload> | null = null;
   try {
     themePayload = buildThemePayload(formValues);
   } catch (error) {
-    setSettingsStatus(error.message);
+    setSettingsStatus(getErrorMessage(error));
     return;
   }
-  const theme = applyTheme(themePayload.theme, themePayload.themeColor),
+  const theme = applyTheme(
+      themePayload.theme,
+      themePayload.themeColor,
+      themePayload.themeVariant,
+    ),
     next = await updateSettings({
       theme,
       themeColor: themePayload.themeColor,
+      themeVariant: themePayload.themeVariant,
     });
-  updateSettingsFormValues({ themeColor: next.themeColor });
+  updateSettingsFormValues({
+    themeColor: next.themeColor,
+    themeVariant: next.themeVariant,
+  });
+  syncSettingsSnapshot(next);
+};
+
+export const handleThemeVariantChange = async () => {
+  clearSettingsStatus();
+  const formValues = readSettingsFormValues();
+  let themePayload: ReturnType<typeof buildThemePayload> | null = null;
+  try {
+    themePayload = buildThemePayload(formValues);
+  } catch (error) {
+    setSettingsStatus(getErrorMessage(error));
+    return;
+  }
+  const theme = applyTheme(
+      themePayload.theme,
+      themePayload.themeColor,
+      themePayload.themeVariant,
+    ),
+    next = await updateSettings({
+      theme,
+      themeColor: themePayload.themeColor,
+      themeVariant: themePayload.themeVariant,
+    });
+  updateSettingsFormValues({
+    themeColor: next.themeColor,
+    themeVariant: next.themeVariant,
+  });
   syncSettingsSnapshot(next);
 };
 

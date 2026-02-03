@@ -1,4 +1,4 @@
-import { t } from "../../utils/index.js";
+import { t } from "../../utils/index.ts";
 import { sendMessageToSandbox } from "../../services/index.js";
 import ToolInputError from "../errors.js";
 import { ensureObjectArgs } from "../validation/index.js";

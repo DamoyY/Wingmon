@@ -1,4 +1,4 @@
-import { fadeOutMessages, resetMessagesFade } from "../../../ui/index.js";
+import { fadeOutMessages, resetMessagesFade } from "../../../ui/index.ts";
 import { resetConversation, state } from "../../../state/index.js";
 import { renderMessagesView } from "../messages/index.js";
 

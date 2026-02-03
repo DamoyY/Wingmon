@@ -3,7 +3,7 @@ import {
   fillSettingsForm,
   setText,
   showKeyView,
-} from "../../../ui/index.js";
+} from "../../../ui/index.ts";
 import { renderMessagesView } from "./presenter.js";
 import { clearPromptContent } from "../chat/composerState.js";
 import {

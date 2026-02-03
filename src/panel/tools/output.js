@@ -1,4 +1,4 @@
-import { t } from "../utils/index.js";
+import { t } from "../utils/index.ts";
 
 export const buildToolErrorOutput = ({
   message,

@@ -4,7 +4,7 @@ import {
   buildPageMarkdownToolOutput,
   toolNames,
 } from "../../../tools/index.js";
-import { createRandomId } from "../../../utils/index.js";
+import { createRandomId } from "../../../utils/index.ts";
 
 const resolveTabId = (activeTab) => {
     if (typeof activeTab?.id !== "number") {

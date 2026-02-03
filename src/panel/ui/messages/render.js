@@ -1,9 +1,9 @@
-import { elements } from "../core/elements.js";
+import { elements } from "../core/elements.ts";
 import renderMessageContent from "./contentRenderer.js";
 import { animateMessageRowEnter } from "./animations.js";
 import { resolveIndicesKey } from "./messageIndices.js";
-import { applyMessageHeadingTypography } from "../theme/typography.js";
-import { combineMessageContents, t } from "../../utils/index.js";
+import { applyMessageHeadingTypography } from "../theme/typography.ts";
+import { combineMessageContents, t } from "../../utils/index.ts";
 
 const ensureNewChatButton = () => {
     if (!elements.newChatButton) {

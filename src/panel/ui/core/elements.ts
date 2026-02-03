@@ -1,12 +1,20 @@
-const ensureDomReady = () => {
+const ensureDomReady = (): Promise<void> => {
     if (document.readyState !== "loading") {
       return Promise.resolve();
     }
     return new Promise((resolve) => {
-      document.addEventListener("DOMContentLoaded", resolve, { once: true });
+      document.addEventListener(
+        "DOMContentLoaded",
+        () => {
+          resolve();
+        },
+        {
+          once: true,
+        },
+      );
     });
   },
-  requireElement = (id, label) => {
+  requireElement = (id: string, label: string): HTMLElement => {
     const element = document.getElementById(id);
     if (!element) {
       throw new Error(`${label}元素未找到`);
@@ -14,11 +22,11 @@ const ensureDomReady = () => {
     return element;
   };
 
-export const elements = {};
+export const elements: Record<string, HTMLElement> = {};
 
-let initPromise = null;
+let initPromise: Promise<Record<string, HTMLElement>> | null = null;
 
-export const initElements = async () => {
+export const initElements = async (): Promise<Record<string, HTMLElement>> => {
   if (initPromise) {
     return initPromise;
   }
@@ -39,6 +47,10 @@ export const initElements = async () => {
       languageSelect: requireElement("language-select", "languageSelect"),
       themeSelect: requireElement("theme-select", "themeSelect"),
       themeColorInput: requireElement("theme-color-input", "themeColorInput"),
+      themeVariantSelect: requireElement(
+        "theme-variant-select",
+        "themeVariantSelect",
+      ),
       keyStatus: requireElement("key-status", "keyStatus"),
       settingsHint: requireElement("settings-hint", "settingsHint"),
       openSettings: requireElement("open-settings", "openSettings"),

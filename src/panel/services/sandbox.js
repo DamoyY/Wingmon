@@ -1,4 +1,4 @@
-import { createRandomId } from "../utils/index.js";
+import { createRandomId } from "../utils/index.ts";
 
 const SANDBOX_REQUEST_TYPE = "runConsoleCommand",
   SANDBOX_RESPONSE_TYPE = "runConsoleResult";

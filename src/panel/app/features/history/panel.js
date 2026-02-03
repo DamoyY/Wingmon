@@ -3,9 +3,9 @@ import {
   showChatView,
   showConfirmDialog,
   showHistoryView,
-} from "../../../ui/index.js";
+} from "../../../ui/index.ts";
 import { state } from "../../../state/index.js";
-import { t } from "../../../utils/index.js";
+import { t } from "../../../utils/index.ts";
 import fetchSortedHistory from "./data.js";
 import {
   deleteConversationById,

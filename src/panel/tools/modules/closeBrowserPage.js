@@ -1,4 +1,4 @@
-import { t } from "../../utils/index.js";
+import { t } from "../../utils/index.ts";
 import { closeTab } from "../../services/index.js";
 import { validateTabIdArgs } from "../validation/index.js";
 
