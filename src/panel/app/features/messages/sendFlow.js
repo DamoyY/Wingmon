@@ -58,6 +58,7 @@ const ensureNotAborted = (signal) => {
   };
 
 export const stopSending = async () => {
+  setSendUiState(false);
   if (!activeAbortController) {
     return;
   }

@@ -164,7 +164,7 @@ const createAbortError = () => {
       if (!pendingToolCalls.length) {
         return;
       }
-      const toolMessages = await handleToolCalls(pendingToolCalls);
+      const toolMessages = await handleToolCalls(pendingToolCalls, signal);
       toolMessages.forEach((message) => addMessage(message));
       ensureNotAborted(signal);
       yield* requestNext();
