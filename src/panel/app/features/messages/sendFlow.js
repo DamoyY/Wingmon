@@ -37,13 +37,22 @@ const ensureNotAborted = (signal) => {
       return;
     }
     const hasContent =
-        typeof message.content === "string" && message.content.trim(),
-      hasToolCalls =
-        Array.isArray(message.tool_calls) && message.tool_calls.length;
-    if (hasContent || hasToolCalls) {
+      typeof message.content === "string" && message.content.trim();
+    if (hasContent) {
       return;
     }
-    removeMessage(assistantIndex);
+    const indices = [assistantIndex];
+    for (let i = assistantIndex + 1; i < state.messages.length; i += 1) {
+      const nextMessage = state.messages[i];
+      if (!nextMessage) {
+        throw new Error("消息索引无效");
+      }
+      if (!nextMessage.hidden) {
+        break;
+      }
+      indices.push(i);
+    }
+    indices.sort((a, b) => b - a).forEach((index) => removeMessage(index));
   },
   saveCurrentConversation = async () => {
     if (!state.messages.length) {
