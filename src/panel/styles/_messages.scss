@@ -29,14 +29,18 @@
   opacity: 1;
 }
 
-.empty-state img {
-  width: 128px;
-  height: 128px;
-  opacity: 0.3;
+.empty-state-logo {
+  width: 256px;
+  height: 256px;
+  opacity: 0.4;
+  background-image: url("empty-state-light.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
-:root:not([data-theme="dark"]) .empty-state img {
-  filter: invert(1);
+:root[data-theme="dark"] .empty-state-logo {
+  background-image: url("empty-state-dark.png");
 }
 
 .message-row {
