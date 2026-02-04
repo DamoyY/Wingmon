@@ -1,4 +1,17 @@
-const normalizeButtonId = (message) => {
+type ClickButtonMessage = {
+  id?: unknown;
+};
+
+type ClickButtonResponse = {
+  ok?: boolean;
+  error?: string;
+};
+
+type SendResponse = (response: ClickButtonResponse) => void;
+
+const normalizeButtonId = (
+    message: ClickButtonMessage | null | undefined,
+  ): string => {
     const id = typeof message?.id === "string" ? message.id.trim() : "";
     if (!id) {
       throw new Error("id 必须是非空字符串");
@@ -8,8 +21,8 @@ const normalizeButtonId = (message) => {
     }
     return id.toLowerCase();
   },
-  findSingleButton = (normalizedId) => {
-    const matches = document.querySelectorAll(
+  findSingleButton = (normalizedId: string): HTMLElement | null => {
+    const matches = document.querySelectorAll<HTMLElement>(
       `[data-llm-id="${normalizedId}"]`,
     );
     if (!matches.length) {
@@ -20,7 +33,10 @@ const normalizeButtonId = (message) => {
     }
     return matches[0];
   },
-  handleClickButton = (message, sendResponse) => {
+  handleClickButton = (
+    message: ClickButtonMessage,
+    sendResponse: SendResponse,
+  ): void => {
     const normalizedId = normalizeButtonId(message),
       target = findSingleButton(normalizedId);
     if (!target) {
@@ -30,4 +46,5 @@ const normalizeButtonId = (message) => {
     target.click();
     sendResponse({ ok: true });
   };
+
 export default handleClickButton;

@@ -4,32 +4,38 @@ import {
   handleGetPageContent,
 } from "../handlers/index.js";
 
-const registerMessageListener = () => {
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+const registerMessageListener = (): void => {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    void _sender;
     try {
       if (message?.type === "ping") {
-        if (!document.body) {
+        const body = document.querySelector("body");
+        if (!body) {
           sendResponse({ error: "页面没有可用的 body" });
-          return;
+          return undefined;
         }
         sendResponse({ ok: true });
-        return;
+        return undefined;
       }
       if (message?.type === "getPageContent") {
-        handleGetPageContent(sendResponse);
-        return;
+        void handleGetPageContent(sendResponse);
+        return true;
       }
       if (message?.type === "clickButton") {
         handleClickButton(message, sendResponse);
-        return;
+        return undefined;
       }
       if (message?.type === "enterText") {
         handleEnterText(message, sendResponse);
+        return undefined;
       }
     } catch (error) {
-      console.error(error);
-      sendResponse({ error: error?.message || "未知错误" });
+      const messageText = error instanceof Error ? error.message : "未知错误";
+      console.error(messageText);
+      sendResponse({ error: messageText });
     }
+    return undefined;
   });
 };
+
 export default registerMessageListener;

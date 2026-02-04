@@ -1,4 +1,4 @@
-import registerMessageListener from "./messaging/listener.js";
+import registerMessageListener from "./messaging/listener.ts";
 
 const reportReady = () =>
     new Promise((resolve, reject) => {
