@@ -50,14 +50,14 @@ const resolveTabId = (activeTab) => {
     if (Number.isInteger(value) && value > 0) {
       return value;
     }
-    return undefined;
+    throw new Error("page_number 必须是正整数");
   },
   buildGetPageArguments = (tabId, pageNumber) => {
-    const args = { tabId },
-      resolvedPageNumber = resolvePageNumber(pageNumber);
-    if (resolvedPageNumber !== undefined) {
-      args.page_number = resolvedPageNumber;
-    }
+    const args = {
+      tabId,
+      page_number: resolvePageNumber(pageNumber),
+    };
+    args.preserve_viewport = true;
     return args;
   },
   buildGetPageToolCall = (tabId, callId, pageNumber) => ({

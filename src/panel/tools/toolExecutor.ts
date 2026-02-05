@@ -161,12 +161,12 @@ const normalizeToolCall = (
   };
 export const buildPageMarkdownToolOutput = async (
   tabId: number,
-  pageNumber?: number,
+  pageNumber: number,
 ): Promise<string> => {
-  const args: { tabId: number; page_number?: number } = { tabId };
-  if (pageNumber !== undefined) {
-    args.page_number = pageNumber;
-  }
+  const args: { tabId: number; page_number: number } = {
+    tabId,
+    page_number: pageNumber,
+  };
   const output = await executeTool(toolNamesSafe.getPageMarkdown, args);
   return resolveToolOutput(output, toolNamesSafe.getPageMarkdown).content;
 };

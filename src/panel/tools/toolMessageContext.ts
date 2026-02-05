@@ -151,12 +151,16 @@ const resolvePageNumberKey = (pageNumber?: number): number => {
     }
     return viewportPlan.currentChunk;
   },
-  urlLabelPattern = /^\*\*URL[:：]\*\*$/i,
+  urlLabelPattern = /^(?:\*\*)?URL[:：](?:\*\*)?$/i,
   extractUrlFromGetPageOutput = (content: string): string | null => {
     const lines = content.split(/\r?\n/);
     for (let i = 0; i < lines.length - 1; i += 1) {
       const line = lines[i].trim();
-      if (line === tSafe("statusUrlLabel") || urlLabelPattern.test(line)) {
+      if (
+        line === tSafe("statusUrlLabel") ||
+        line === tSafe("statusUrlPlain") ||
+        urlLabelPattern.test(line)
+      ) {
         const urlLine = lines[i + 1]?.trim();
         if (!urlLine) {
           console.error("get_page 工具响应缺少 URL");
@@ -261,7 +265,7 @@ const resolvePageNumberKey = (pageNumber?: number): number => {
   },
   isGetPageSuccessOutput = (content: unknown): content is string =>
     typeof content === "string" &&
-    content.trim().startsWith(tSafe("statusTitleLabel"));
+    content.trim().startsWith(tSafe("statusReadSuccess"));
 
 export const resolveViewportChunkPlan = (
   content: string,

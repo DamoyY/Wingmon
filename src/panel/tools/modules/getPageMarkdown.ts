@@ -17,7 +17,8 @@ type TabLike = {
 
 type GetPageArgs = {
   tabId: number;
-  pageNumber?: number;
+  pageNumber: number;
+  preserveViewport?: boolean;
 };
 
 type PageMarkdownOutputArgs = {
@@ -25,6 +26,8 @@ type PageMarkdownOutputArgs = {
   url: string;
   content?: string;
   isInternal: boolean;
+  pageNumber?: number;
+  totalPages?: number;
 };
 
 const getAllTabsSafe: () => Promise<TabLike[]> = getAllTabs as () => Promise<
@@ -62,9 +65,31 @@ const getAllTabsSafe: () => Promise<TabLike[]> = getAllTabs as () => Promise<
     shouldFollowMode as () => Promise<boolean>,
   validateTabIdArgsSafe: (args: unknown) => { tabId: number } =
     validateTabIdArgs as (args: unknown) => { tabId: number },
-  tSafe: (key: string) => string = t as (key: string) => string,
-  parsePageNumberSafe: (value: unknown) => number | undefined =
-    parsePageNumber as (value: unknown) => number | undefined;
+  tSafe: (key: string, args?: string[]) => string = t as (
+    key: string,
+    args?: string[],
+  ) => string,
+  parsePageNumberSafe: (value: unknown) => number = parsePageNumber as (
+    value: unknown,
+  ) => number;
+
+const parsePreserveViewport = (value: unknown): boolean => {
+  if (value === undefined || value === null) {
+    return false;
+  }
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    if (value === "true") {
+      return true;
+    }
+    if (value === "false") {
+      return false;
+    }
+  }
+  throw new Error("preserve_viewport 必须是布尔值");
+};
 
 const parameters = {
     type: "object",
@@ -75,7 +100,7 @@ const parameters = {
         description: tSafe("toolParamPageNumber"),
       },
     },
-    required: ["tabId"],
+    required: ["tabId", "page_number"],
     additionalProperties: false,
   },
   buildPageMarkdownOutput = ({
@@ -83,25 +108,48 @@ const parameters = {
     url,
     content = "",
     isInternal,
+    pageNumber,
+    totalPages,
   }: PageMarkdownOutputArgs): string => {
     const headerLines = isInternal
-      ? [tSafe("statusTitleLabel"), title, "**URL：**", url]
-      : [tSafe("statusTitleLabel"), title, tSafe("statusUrlLabel"), url];
+      ? [`${tSafe("statusTitle")}：`, title, tSafe("statusUrlPlain"), url]
+      : [
+          tSafe("statusReadSuccess"),
+          `${tSafe("statusTitle")}：`,
+          title,
+          tSafe("statusUrlPlain"),
+          url,
+        ];
+    if (!isInternal) {
+      if (!Number.isInteger(pageNumber) || pageNumber <= 0) {
+        throw new Error("get_page 响应缺少有效分块序号");
+      }
+      if (!Number.isInteger(totalPages) || totalPages <= 0) {
+        throw new Error("get_page 响应缺少有效总分块数量");
+      }
+      headerLines.push(`${tSafe("statusTotalChunks")}：`, String(totalPages));
+    }
     return buildPageReadResult({
       headerLines,
-      contentLabel: tSafe("statusContentLabel"),
+      contentLabel: isInternal
+        ? ""
+        : tSafe("statusChunkContent", [String(pageNumber)]),
       content,
       isInternal,
     });
   },
   validateArgs = (args: unknown): GetPageArgs => {
-    const { tabId } = validateTabIdArgsSafe(args);
-    const pageNumber = parsePageNumberSafe(
-      (args as Record<string, unknown> | null)?.page_number,
-    );
-    return { tabId, pageNumber };
+    const argsRecord = args as Record<string, unknown> | null,
+      { tabId } = validateTabIdArgsSafe(args),
+      preserveViewport = parsePreserveViewport(argsRecord?.preserve_viewport);
+    const pageNumber = parsePageNumberSafe(argsRecord?.page_number);
+    return { tabId, pageNumber, preserveViewport };
   },
-  execute = async ({ tabId, pageNumber }: GetPageArgs): Promise<string> => {
+  execute = async ({
+    tabId,
+    pageNumber,
+    preserveViewport = false,
+  }: GetPageArgs): Promise<string> => {
     const tabs = await getAllTabsSafe(),
       targetTab = tabs.find((tab) => tab.id === tabId);
     if (!targetTab) {
@@ -124,7 +172,7 @@ const parameters = {
       });
     }
     const pageData = await fetchPageMarkdownDataSafe(tabId, pageNumber);
-    if (followMode) {
+    if (followMode && !preserveViewport) {
       await syncPageHashSafe(tabId, pageData);
     }
     return buildPageMarkdownOutput({
@@ -132,6 +180,8 @@ const parameters = {
       url: pageData.url,
       content: pageData.content,
       isInternal: false,
+      pageNumber: pageData.pageNumber,
+      totalPages: pageData.totalPages,
     });
   };
 

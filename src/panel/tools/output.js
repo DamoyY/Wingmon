@@ -6,7 +6,7 @@ export const buildToolErrorOutput = ({
   isCloseTool,
 }) => {
   if (!isInputError) {
-    return "错误";
+    return t("statusInternalToolError");
   }
   const fallback = t("statusFailed");
   if (isCloseTool) {

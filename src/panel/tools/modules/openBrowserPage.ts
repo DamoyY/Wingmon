@@ -14,7 +14,7 @@ import {
 type OpenPageArgs = {
   url: string;
   focus: boolean;
-  pageNumber?: number;
+  pageNumber: number;
 };
 
 type OpenPageReadOutputArgs = {
@@ -22,6 +22,8 @@ type OpenPageReadOutputArgs = {
   tabId: number;
   content?: string;
   isInternal: boolean;
+  pageNumber?: number;
+  totalPages?: number;
 };
 
 type TabLike = {
@@ -61,8 +63,9 @@ const ToolInputErrorSafe = ToolInputError as ToolInputErrorCtor,
   ensureObjectArgsSafe: (args: unknown) => void = ensureObjectArgs as (
     args: unknown,
   ) => void,
-  parsePageNumberSafe: (value: unknown) => number | undefined =
-    parsePageNumber as (value: unknown) => number | undefined,
+  parsePageNumberSafe: (value: unknown) => number = parsePageNumber as (
+    value: unknown,
+  ) => number,
   fetchPageMarkdownDataSafe: (
     tabId: number,
     pageNumber?: number,
@@ -98,7 +101,7 @@ const parameters = {
         description: tSafe("toolParamPageNumber"),
       },
     },
-    required: ["url", "focus"],
+    required: ["url", "focus", "page_number"],
     additionalProperties: false,
   },
   buildOpenPageReadOutput = ({
@@ -106,17 +109,42 @@ const parameters = {
     tabId,
     content = "",
     isInternal,
+    pageNumber,
+    totalPages,
   }: OpenPageReadOutputArgs): string =>
-    buildPageReadResult({
-      headerLines: [
+    (() => {
+      const headerLines = [
         tSafe("statusOpenSuccess"),
-        `${tSafe("statusTitle")}: "${title}"`,
-        `${tSafe("statusTabId")}: "${String(tabId)}"`,
-      ],
-      contentLabel: `${tSafe("statusContent")}：`,
-      content,
-      isInternal,
-    }),
+        `${tSafe("statusTitle")}: `,
+        title,
+        `${tSafe("statusTabId")}: `,
+        String(tabId),
+      ];
+      if (isInternal) {
+        return buildPageReadResult({
+          headerLines,
+          contentLabel: "",
+          content,
+          isInternal: true,
+        });
+      }
+      if (!Number.isInteger(pageNumber) || pageNumber <= 0) {
+        throw new Error("open_page 响应缺少有效分块序号");
+      }
+      if (!Number.isInteger(totalPages) || totalPages <= 0) {
+        throw new Error("open_page 响应缺少有效总分块数量");
+      }
+      return buildPageReadResult({
+        headerLines: [
+          ...headerLines,
+          `${tSafe("statusTotalChunks")}：`,
+          String(totalPages),
+        ],
+        contentLabel: tSafe("statusChunkContent", [String(pageNumber)]),
+        content,
+        isInternal: false,
+      });
+    })(),
   normalizeTab = (tab: TabLike): NormalizedTab | null => {
     if (typeof tab.url !== "string" || !tab.url.trim()) {
       console.error("标签页缺少 URL", tab);
@@ -181,7 +209,7 @@ const parameters = {
           isInternal: true,
         });
       }
-      const readPageNumber = isPdfDocument ? (pageNumber ?? 1) : 1;
+      const readPageNumber = isPdfDocument ? pageNumber : 1;
       const pageData = await fetchPageMarkdownDataSafe(
         matchedTab.id,
         readPageNumber,
@@ -194,6 +222,8 @@ const parameters = {
         tabId: matchedTab.id,
         content: pageData.content,
         isInternal: isInternalUrlSafe(pageData.url || matchedUrl),
+        pageNumber: pageData.pageNumber,
+        totalPages: pageData.totalPages,
       });
     }
     const tab = await createTabSafe(url, shouldFocus);
@@ -219,6 +249,8 @@ const parameters = {
       tabId: tab.id,
       content: pageData.content,
       isInternal: isInternalUrlSafe(pageData.url || url),
+      pageNumber: pageData.pageNumber,
+      totalPages: pageData.totalPages,
     });
   };
 

@@ -4,9 +4,9 @@ type ToolInputErrorCtor = new (message: string) => Error;
 
 const ToolInputErrorSafe = ToolInputError as ToolInputErrorCtor;
 
-export const parsePageNumber = (value: unknown): number | undefined => {
+export const parsePageNumber = (value: unknown): number => {
   if (value === undefined || value === null) {
-    return undefined;
+    throw new ToolInputErrorSafe("page_number 必须是正整数");
   }
   if (typeof value === "number" && Number.isInteger(value) && value > 0) {
     return value;

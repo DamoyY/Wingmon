@@ -41,8 +41,14 @@
   "statusOpenSuccess": {
     "message": "**Open Success**"
   },
+  "statusReadSuccess": {
+    "message": "**Read Success**"
+  },
   "statusClickSuccess": {
     "message": "**Click Success**"
+  },
+  "statusInternalToolError": {
+    "message": "**Internal Tool Error**"
   },
   "statusReadFailedInternal": {
     "message": "**Read Failed:**\nThis page is an internal browser page and cannot be read."
@@ -64,6 +70,15 @@
   },
   "statusContent": {
     "message": "Content"
+  },
+  "statusTotalChunks": {
+    "message": "Total chunks"
+  },
+  "statusChunkContent": {
+    "message": "Chunk $1 content:"
+  },
+  "statusUrlPlain": {
+    "message": "URL:"
   },
   "statusAlreadyExists": {
     "message": "Failed, the same page already exists in the browser, TabID: \"$1\""
@@ -102,7 +117,7 @@
     "message": "Execute a console command in the Sandbox Page and get the results"
   },
   "toolListTabs": {
-    "message": "List the titles, URLs, and TabIDs of all currently open tabs"
+    "message": "List the titles, URLs, and TabIDs of all tabs"
   },
   "toolShowHtml": {
     "message": "The HTML provided to this tool will be opened in the user's browser"
@@ -111,7 +126,7 @@
     "message": "Whether to switch browser focus to this page"
   },
   "toolParamPageNumber": {
-    "message": "leave empty as the first page"
+    "message": "When page is HTML, it represents chunk number (one chunk is approximately 5000 tokens). When page is PDF, it represents page number"
   },
   "toolParamId": {
     "message": "The ID of the button to click"
