@@ -10,6 +10,7 @@
     "@material/material-color-utilities": "latest",
     "@material/web": "latest",
     "@opendocsg/pdf2md": "latest",
+    "dompurify": "latest",
     "highlight.js": "latest",
     "katex": "latest",
     "md4w": "latest",

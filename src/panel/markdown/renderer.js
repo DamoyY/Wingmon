@@ -1,5 +1,5 @@
 import { init, mdToHtml } from "md4w";
-import { sanitizeRenderedHtml } from "./sanitize.js";
+import { sanitizeRenderedHtml } from "./sanitize.ts";
 
 const parseFlags = [
   "DEFAULT",
