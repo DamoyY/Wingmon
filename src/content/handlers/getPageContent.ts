@@ -11,6 +11,10 @@ type PageContentResponse = {
 
 type SendResponse = (response: PageContentResponse) => void;
 
+type PageContentMessage = {
+  pageNumber?: number;
+};
+
 const isPdfContentType = (): boolean => {
   return document.contentType.toLowerCase().includes("pdf");
 };
@@ -49,14 +53,32 @@ const sendError = (sendResponse: SendResponse, error: unknown): void => {
   sendResponse({ error: message });
 };
 
+const resolvePageNumber = (value: unknown): number => {
+  if (value === undefined || value === null) {
+    return 1;
+  }
+  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isInteger(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  throw new Error("page_number 必须是正整数");
+};
+
 const handleGetPageContent = async (
+  message: PageContentMessage,
   sendResponse: SendResponse,
 ): Promise<void> => {
   try {
     const title = document.title || "",
       url = window.location.href || "";
     if (isPdfDocument()) {
-      const markdown = await convertPdfToMarkdown({ title, url });
+      const pageNumber = resolvePageNumber(message.pageNumber);
+      const markdown = await convertPdfToMarkdown({ title, url, pageNumber });
       sendResponse(markdown);
       return;
     }

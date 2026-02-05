@@ -18,7 +18,7 @@ const registerMessageListener = (): void => {
         return undefined;
       }
       if (message?.type === "getPageContent") {
-        void handleGetPageContent(sendResponse);
+        void handleGetPageContent(message, sendResponse);
         return true;
       }
       if (message?.type === "clickButton") {

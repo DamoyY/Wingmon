@@ -6,7 +6,7 @@ import {
 } from "../../services/index.js";
 import ToolInputError from "../errors.js";
 import { ensureObjectArgs } from "../validation/index.js";
-import { buildPageReadResult, fetchPageMarkdownData } from "../pageRead.js";
+import { buildPageReadResult, fetchPageMarkdownData } from "../pageRead.ts";
 
 const parameters = {
     type: "object",

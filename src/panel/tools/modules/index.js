@@ -1,9 +1,9 @@
 import clickButton from "./clickButton.js";
 import closeBrowserPage from "./closeBrowserPage.js";
 import enterText from "./enterText.ts";
-import getPageMarkdown from "./getPageMarkdown.js";
+import getPageMarkdown from "./getPageMarkdown.ts";
 import listTabs from "./listTabs.js";
-import openBrowserPage from "./openBrowserPage.js";
+import openBrowserPage from "./openBrowserPage.ts";
 import runConsoleCommand from "./runConsoleCommand.js";
 import showHtml from "./showHtml.js";
 
