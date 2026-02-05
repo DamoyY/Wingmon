@@ -5,7 +5,7 @@ import {
   extractResponsesToolCalls,
   finalizeChatToolCalls,
   finalizeResponsesToolCalls,
-} from "./calls.js";
+} from "./toolCallNormalization.js";
 import { buildChatMessages, buildResponsesInput } from "./message-builders.js";
 
 const apiToolAdapter = Object.freeze({

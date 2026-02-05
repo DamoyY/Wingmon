@@ -1,9 +1,4 @@
-import {
-  addMessage,
-  state,
-  subscribeState,
-  updateMessage,
-} from "../../../state/index.js";
+import { state, subscribeState } from "../../../state/index.js";
 import {
   animateMessageRemoval,
   renderMessages,
@@ -11,7 +6,6 @@ import {
 } from "../../../ui/index.ts";
 import createMessageActionHandlers from "./actions.js";
 import { buildDisplayMessages } from "./displayMessages.ts";
-import { createRandomId } from "../../../utils/index.ts";
 
 let actionHandlers = null,
   unsubscribeMessages = null;
@@ -136,36 +130,4 @@ const buildMessagesForView = () => buildDisplayMessages(state.messages),
 export const renderMessagesView = () => {
   ensureMessagesSubscription();
   renderMessagesFromState();
-};
-
-export const appendAssistantDelta = (delta) => {
-  if (!delta) {
-    return;
-  }
-  ensureMessagesSubscription();
-  let targetIndex = null;
-  for (let i = state.messages.length - 1; i >= 0; i -= 1) {
-    const message = state.messages[i];
-    if (message?.role === "assistant" && message.pending === true) {
-      targetIndex = i;
-      break;
-    }
-  }
-  if (targetIndex === null) {
-    const lastIndex = state.messages.length - 1,
-      last = state.messages[lastIndex];
-    if (!last || last.role !== "assistant") {
-      addMessage({
-        role: "assistant",
-        content: delta,
-        groupId: createRandomId("assistant"),
-      });
-      return;
-    }
-    targetIndex = lastIndex;
-  }
-  const target = state.messages[targetIndex];
-  updateMessage(targetIndex, {
-    content: `${target?.content || ""}${delta}`,
-  });
 };

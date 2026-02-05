@@ -10,7 +10,10 @@ import {
   updateSettingsFormValues,
 } from "../../../ui/index.ts";
 import { setLocale, translateDOM } from "../../../utils/index.ts";
-import { getSettings, updateSettings } from "../../../services/settings.ts";
+import {
+  getSettings,
+  updateSettings,
+} from "../../../services/settingsStorage.ts";
 import {
   buildThemePayload,
   isSettingsComplete,

@@ -6,7 +6,7 @@ import {
 import {
   collectPageReadDedupeSets,
   getToolOutputContent,
-} from "./pageReadDedupe.ts";
+} from "./toolMessageContext.ts";
 
 const toChatToolCallForRequest = (entry) => ({
     id: entry.callId,

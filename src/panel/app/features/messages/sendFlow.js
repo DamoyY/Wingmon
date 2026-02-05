@@ -15,7 +15,7 @@ import {
   applyStreamedResponse,
 } from "./responseHandlers.js";
 import {
-  promptSettingsCompletion,
+  requestSettingsCompletion,
   reportSendStatus,
   setSendUiState,
   syncComposerAfterSend,
@@ -87,7 +87,7 @@ export const sendMessage = async ({ includePage = false } = {}) => {
   }
   const settings = await getSettings();
   if (!ensureSettingsReady(settings)) {
-    promptSettingsCompletion(settings);
+    requestSettingsCompletion(settings);
     return;
   }
   let pendingAssistantIndex = null;

@@ -1,8 +1,8 @@
 export { default as createMessageActionHandlers } from "./actions.js";
-export { appendAssistantDelta, renderMessagesView } from "./presenter.js";
+export { renderMessagesView } from "./presenter.js";
 export { sendMessage, sendMessageWithPage, stopSending } from "./sendFlow.js";
 export {
-  promptSettingsCompletion,
+  requestSettingsCompletion,
   reportSendStatus,
   setSendUiState,
   syncComposerAfterSend,

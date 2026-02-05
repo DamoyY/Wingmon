@@ -83,7 +83,7 @@ export const reportSendStatus = (message: unknown): void => {
   updateAssistantStatus(targetIndex, normalizedMessage);
 };
 
-export const promptSettingsCompletion = (
+export const requestSettingsCompletion = (
   settings: SettingsFormValues,
 ): void => {
   void showKeyView({ isFirstUse: true });

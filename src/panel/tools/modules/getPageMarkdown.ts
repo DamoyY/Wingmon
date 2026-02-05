@@ -6,7 +6,7 @@ import {
   fetchPageMarkdownData,
   shouldFollowMode,
   syncPageHash,
-} from "../pageRead.ts";
+} from "../pageReadHelpers.ts";
 
 type TabLike = {
   id?: number;

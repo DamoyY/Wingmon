@@ -1,4 +1,4 @@
-export * from "./render.ts";
+export * from "./messageListRenderer.ts";
 export {
   animateMessageRowEnter,
   animateMessageRemoval,

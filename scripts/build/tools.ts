@@ -25,7 +25,7 @@ export const getToolIndexPlugin = async (): Promise<Plugin> => {
     "utils",
     "shared",
     "toolModuleUtils",
-    "tabAction",
+    "tabActionRunner",
   ]);
 
   const toolFiles = (await readdir(toolsDir))

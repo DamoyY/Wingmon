@@ -13,7 +13,7 @@ const resetViewStyles = (view: HTMLElement): void => {
     style.zIndex = "";
     style.pointerEvents = "";
   },
-  setSettingsMode = (isFirstUse: boolean): void => {
+  setKeyViewHintState = (isFirstUse: boolean): void => {
     const { settingsHint, cancelSettings } = elements as Partial<
       typeof elements
     >;
@@ -129,7 +129,7 @@ export const showKeyView = ({
     resetViewStyles(keyView);
   }
   setText(keyStatus, "");
-  setSettingsMode(isFirstUse);
+  setKeyViewHintState(isFirstUse);
   if (animate) {
     return animateSwap({
       incoming: keyView,

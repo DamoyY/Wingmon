@@ -1,5 +1,5 @@
-export { default as createRandomId } from "./ids.js";
-export { default as combineMessageContents } from "./messages.js";
+export { default as createRandomId } from "./createRandomId.js";
+export { default as combineMessageContents } from "./combineMessageContents.js";
 export { ensureElement, requireElementById } from "./ensureElement.ts";
 export {
   default as normalizeIndices,

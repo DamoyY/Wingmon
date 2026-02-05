@@ -1,2 +1,2 @@
-export * from "./args.js";
+export * from "./toolArgsValidation.js";
 export * from "./pageNumber.ts";

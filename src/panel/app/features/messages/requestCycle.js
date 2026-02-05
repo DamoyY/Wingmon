@@ -5,9 +5,14 @@ import {
   handleToolCalls,
 } from "../../../tools/index.js";
 import { requestModel } from "../../../api/index.js";
-import { addMessage, state, updateMessage } from "../../../state/index.js";
+import {
+  addMessage,
+  appendAssistantDelta,
+  state,
+  updateMessage,
+} from "../../../state/index.js";
 import { createRandomId, t } from "../../../utils/index.ts";
-import { appendAssistantDelta, renderMessagesView } from "./presenter.js";
+import { renderMessagesView } from "./presenter.js";
 
 const createAbortError = () => {
     const error = new Error(t("requestStopped"));

@@ -6,8 +6,11 @@ import {
 } from "../../services/index.js";
 import ToolInputError from "../errors.js";
 import { ensureObjectArgs } from "../validation/index.js";
-import { buildPageReadResult, fetchPageMarkdownData } from "../pageRead.ts";
-import { runTabAction } from "./tabAction.ts";
+import {
+  buildPageReadResult,
+  fetchPageMarkdownData,
+} from "../pageReadHelpers.ts";
+import { runTabAction } from "./tabActionRunner.ts";
 
 type ClickButtonArgs = {
   id: string;

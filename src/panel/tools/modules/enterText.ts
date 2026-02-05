@@ -4,7 +4,7 @@ import {
   sendMessageToTab,
   waitForContentScript,
 } from "../../services/index.js";
-import { runTabAction } from "./tabAction.ts";
+import { runTabAction } from "./tabActionRunner.ts";
 
 type EnterTextArgs = {
   id: string;
