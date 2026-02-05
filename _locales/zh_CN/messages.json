@@ -66,7 +66,7 @@
     "message": "内容"
   },
   "statusAlreadyExists": {
-    "message": "失败，浏览器中已存在相同页面，TabID：\"$1\""
+    "message": "失败，浏览器中已存在相同页面，TabID：\"$1\"，如需访问请使用 `get_page`。"
   },
   "statusSuccess": {
     "message": "成功"

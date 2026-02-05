@@ -1,6 +1,7 @@
 export * from "./history.js";
 export * from "./htmlPreview.js";
 export { default as normalizePreviewHtml } from "./htmlPreviewNormalizer.js";
+export * from "./reloadTab.ts";
 export {
   default as sendMessageToSandbox,
   registerSandboxWindowProvider,

@@ -2,6 +2,7 @@ import {
   handleClickButton,
   handleEnterText,
   handleGetPageContent,
+  handleSetPageHash,
 } from "../handlers/index.js";
 
 const registerMessageListener = (): void => {
@@ -19,6 +20,10 @@ const registerMessageListener = (): void => {
       }
       if (message?.type === "getPageContent") {
         void handleGetPageContent(message, sendResponse);
+        return true;
+      }
+      if (message?.type === "setPageHash") {
+        handleSetPageHash(message, sendResponse);
         return true;
       }
       if (message?.type === "clickButton") {

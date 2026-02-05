@@ -1,6 +1,7 @@
 import { t } from "../utils/index.ts";
 import {
   getSettings,
+  reloadTab,
   sendMessageToTab,
   waitForContentScript,
 } from "../services/index.js";
@@ -29,11 +30,26 @@ type PageContentMessage = {
   pageNumber?: number;
 };
 
+type PageHashMessage = {
+  type: "setPageHash";
+  pageNumber: number;
+};
+
+type PageHashResponse = {
+  ok?: boolean;
+  skipped?: boolean;
+};
+
 const tSafe = t as (key: string) => string,
   sendMessageToTabSafe = sendMessageToTab as (
     tabId: number,
     payload: PageContentMessage,
   ) => Promise<PageContentResponse | null>,
+  sendPageHashMessageSafe = sendMessageToTab as (
+    tabId: number,
+    payload: PageHashMessage,
+  ) => Promise<PageHashResponse | null>,
+  reloadTabSafe = reloadTab as (tabId: number) => Promise<void>,
   waitForContentScriptSafe = waitForContentScript as (
     tabId: number,
   ) => Promise<boolean>,
@@ -74,6 +90,21 @@ const buildPageContentMessage = (pageNumber?: number): PageContentMessage => {
   }
   return { type: "getPageContent" };
 };
+
+const resolvePageNumber = (value?: number): number => {
+  if (value === undefined) {
+    return 1;
+  }
+  if (Number.isInteger(value) && value > 0) {
+    return value;
+  }
+  throw new Error("page_number 必须是正整数");
+};
+
+const buildPageHashMessage = (pageNumber?: number): PageHashMessage => ({
+  type: "setPageHash",
+  pageNumber: resolvePageNumber(pageNumber),
+});
 
 export const fetchPageMarkdownData = async (
   tabId: number,
@@ -126,6 +157,21 @@ export const fetchPageMarkdownData = async (
       }
     };
   return attemptFetch(0);
+};
+
+export const syncPageHash = async (
+  tabId: number,
+  pageNumber?: number,
+): Promise<void> => {
+  await waitForContentScriptSafe(tabId);
+  const response = await sendPageHashMessageSafe(
+    tabId,
+    buildPageHashMessage(pageNumber),
+  );
+  if (!response?.ok || response.skipped) {
+    return;
+  }
+  await reloadTabSafe(tabId);
 };
 
 export const shouldFollowMode = async (): Promise<boolean> => {

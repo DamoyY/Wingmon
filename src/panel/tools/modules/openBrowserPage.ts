@@ -7,6 +7,7 @@ import {
   buildPageReadResult,
   fetchPageMarkdownData,
   shouldFollowMode,
+  syncPageHash,
 } from "../pageRead.ts";
 
 type OpenPageArgs = {
@@ -146,18 +147,25 @@ const parameters = {
       if (shouldFocus) {
         await focusTabSafe(matchedTab.id);
       }
+      const isInternal = isInternalUrlSafe(matchedTab.url || url);
       if (pageNumber !== undefined && isPdfUrl(url)) {
         const {
           title,
           url: pageUrl,
           content,
         } = await fetchPageMarkdownData(matchedTab.id, pageNumber);
+        if (followMode && !isInternal) {
+          await syncPageHash(matchedTab.id, pageNumber);
+        }
         return buildOpenPageReadOutput({
           title,
           tabId: matchedTab.id,
           content,
           isInternal: isInternalUrlSafe(pageUrl || url),
         });
+      }
+      if (followMode && !isInternal) {
+        await syncPageHash(matchedTab.id, pageNumber);
       }
       return buildOpenPageAlreadyExistsOutput(matchedTab.id);
     }
@@ -179,6 +187,9 @@ const parameters = {
       url: pageUrl,
       content,
     } = await fetchPageMarkdownData(tab.id, pageNumber);
+    if (followMode) {
+      await syncPageHash(tab.id, pageNumber);
+    }
     return buildOpenPageReadOutput({
       title,
       tabId: tab.id,

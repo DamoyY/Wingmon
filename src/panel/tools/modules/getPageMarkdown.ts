@@ -5,6 +5,7 @@ import {
   buildPageReadResult,
   fetchPageMarkdownData,
   shouldFollowMode,
+  syncPageHash,
 } from "../pageRead.ts";
 
 type TabLike = {
@@ -94,7 +95,8 @@ const parameters = {
     if (typeof targetTab.url !== "string" || !targetTab.url.trim()) {
       throw new Error("标签页缺少 URL");
     }
-    if (await shouldFollowModeSafe()) {
+    const followMode = await shouldFollowModeSafe();
+    if (followMode) {
       await focusTabSafe(tabId);
     }
     const internalUrl = isInternalUrlSafe(targetTab.url);
@@ -110,6 +112,9 @@ const parameters = {
       tabId,
       pageNumber,
     );
+    if (followMode) {
+      await syncPageHash(tabId, pageNumber);
+    }
     return buildPageMarkdownOutput({
       title,
       url,

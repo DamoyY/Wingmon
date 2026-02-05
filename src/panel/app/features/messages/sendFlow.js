@@ -93,13 +93,6 @@ export const sendMessage = async ({ includePage = false } = {}) => {
   let pendingAssistantIndex = null;
   addMessage({ role: "user", content });
   syncComposerAfterSend();
-  addMessage({
-    role: "assistant",
-    content: "",
-    pending: true,
-    groupId: createRandomId("assistant"),
-  });
-  pendingAssistantIndex = state.messages.length - 1;
   setStateValue("sending", true);
   const abortController = new AbortController();
   activeAbortController = abortController;
@@ -112,6 +105,13 @@ export const sendMessage = async ({ includePage = false } = {}) => {
       await appendSharedPageContext();
     }
     ensureNotAborted(abortController.signal);
+    addMessage({
+      role: "assistant",
+      content: "",
+      pending: true,
+      groupId: createRandomId("assistant"),
+    });
+    pendingAssistantIndex = state.messages.length - 1;
     const responseStream = createResponseStream({
         settings,
         signal: abortController.signal,
