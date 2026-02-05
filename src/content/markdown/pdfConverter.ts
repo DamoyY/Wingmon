@@ -14,6 +14,9 @@ type MarkdownPageContent = {
   title: string;
   url: string;
   content: string;
+  totalPages: number;
+  pageNumber: number;
+  viewportPage: number;
 };
 
 type PdfDocument = {
@@ -95,7 +98,7 @@ const cleanupPdfDocument = async (
 const buildMarkdownContent = (
   parsed: PdfParseResult,
   pageNumber: number,
-): string => {
+): { content: string; totalPages: number } => {
   if (!Array.isArray(parsed.pages) || !parsed.pages.length) {
     throw new Error("PDF 内容为空");
   }
@@ -115,7 +118,10 @@ const buildMarkdownContent = (
     }
     return item;
   });
-  return `${lines.join("\n")}\n`;
+  return {
+    content: `${lines.join("\n")}\n`,
+    totalPages: parsed.pages.length,
+  };
 };
 
 const convertPdfToMarkdown = async (
@@ -129,11 +135,14 @@ const convertPdfToMarkdown = async (
   try {
     const parsed = (await parse(pdfBytes)) as PdfParseResult;
     pdfDocument = parsed.pdfDocument;
-    const content = buildMarkdownContent(parsed, pageNumber);
+    const { content, totalPages } = buildMarkdownContent(parsed, pageNumber);
     return {
       title,
       url,
       content,
+      totalPages,
+      pageNumber,
+      viewportPage: pageNumber,
     };
   } finally {
     await cleanupPdfDocument(pdfDocument);

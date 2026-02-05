@@ -1,4 +1,3 @@
-import { isPdfUrl } from "../../shared/index.ts";
 import { t } from "../utils/index.ts";
 import {
   getToolCallArguments,
@@ -36,7 +35,6 @@ type PageReadCallInfo = {
   tabId?: number;
   pageNumber?: number;
   url?: string;
-  isPdf?: boolean;
 };
 
 type PageReadEvent = {
@@ -45,13 +43,20 @@ type PageReadEvent = {
   callId: string;
   index: number;
   pageNumber?: number;
-  isPdf?: boolean;
+  url?: string;
 };
 
 type ToolNames = {
   getPageMarkdown: string;
   openBrowserPage: string;
   clickButton: string;
+};
+
+export type ViewportChunkPlan = {
+  viewportCenter: number;
+  totalChunks: number;
+  currentChunk: number;
+  nearbyChunk: number | null;
 };
 
 const tSafe = t as (key: string) => string,
@@ -69,6 +74,82 @@ const resolvePageNumberKey = (pageNumber?: number): number => {
       return pageNumber;
     }
     return 1;
+  },
+  clampChunk = (value: number, min: number, max: number): number =>
+    Math.min(max, Math.max(min, value)),
+  parseViewportCenterValues = (
+    content: string,
+  ): { viewportCenter: number; totalChunks: number } | null => {
+    const patterns = [
+      /"viewportCenter"\s*:\s*"?(?<center>\d+(?:\.\d+)?)\s*\/\s*(?<total>\d+)"?/i,
+      /viewportCenter\s*[:：=]\s*(?<center>\d+(?:\.\d+)?)\s*\/\s*(?<total>\d+)/i,
+      /\*\*viewportCenter[:：]?\*\*\s*(?<center>\d+(?:\.\d+)?)\s*\/\s*(?<total>\d+)/i,
+    ];
+    for (const pattern of patterns) {
+      const match = content.match(pattern);
+      if (!match?.groups) {
+        continue;
+      }
+      const { center, total } = match.groups;
+      const viewportCenter = Number(center),
+        totalChunks = Number(total);
+      if (!Number.isFinite(viewportCenter)) {
+        console.error("viewportCenter 数值无效", { center });
+        return null;
+      }
+      if (!Number.isInteger(totalChunks) || totalChunks <= 0) {
+        console.error("viewportCenter 总分片数无效", { total });
+        return null;
+      }
+      return { viewportCenter, totalChunks };
+    }
+    return null;
+  },
+  resolveNearbyChunk = (
+    viewportCenter: number,
+    totalChunks: number,
+    currentChunk: number,
+  ): number | null => {
+    if (totalChunks < 2) {
+      return null;
+    }
+    const relativePosition = viewportCenter - (currentChunk - 1),
+      direction = relativePosition >= 0.5 ? 1 : -1;
+    let nearbyChunk = currentChunk + direction;
+    if (nearbyChunk < 1 || nearbyChunk > totalChunks) {
+      nearbyChunk = currentChunk - direction;
+    }
+    if (
+      nearbyChunk < 1 ||
+      nearbyChunk > totalChunks ||
+      nearbyChunk === currentChunk
+    ) {
+      return null;
+    }
+    return nearbyChunk;
+  },
+  resolveUrlKey = (url?: string): string | null => {
+    if (typeof url !== "string") {
+      return null;
+    }
+    const trimmed = url.trim();
+    if (!trimmed) {
+      return null;
+    }
+    return trimmed;
+  },
+  resolveGetPageSegmentNumber = (
+    pageNumber: number | undefined,
+    content: string,
+  ): number | undefined => {
+    if (Number.isInteger(pageNumber) && pageNumber > 0) {
+      return pageNumber;
+    }
+    const viewportPlan = resolveViewportChunkPlan(content);
+    if (!viewportPlan) {
+      return undefined;
+    }
+    return viewportPlan.currentChunk;
   },
   urlLabelPattern = /^\*\*URL[:：]\*\*$/i,
   extractUrlFromGetPageOutput = (content: string): string | null => {
@@ -88,7 +169,11 @@ const resolvePageNumberKey = (pageNumber?: number): number => {
     return null;
   },
   buildPageReadKey = (event: PageReadEvent): string => {
-    const pageNumber = event.isPdf ? resolvePageNumberKey(event.pageNumber) : 1;
+    const pageNumber = resolvePageNumberKey(event.pageNumber),
+      urlKey = resolveUrlKey(event.url);
+    if (urlKey) {
+      return `${urlKey}:${String(pageNumber)}`;
+    }
     return `${String(event.tabId)}:${String(pageNumber)}`;
   },
   extractGetPageInfoFromCall = (call: ToolCall) => {
@@ -123,7 +208,7 @@ const resolvePageNumberKey = (pageNumber?: number): number => {
       pageNumber?: number;
       url: string;
     };
-    return { pageNumber, url, isPdf: isPdfUrl(url) };
+    return { pageNumber, url };
   },
   extractPageReadTabIdFromOutput = (
     content: unknown,
@@ -178,6 +263,35 @@ const resolvePageNumberKey = (pageNumber?: number): number => {
     typeof content === "string" &&
     content.trim().startsWith(tSafe("statusTitleLabel"));
 
+export const resolveViewportChunkPlan = (
+  content: string,
+): ViewportChunkPlan | null => {
+  const matched = parseViewportCenterValues(content);
+  if (!matched) {
+    return null;
+  }
+  const viewportCenter = clampChunk(
+      matched.viewportCenter,
+      1,
+      matched.totalChunks,
+    ),
+    currentChunk = clampChunk(
+      Math.ceil(viewportCenter),
+      1,
+      matched.totalChunks,
+    );
+  return {
+    viewportCenter,
+    totalChunks: matched.totalChunks,
+    currentChunk,
+    nearbyChunk: resolveNearbyChunk(
+      viewportCenter,
+      matched.totalChunks,
+      currentChunk,
+    ),
+  };
+};
+
 export const collectPageReadDedupeSets = (messages: Message[]) => {
   const callInfoById = new Map<string, PageReadCallInfo>();
   messages.forEach((msg) => {
@@ -201,10 +315,9 @@ export const collectPageReadDedupeSets = (messages: Message[]) => {
         info.pageNumber = pageNumber;
       }
       if (name === toolNamesSafe.openBrowserPage) {
-        const { pageNumber, url, isPdf } = extractOpenPageInfoFromCall(call);
+        const { pageNumber, url } = extractOpenPageInfoFromCall(call);
         info.pageNumber = pageNumber;
         info.url = url;
-        info.isPdf = isPdf;
       }
       callInfoById.set(callId, info);
     });
@@ -236,14 +349,13 @@ export const collectPageReadDedupeSets = (messages: Message[]) => {
         throw new Error(`get_page 工具响应缺少 tabId：${callId}`);
       }
       const url = extractUrlFromGetPageOutput(content);
-      const isPdf = url ? isPdfUrl(url) : false;
       readEvents.push({
         tabId,
         type: name,
         callId,
         index,
-        pageNumber: info.pageNumber,
-        isPdf,
+        pageNumber: resolveGetPageSegmentNumber(info.pageNumber, content),
+        url: url || undefined,
       });
       return;
     }
@@ -258,7 +370,7 @@ export const collectPageReadDedupeSets = (messages: Message[]) => {
         callId,
         index,
         pageNumber: info ? info.pageNumber : undefined,
-        isPdf: info?.isPdf,
+        url: info?.url,
       });
       return;
     }
@@ -272,7 +384,6 @@ export const collectPageReadDedupeSets = (messages: Message[]) => {
         type: name,
         callId,
         index,
-        isPdf: false,
       });
     }
   });

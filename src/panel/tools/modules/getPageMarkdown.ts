@@ -4,6 +4,7 @@ import { parsePageNumber, validateTabIdArgs } from "../validation/index.js";
 import {
   buildPageReadResult,
   fetchPageMarkdownData,
+  type PageMarkdownData,
   shouldFollowMode,
   syncPageHash,
 } from "../pageReadHelpers.ts";
@@ -38,11 +39,25 @@ const getAllTabsSafe: () => Promise<TabLike[]> = getAllTabs as () => Promise<
   fetchPageMarkdownDataSafe: (
     tabId: number,
     pageNumber?: number,
-  ) => Promise<{ title: string; url: string; content: string }> =
-    fetchPageMarkdownData as (
-      tabId: number,
-      pageNumber?: number,
-    ) => Promise<{ title: string; url: string; content: string }>,
+  ) => Promise<PageMarkdownData> = fetchPageMarkdownData as (
+    tabId: number,
+    pageNumber?: number,
+  ) => Promise<PageMarkdownData>,
+  syncPageHashSafe: (
+    tabId: number,
+    pageData?: {
+      pageNumber?: number;
+      totalPages?: number;
+      viewportPage?: number;
+    },
+  ) => Promise<void> = syncPageHash as (
+    tabId: number,
+    pageData?: {
+      pageNumber?: number;
+      totalPages?: number;
+      viewportPage?: number;
+    },
+  ) => Promise<void>,
   shouldFollowModeSafe: () => Promise<boolean> =
     shouldFollowMode as () => Promise<boolean>,
   validateTabIdArgsSafe: (args: unknown) => { tabId: number } =
@@ -108,17 +123,14 @@ const parameters = {
         isInternal: true,
       });
     }
-    const { title, url, content } = await fetchPageMarkdownDataSafe(
-      tabId,
-      pageNumber,
-    );
+    const pageData = await fetchPageMarkdownDataSafe(tabId, pageNumber);
     if (followMode) {
-      await syncPageHash(tabId, pageNumber);
+      await syncPageHashSafe(tabId, pageData);
     }
     return buildPageMarkdownOutput({
-      title,
-      url,
-      content,
+      title: pageData.title,
+      url: pageData.url,
+      content: pageData.content,
       isInternal: false,
     });
   };

@@ -111,7 +111,7 @@
     "message": "Whether to switch browser focus to this page"
   },
   "toolParamPageNumber": {
-    "message": "Only valid for PDF pages; leave empty as the first page"
+    "message": "leave empty as the first page"
   },
   "toolParamId": {
     "message": "The ID of the button to click"

@@ -102,7 +102,7 @@ export const sendMessage = async ({ includePage = false } = {}) => {
     await saveCurrentConversation();
     ensureNotAborted(abortController.signal);
     if (includePage) {
-      await appendSharedPageContext();
+      await appendSharedPageContext({ signal: abortController.signal });
     }
     ensureNotAborted(abortController.signal);
     addMessage({

@@ -111,7 +111,7 @@
     "message": "是否将浏览器焦点切换至此页面"
   },
   "toolParamPageNumber": {
-    "message": "只在PDF页面时有效，留空视作第一页"
+    "message": "留空视作第一页"
   },
   "toolParamId": {
     "message": "要点击的 button 的 ID"

@@ -6,6 +6,7 @@ import { ensureObjectArgs, parsePageNumber } from "../validation/index.js";
 import {
   buildPageReadResult,
   fetchPageMarkdownData,
+  type PageMarkdownData,
   shouldFollowMode,
   syncPageHash,
 } from "../pageReadHelpers.ts";
@@ -61,7 +62,31 @@ const ToolInputErrorSafe = ToolInputError as ToolInputErrorCtor,
     args: unknown,
   ) => void,
   parsePageNumberSafe: (value: unknown) => number | undefined =
-    parsePageNumber as (value: unknown) => number | undefined;
+    parsePageNumber as (value: unknown) => number | undefined,
+  fetchPageMarkdownDataSafe: (
+    tabId: number,
+    pageNumber?: number,
+  ) => Promise<PageMarkdownData> = fetchPageMarkdownData as (
+    tabId: number,
+    pageNumber?: number,
+  ) => Promise<PageMarkdownData>,
+  syncPageHashSafe: (
+    tabId: number,
+    pageData?: {
+      pageNumber?: number;
+      totalPages?: number;
+      viewportPage?: number;
+    },
+  ) => Promise<void> = syncPageHash as (
+    tabId: number,
+    pageData?: {
+      pageNumber?: number;
+      totalPages?: number;
+      viewportPage?: number;
+    },
+  ) => Promise<void>,
+  shouldFollowModeSafe: () => Promise<boolean> =
+    shouldFollowMode as () => Promise<boolean>;
 
 const parameters = {
     type: "object",
@@ -76,8 +101,6 @@ const parameters = {
     required: ["url", "focus"],
     additionalProperties: false,
   },
-  buildOpenPageAlreadyExistsOutput = (tabId: number): string =>
-    tSafe("statusAlreadyExists", [String(tabId)]),
   buildOpenPageReadOutput = ({
     title,
     tabId,
@@ -133,7 +156,7 @@ const parameters = {
     focus,
     pageNumber,
   }: OpenPageArgs): Promise<string> => {
-    const followMode = await shouldFollowMode(),
+    const followMode = await shouldFollowModeSafe(),
       shouldFocus = followMode || focus,
       tabs = await getAllTabsSafe(),
       normalizedTabs = tabs
@@ -147,27 +170,31 @@ const parameters = {
       if (shouldFocus) {
         await focusTabSafe(matchedTab.id);
       }
-      const isInternal = isInternalUrlSafe(matchedTab.url || url);
-      if (pageNumber !== undefined && isPdfUrl(url)) {
-        const {
-          title,
-          url: pageUrl,
-          content,
-        } = await fetchPageMarkdownData(matchedTab.id, pageNumber);
-        if (followMode && !isInternal) {
-          await syncPageHash(matchedTab.id, pageNumber);
-        }
+      const matchedUrl = matchedTab.url || url,
+        isInternal = isInternalUrlSafe(matchedUrl),
+        isPdfDocument = isPdfUrl(matchedUrl);
+      if (isInternal) {
+        const title = matchedTab.title || "";
         return buildOpenPageReadOutput({
           title,
           tabId: matchedTab.id,
-          content,
-          isInternal: isInternalUrlSafe(pageUrl || url),
+          isInternal: true,
         });
       }
-      if (followMode && !isInternal) {
-        await syncPageHash(matchedTab.id, pageNumber);
+      const readPageNumber = isPdfDocument ? (pageNumber ?? 1) : 1;
+      const pageData = await fetchPageMarkdownDataSafe(
+        matchedTab.id,
+        readPageNumber,
+      );
+      if (followMode) {
+        await syncPageHashSafe(matchedTab.id, pageData);
       }
-      return buildOpenPageAlreadyExistsOutput(matchedTab.id);
+      return buildOpenPageReadOutput({
+        title: pageData.title,
+        tabId: matchedTab.id,
+        content: pageData.content,
+        isInternal: isInternalUrlSafe(pageData.url || matchedUrl),
+      });
     }
     const tab = await createTabSafe(url, shouldFocus);
     if (shouldFocus) {
@@ -182,19 +209,16 @@ const parameters = {
         isInternal: true,
       });
     }
-    const {
-      title,
-      url: pageUrl,
-      content,
-    } = await fetchPageMarkdownData(tab.id, pageNumber);
+    const readPageNumber = isPdfUrl(url) ? pageNumber : 1,
+      pageData = await fetchPageMarkdownDataSafe(tab.id, readPageNumber);
     if (followMode) {
-      await syncPageHash(tab.id, pageNumber);
+      await syncPageHashSafe(tab.id, pageData);
     }
     return buildOpenPageReadOutput({
-      title,
+      title: pageData.title,
       tabId: tab.id,
-      content,
-      isInternal: isInternalUrlSafe(pageUrl || url),
+      content: pageData.content,
+      isInternal: isInternalUrlSafe(pageData.url || url),
     });
   };
 

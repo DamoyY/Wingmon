@@ -7,13 +7,18 @@ type PageContentResponse = {
   title?: string;
   url?: string;
   content?: string;
+  totalPages?: number;
+  pageNumber?: number;
+  viewportPage?: number;
+  totalTokens?: number;
   error?: string;
 };
 
 type SendResponse = (response: PageContentResponse) => void;
 
 type PageContentMessage = {
-  pageNumber?: number;
+  pageNumber?: unknown;
+  page_number?: unknown;
 };
 
 const isPdfContentType = (): boolean => {
@@ -59,15 +64,35 @@ const resolvePageNumber = (value: unknown): number => {
   throw new Error("page_number 必须是正整数");
 };
 
+const resolveMessagePageNumber = (message: PageContentMessage): number => {
+  const hasCamel = message.pageNumber !== undefined,
+    hasSnake = message.page_number !== undefined;
+  if (hasCamel && hasSnake) {
+    const camelValue = resolvePageNumber(message.pageNumber),
+      snakeValue = resolvePageNumber(message.page_number);
+    if (camelValue !== snakeValue) {
+      throw new Error("pageNumber 与 page_number 不一致");
+    }
+    return camelValue;
+  }
+  if (hasCamel) {
+    return resolvePageNumber(message.pageNumber);
+  }
+  if (hasSnake) {
+    return resolvePageNumber(message.page_number);
+  }
+  return 1;
+};
+
 const handleGetPageContent = async (
   message: PageContentMessage,
   sendResponse: SendResponse,
 ): Promise<void> => {
   try {
     const title = document.title || "",
-      url = window.location.href || "";
+      url = window.location.href || "",
+      pageNumber = resolveMessagePageNumber(message);
     if (isPdfDocument()) {
-      const pageNumber = resolvePageNumber(message.pageNumber);
       const markdown = await convertPdfToMarkdown({ title, url, pageNumber });
       sendResponse(markdown);
       return;
@@ -85,6 +110,7 @@ const handleGetPageContent = async (
         body,
         title,
         url,
+        pageNumber,
       });
       sendResponse(markdown);
     } finally {

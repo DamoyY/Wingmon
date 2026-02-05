@@ -13,7 +13,13 @@ type PageReadResultArgs = {
   isInternal: boolean;
 };
 
-type PageMarkdownData = {
+export type PageReadMetadata = {
+  pageNumber: number;
+  totalPages: number;
+  viewportPage: number;
+};
+
+export type PageMarkdownData = PageReadMetadata & {
   title: string;
   url: string;
   content: string;
@@ -23,6 +29,9 @@ type PageContentResponse = {
   title?: string;
   url?: string;
   content?: string;
+  pageNumber?: number | string;
+  totalPages?: number | string;
+  viewportPage?: number | string;
 };
 
 type PageContentMessage = {
@@ -33,11 +42,15 @@ type PageContentMessage = {
 type PageHashMessage = {
   type: "setPageHash";
   pageNumber: number;
+  totalPages: number;
+  viewportPage: number;
 };
 
 type PageHashResponse = {
   ok?: boolean;
   skipped?: boolean;
+  reload?: boolean;
+  shouldReload?: boolean;
 };
 
 const tSafe = t as (key: string) => string,
@@ -68,6 +81,76 @@ const pageContentRetryBaseDelayMs = 200,
       setTimeout(resolve, delayMs);
     });
 
+const parsePositiveInteger = (
+    value: unknown,
+    fieldName: string,
+  ): number | undefined => {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+      return value;
+    }
+    if (typeof value === "string" && value.trim()) {
+      const parsed = Number(value);
+      if (Number.isInteger(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+    throw new Error(`${fieldName} 必须是正整数`);
+  },
+  parsePositiveNumber = (
+    value: unknown,
+    fieldName: string,
+  ): number | undefined => {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+    if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+      return value;
+    }
+    if (typeof value === "string" && value.trim()) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+    throw new Error(`${fieldName} 必须是正数`);
+  },
+  resolvePageNumber = (value?: number): number =>
+    parsePositiveInteger(value, "page_number") ?? 1,
+  resolvePageMetadata = (
+    meta: {
+      pageNumber?: unknown;
+      totalPages?: unknown;
+      viewportPage?: unknown;
+    },
+    fallbackPageNumber?: number,
+  ): PageReadMetadata => {
+    const pageNumber =
+        parsePositiveInteger(meta.pageNumber, "pageNumber") ??
+        resolvePageNumber(fallbackPageNumber),
+      totalPages =
+        parsePositiveInteger(meta.totalPages, "totalPages") ?? pageNumber,
+      viewportPage =
+        parsePositiveNumber(meta.viewportPage, "viewportPage") ?? pageNumber;
+    if (pageNumber > totalPages) {
+      throw new Error(
+        `pageNumber 超出范围：${String(pageNumber)} > ${String(totalPages)}`,
+      );
+    }
+    if (viewportPage > totalPages) {
+      throw new Error(
+        `viewportPage 超出范围：${String(viewportPage)} > ${String(totalPages)}`,
+      );
+    }
+    return {
+      pageNumber,
+      totalPages,
+      viewportPage,
+    };
+  };
+
 export const buildPageReadResult = ({
   headerLines,
   contentLabel,
@@ -83,27 +166,21 @@ export const buildPageReadResult = ({
 
 const buildPageContentMessage = (pageNumber?: number): PageContentMessage => {
   if (pageNumber !== undefined) {
-    if (!Number.isInteger(pageNumber) || pageNumber <= 0) {
-      throw new Error("page_number 必须是正整数");
-    }
-    return { type: "getPageContent", pageNumber };
+    return {
+      type: "getPageContent",
+      pageNumber: resolvePageNumber(pageNumber),
+    };
   }
   return { type: "getPageContent" };
 };
 
-const resolvePageNumber = (value?: number): number => {
-  if (value === undefined) {
-    return 1;
-  }
-  if (Number.isInteger(value) && value > 0) {
-    return value;
-  }
-  throw new Error("page_number 必须是正整数");
-};
-
-const buildPageHashMessage = (pageNumber?: number): PageHashMessage => ({
+const buildPageHashMessage = (pageData?: {
+  pageNumber?: number;
+  totalPages?: number;
+  viewportPage?: number;
+}): PageHashMessage => ({
   type: "setPageHash",
-  pageNumber: resolvePageNumber(pageNumber),
+  ...resolvePageMetadata(pageData ?? {}),
 });
 
 export const fetchPageMarkdownData = async (
@@ -119,10 +196,12 @@ export const fetchPageMarkdownData = async (
       if (!pageData || typeof pageData.content !== "string") {
         throw new Error("页面内容为空");
       }
+      const metadata = resolvePageMetadata(pageData, pageNumber);
       return {
         title: pageData.title || "",
         url: pageData.url || "",
         content: pageData.content,
+        ...metadata,
       };
     };
   if (!isComplete) {
@@ -161,14 +240,27 @@ export const fetchPageMarkdownData = async (
 
 export const syncPageHash = async (
   tabId: number,
-  pageNumber?: number,
+  pageData?: {
+    pageNumber?: number;
+    totalPages?: number;
+    viewportPage?: number;
+  },
 ): Promise<void> => {
   await waitForContentScriptSafe(tabId);
   const response = await sendPageHashMessageSafe(
     tabId,
-    buildPageHashMessage(pageNumber),
+    buildPageHashMessage(pageData),
   );
   if (!response?.ok || response.skipped) {
+    return;
+  }
+  const shouldReload =
+    typeof response.shouldReload === "boolean"
+      ? response.shouldReload
+      : typeof response.reload === "boolean"
+        ? response.reload
+        : false;
+  if (!shouldReload) {
     return;
   }
   await reloadTabSafe(tabId);
