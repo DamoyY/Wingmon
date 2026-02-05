@@ -14,6 +14,7 @@
     "highlight.js": "latest",
     "katex": "latest",
     "md4w": "latest",
+    "tiktoken": "latest",
     "turndown": "latest",
     "turndown-plugin-gfm": "latest"
   },

@@ -7,7 +7,7 @@ import { getToolIndexPlugin } from "./tools.ts";
 
 export const buildBundles = async (): Promise<void> => {
   const toolIndexPlugin = await getToolIndexPlugin();
-  const loader = { ".md": "text" };
+  const loader = { ".md": "text", ".wasm": "binary" };
 
   const panelEntryPoint = await resolveEntryPath(
     path.join(rootDir, "src/panel/index"),
