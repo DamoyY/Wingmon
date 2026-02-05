@@ -6,6 +6,7 @@ export type MessageEntry = {
   hidden?: boolean;
   pending?: boolean;
   status?: unknown;
+  groupId?: unknown;
 };
 
 export type MessageList = Array<MessageEntry | null | undefined>;
@@ -22,6 +23,7 @@ type AssistantGroup = {
   indices: number[];
   hasPending: boolean;
   status: string;
+  groupId: string;
 };
 
 const combineMessageContentsSafe = combineMessageContents as (
@@ -60,6 +62,17 @@ const resolveMessageStatus = (status: unknown, role: string): string => {
   return status;
 };
 
+const resolveMessageGroupId = (groupId: unknown, role: string): string => {
+  if (groupId === null || groupId === undefined) {
+    return "";
+  }
+  if (typeof groupId !== "string") {
+    const label = role ? `：${role}` : "";
+    throw new Error(`分组标识格式无效${label}`);
+  }
+  return groupId;
+};
+
 export const buildDisplayMessages = (
   messages: MessageList,
 ): DisplayMessage[] => {
@@ -68,7 +81,6 @@ export const buildDisplayMessages = (
   }
   const entries: DisplayMessage[] = [];
   let assistantGroup: AssistantGroup | null = null;
-  let hasToolBridge = false;
   const flushAssistantGroup = (): void => {
       if (!assistantGroup) {
         return;
@@ -83,19 +95,20 @@ export const buildDisplayMessages = (
         });
       }
       assistantGroup = null;
-      hasToolBridge = false;
     },
     startAssistantGroup = (
       content: string,
       index: number,
       pending: boolean,
       status: string,
+      groupId: string,
     ): void => {
       assistantGroup = {
         contents: [content],
         indices: [index],
         hasPending: pending,
         status,
+        groupId,
       };
     };
   messages.forEach((msg, index) => {
@@ -103,9 +116,6 @@ export const buildDisplayMessages = (
       throw new Error("消息格式无效");
     }
     if (msg.hidden) {
-      if (msg.role === "tool" && assistantGroup) {
-        hasToolBridge = true;
-      }
       return;
     }
     const role = resolveMessageRole(msg.role);
@@ -113,20 +123,20 @@ export const buildDisplayMessages = (
     if (role === "assistant") {
       const isPending = msg.pending === true;
       const status = resolveMessageStatus(msg.status, role);
+      const groupId = resolveMessageGroupId(msg.groupId, role) || String(index);
       if (!assistantGroup) {
-        startAssistantGroup(content, index, isPending, status);
+        startAssistantGroup(content, index, isPending, status, groupId);
         return;
       }
-      if (hasToolBridge) {
+      if (assistantGroup.groupId === groupId) {
         assistantGroup.contents.push(content);
         assistantGroup.indices.push(index);
         assistantGroup.hasPending = assistantGroup.hasPending || isPending;
         assistantGroup.status = status;
-        hasToolBridge = false;
         return;
       }
       flushAssistantGroup();
-      startAssistantGroup(content, index, isPending, status);
+      startAssistantGroup(content, index, isPending, status, groupId);
       return;
     }
     flushAssistantGroup();

@@ -16,6 +16,7 @@ const resolveTabId = (activeTab) => {
     const activeTab = await getActiveTab(),
       tabId = resolveTabId(activeTab),
       callId = createRandomId("local"),
+      groupId = createRandomId("assistant"),
       args = { tabId },
       output = await buildPageMarkdownToolOutput(tabId),
       toolCall = {
@@ -27,7 +28,12 @@ const resolveTabId = (activeTab) => {
         },
         call_id: callId,
       };
-    addMessage({ role: "assistant", content: "", tool_calls: [toolCall] });
+    addMessage({
+      role: "assistant",
+      content: "",
+      tool_calls: [toolCall],
+      groupId,
+    });
     addMessage({
       role: "tool",
       content: output,

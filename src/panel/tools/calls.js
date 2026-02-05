@@ -1,4 +1,5 @@
 import { addMessage, state, updateMessage } from "../state/index.js";
+import { createRandomId } from "../utils/index.ts";
 
 const normalizeToolCall = ({
     id,
@@ -154,5 +155,10 @@ export const attachToolCallsToAssistant = (toolCalls, assistantIndex) => {
     updateMessage(index, { tool_calls: toolCalls });
     return;
   }
-  addMessage({ role: "assistant", content: "", tool_calls: toolCalls });
+  addMessage({
+    role: "assistant",
+    content: "",
+    tool_calls: toolCalls,
+    groupId: createRandomId("assistant"),
+  });
 };

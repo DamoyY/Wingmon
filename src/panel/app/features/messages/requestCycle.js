@@ -5,8 +5,8 @@ import {
   handleToolCalls,
 } from "../../../tools/index.js";
 import { requestModel } from "../../../api/index.js";
-import { addMessage, state } from "../../../state/index.js";
-import { t } from "../../../utils/index.ts";
+import { addMessage, state, updateMessage } from "../../../state/index.js";
+import { createRandomId, t } from "../../../utils/index.ts";
 import { appendAssistantDelta, renderMessagesView } from "./presenter.js";
 
 const createAbortError = () => {
@@ -104,6 +104,9 @@ const createAbortError = () => {
       reportStatus(normalized);
     };
     return {
+      reset: () => {
+        lastStatus = getStatusText(STATUS_KEYS.idle);
+      },
       setInitial: () => setStatus(getStatusText(STATUS_KEYS.thinking)),
       updateFromChunk: (chunk) => {
         if (!chunk) {
@@ -126,23 +129,72 @@ const createAbortError = () => {
   }) {
     const reportStatus = ensureStatusReporter(onStatus),
       statusTracker = createStatusTracker(reportStatus);
-    statusTracker.setInitial();
+    let initializedGroupId = "";
     const requestNext = async function* requestNext({
       assistantIndex: overrideAssistantIndex,
     } = {}) {
       ensureNotAborted(signal);
       let assistantIndex = resolvePendingAssistantIndex(overrideAssistantIndex);
-      const onStreamStart = () => {
+      const ensurePendingAssistant = () => {
           const resolvedIndex = resolvePendingAssistantIndex(assistantIndex);
           if (resolvedIndex !== null) {
             assistantIndex = resolvedIndex;
-            return;
+            const message = state.messages[assistantIndex];
+            if (message && message.role === "assistant") {
+              const groupId =
+                typeof message.groupId === "string"
+                  ? message.groupId.trim()
+                  : "";
+              if (groupId) {
+                return groupId;
+              }
+            }
+            const groupId = createRandomId("assistant");
+            updateMessage(assistantIndex, { groupId });
+            return groupId;
           }
           assistantIndex = state.messages.length;
-          addMessage({ role: "assistant", content: "", pending: true });
+          const groupId = createRandomId("assistant");
+          addMessage({
+            role: "assistant",
+            content: "",
+            pending: true,
+            groupId,
+          });
           renderMessagesView();
+          return groupId;
         },
-        systemPrompt = await buildSystemPrompt(),
+        finalizeToolCallAssistant = () => {
+          if (!Number.isInteger(assistantIndex)) {
+            return;
+          }
+          const message = state.messages[assistantIndex];
+          if (!message || message.role !== "assistant") {
+            return;
+          }
+          const hasContent =
+            typeof message.content === "string" && message.content.trim();
+          const patch = {};
+          if (message.status) {
+            patch.status = "";
+          }
+          if (message.pending === true && !hasContent) {
+            patch.pending = false;
+          }
+          if (Object.keys(patch).length) {
+            updateMessage(assistantIndex, patch);
+          }
+        },
+        onStreamStart = () => {
+          ensurePendingAssistant();
+        };
+      const currentGroupId = ensurePendingAssistant();
+      statusTracker.reset();
+      if (currentGroupId && currentGroupId !== initializedGroupId) {
+        initializedGroupId = currentGroupId;
+        statusTracker.setInitial();
+      }
+      const systemPrompt = await buildSystemPrompt(),
         tools = getToolDefinitions(settings.apiType),
         { toolCalls, reply, streamed } = await requestModel({
           settings,
@@ -168,7 +220,8 @@ const createAbortError = () => {
       const toolMessages = await handleToolCalls(pendingToolCalls, signal);
       toolMessages.forEach((message) => addMessage(message));
       ensureNotAborted(signal);
-      yield* requestNext();
+      finalizeToolCallAssistant();
+      yield* requestNext({ assistantIndex });
     };
     yield* requestNext({ assistantIndex: initialAssistantIndex });
   };

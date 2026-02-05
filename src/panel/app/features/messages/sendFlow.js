@@ -9,6 +9,7 @@ import { getSettings, saveConversation } from "../../../services/index.js";
 import { getPromptContent } from "../chat/composerState.js";
 import appendSharedPageContext from "./pageContext.js";
 import createResponseStream from "./requestCycle.js";
+import { createRandomId } from "../../../utils/index.ts";
 import {
   applyNonStreamedResponse,
   applyStreamedResponse,
@@ -92,7 +93,12 @@ export const sendMessage = async ({ includePage = false } = {}) => {
   let pendingAssistantIndex = null;
   addMessage({ role: "user", content });
   syncComposerAfterSend();
-  addMessage({ role: "assistant", content: "", pending: true });
+  addMessage({
+    role: "assistant",
+    content: "",
+    pending: true,
+    groupId: createRandomId("assistant"),
+  });
   pendingAssistantIndex = state.messages.length - 1;
   setStateValue("sending", true);
   const abortController = new AbortController();

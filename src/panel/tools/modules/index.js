@@ -1,4 +1,4 @@
-import clickButton from "./clickButton.js";
+import clickButton from "./clickButton.ts";
 import closeBrowserPage from "./closeBrowserPage.js";
 import enterText from "./enterText.ts";
 import getPageMarkdown from "./getPageMarkdown.ts";

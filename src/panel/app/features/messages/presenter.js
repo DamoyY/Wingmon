@@ -11,6 +11,7 @@ import {
 } from "../../../ui/index.ts";
 import createMessageActionHandlers from "./actions.js";
 import { buildDisplayMessages } from "./displayMessages.ts";
+import { createRandomId } from "../../../utils/index.ts";
 
 let actionHandlers = null,
   unsubscribeMessages = null;
@@ -34,6 +35,15 @@ const buildMessagesForView = () => buildDisplayMessages(state.messages),
     }
     return actionHandlers;
   },
+  resolveAssistantGroupId = (message, index) => {
+    if (message && typeof message.groupId === "string") {
+      const trimmed = message.groupId.trim();
+      if (trimmed) {
+        return trimmed;
+      }
+    }
+    return String(index);
+  },
   isInLastAssistantGroup = (index) => {
     if (!Number.isInteger(index) || index < 0) {
       return false;
@@ -53,10 +63,15 @@ const buildMessagesForView = () => buildDisplayMessages(state.messages),
     if (!lastVisible || lastVisible.role !== "assistant") {
       return false;
     }
+    const lastGroupId = resolveAssistantGroupId(lastVisible, lastVisibleIndex);
     for (let i = lastVisibleIndex; i >= 0; i -= 1) {
       const message = state.messages[i];
       if (message && !message.hidden) {
         if (message.role !== "assistant") {
+          return false;
+        }
+        const groupId = resolveAssistantGroupId(message, i);
+        if (groupId !== lastGroupId) {
           return false;
         }
         if (i === index) {
@@ -140,7 +155,11 @@ export const appendAssistantDelta = (delta) => {
     const lastIndex = state.messages.length - 1,
       last = state.messages[lastIndex];
     if (!last || last.role !== "assistant") {
-      addMessage({ role: "assistant", content: delta });
+      addMessage({
+        role: "assistant",
+        content: delta,
+        groupId: createRandomId("assistant"),
+      });
       return;
     }
     targetIndex = lastIndex;

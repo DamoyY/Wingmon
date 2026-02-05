@@ -6,6 +6,7 @@ import {
 } from "../../../state/index.js";
 import { attachToolCallsToAssistant } from "../../../tools/index.js";
 import { renderMessagesView } from "./presenter.js";
+import { createRandomId } from "../../../utils/index.ts";
 
 const normalizeToolCalls = (toolCalls) =>
   Array.isArray(toolCalls) ? toolCalls : [];
@@ -49,7 +50,11 @@ export const applyNonStreamedResponse = (reply, toolCalls, assistantIndex) => {
     if (resolvedIndex !== null) {
       updateMessage(resolvedIndex, { content: reply, pending: false });
     } else {
-      addMessage({ role: "assistant", content: reply });
+      addMessage({
+        role: "assistant",
+        content: reply,
+        groupId: createRandomId("assistant"),
+      });
     }
     renderMessagesView();
   }
