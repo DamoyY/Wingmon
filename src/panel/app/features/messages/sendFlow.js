@@ -19,7 +19,7 @@ import {
   setSendUiState,
   syncComposerAfterSend,
 } from "./sendUi.ts";
-import ensureSettingsReady from "./settingsValidation.js";
+import { ensureSettingsReady } from "../settings/model.ts";
 
 let activeAbortController = null;
 

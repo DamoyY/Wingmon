@@ -1,3 +1,4 @@
+import { isPdfUrl } from "../../../shared/index.ts";
 import { isInternalUrl, t } from "../../utils/index.ts";
 import { createTab, focusTab, getAllTabs } from "../../services/index.js";
 import ToolInputError from "../errors.js";
@@ -144,6 +145,19 @@ const parameters = {
       }
       if (shouldFocus) {
         await focusTabSafe(matchedTab.id);
+      }
+      if (pageNumber !== undefined && isPdfUrl(url)) {
+        const {
+          title,
+          url: pageUrl,
+          content,
+        } = await fetchPageMarkdownData(matchedTab.id, pageNumber);
+        return buildOpenPageReadOutput({
+          title,
+          tabId: matchedTab.id,
+          content,
+          isInternal: isInternalUrlSafe(pageUrl || url),
+        });
       }
       return buildOpenPageAlreadyExistsOutput(matchedTab.id);
     }

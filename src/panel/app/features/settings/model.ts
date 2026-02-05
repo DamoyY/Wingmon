@@ -1,6 +1,7 @@
 import {
   normalizeTheme,
   normalizeThemeColor,
+  normalizeThemeColorSafe,
   normalizeThemeVariant,
 } from "../../../utils/index.ts";
 
@@ -47,23 +48,16 @@ type RequiredSettingsPayload = {
 
 let settingsSnapshot: NormalizedSettings | null = null;
 
-const trimString = (value: unknown): string =>
-    typeof value === "string" ? value.trim() : "",
-  normalizeThemeColorSafe = (value: unknown): string => {
-    if (typeof value !== "string") {
-      return "";
+const isSettingsInput = (value: unknown): value is SettingsInput =>
+    Boolean(value && typeof value === "object" && !Array.isArray(value)),
+  ensureSettingsInput = (settings: unknown): SettingsInput => {
+    if (!isSettingsInput(settings)) {
+      throw new Error("设置信息无效");
     }
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return "";
-    }
-    try {
-      return normalizeThemeColor(trimmed);
-    } catch (error) {
-      console.error("主题色归一化失败", error);
-      return trimmed;
-    }
+    return settings;
   },
+  trimString = (value: unknown): string =>
+    typeof value === "string" ? value.trim() : "",
   normalizeSettings = (settings: SettingsInput): NormalizedSettings => ({
     apiKey: trimString(settings.apiKey),
     baseUrl: trimString(settings.baseUrl),
@@ -97,6 +91,11 @@ export const isSettingsDirty = (formValues: SettingsInput): boolean => {
 export const isSettingsComplete = (formValues: SettingsInput): boolean => {
   const current = normalizeSettings(formValues);
   return Boolean(current.apiKey && current.baseUrl && current.model);
+};
+
+export const ensureSettingsReady = (settings: unknown): boolean => {
+  const input = ensureSettingsInput(settings);
+  return isSettingsComplete(input);
 };
 
 const buildRequiredSettingsPayload = (

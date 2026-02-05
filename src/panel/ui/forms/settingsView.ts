@@ -1,18 +1,13 @@
 import { elements } from "../core/elements.ts";
 import setText from "../core/text.ts";
-
-const ensureElement = (
-  element: HTMLElement | undefined,
-  label: string,
-): HTMLElement => {
-  if (!element) {
-    throw new Error(`${label}未找到`);
-  }
-  return element;
-};
+import { ensureElement } from "../../utils/index.ts";
 
 export const setSettingsStatus = (message: string): void => {
-  const status = ensureElement(elements.keyStatus, "状态提示元素");
+  const status = ensureElement(
+    elements.keyStatus,
+    "状态提示元素",
+    "状态提示元素未找到",
+  );
   setText(status, message);
 };
 
@@ -21,6 +16,6 @@ export const clearSettingsStatus = (): void => {
 };
 
 export const setSaveButtonVisible = (visible: boolean): void => {
-  const saveKey = ensureElement(elements.saveKey, "保存按钮");
+  const saveKey = ensureElement(elements.saveKey, "保存按钮", "保存按钮未找到");
   saveKey.classList.toggle("hidden", !visible);
 };

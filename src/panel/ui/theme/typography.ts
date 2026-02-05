@@ -1,4 +1,5 @@
 import { styles as typescaleStyles } from "@material/web/typography/md-typescale-styles.js";
+import { ensureElement } from "../../utils/index.ts";
 
 interface CSSResult {
   styleSheet?: CSSStyleSheet;
@@ -12,12 +13,6 @@ const headingClassMap = new Map<string, string>([
     ["H5", "md-typescale-title-small"],
     ["H6", "md-typescale-body-medium"],
   ]),
-  ensureElement = (element: unknown, label: string): Element => {
-    if (!(element instanceof Element)) {
-      throw new Error(`${label}无效`);
-    }
-    return element;
-  },
   ensureStylesheet = (): CSSStyleSheet => {
     const styleSheet = (typescaleStyles as unknown as CSSResult).styleSheet;
     if (!styleSheet) {

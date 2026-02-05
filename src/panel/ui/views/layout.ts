@@ -1,18 +1,22 @@
 import { elements } from "../core/elements.ts";
+import { ensureElement } from "../../utils/index.ts";
 
-const ensureElement = (
-    element: HTMLElement | undefined,
-    name: string,
-  ): HTMLElement => {
-    if (!element) {
-      throw new Error(`${name} is required for chat layout.`);
-    }
-    return element;
-  },
-  updateChatBarSizes = (): void => {
-    const topBarEl = ensureElement(elements.topBar, "Top bar"),
-      bottomBarEl = ensureElement(elements.bottomBar, "Bottom bar"),
-      chatViewEl = ensureElement(elements.chatView, "Chat view"),
+const updateChatBarSizes = (): void => {
+    const topBarEl = ensureElement(
+        elements.topBar,
+        "Top bar",
+        "Top bar is required for chat layout.",
+      ),
+      bottomBarEl = ensureElement(
+        elements.bottomBar,
+        "Bottom bar",
+        "Bottom bar is required for chat layout.",
+      ),
+      chatViewEl = ensureElement(
+        elements.chatView,
+        "Chat view",
+        "Chat view is required for chat layout.",
+      ),
       topHeight = topBarEl.offsetHeight,
       chatViewHeight = chatViewEl.offsetHeight,
       bottomHeight = chatViewHeight * 0.25;
@@ -27,9 +31,21 @@ const ensureElement = (
     );
   },
   setupChatLayout = (): (() => void) => {
-    ensureElement(elements.chatView, "Chat view");
-    const topBar = ensureElement(elements.topBar, "Top bar"),
-      bottomBar = ensureElement(elements.bottomBar, "Bottom bar");
+    ensureElement(
+      elements.chatView,
+      "Chat view",
+      "Chat view is required for chat layout.",
+    );
+    const topBar = ensureElement(
+        elements.topBar,
+        "Top bar",
+        "Top bar is required for chat layout.",
+      ),
+      bottomBar = ensureElement(
+        elements.bottomBar,
+        "Bottom bar",
+        "Bottom bar is required for chat layout.",
+      );
     updateChatBarSizes();
     const observer = new ResizeObserver(updateChatBarSizes);
     observer.observe(topBar);

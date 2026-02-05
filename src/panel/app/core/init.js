@@ -15,7 +15,6 @@ import {
   showChatView,
   showKeyView,
 } from "../../ui/index.ts";
-import bindEvents from "./controller.js";
 import { updateComposerButtonsState } from "../features/chat/index.js";
 import {
   refreshSendWithPageButton,
@@ -23,6 +22,7 @@ import {
 } from "../features/messages/index.js";
 import { syncSettingsSnapshot } from "../features/settings/index.js";
 import { setLocale, translateDOM } from "../../utils/index.ts";
+import { bindPanelEvents } from "../bindings/index.js";
 
 const initPanel = async () => {
   initTabListeners();
@@ -49,7 +49,7 @@ const initPanel = async () => {
     showKeyView({ isFirstUse: true });
   }
   renderMessagesView();
-  bindEvents();
+  bindPanelEvents();
   updateComposerButtonsState();
   await refreshSendWithPageButton();
 };

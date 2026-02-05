@@ -1,12 +1,10 @@
-import { elements } from "../core/elements.ts";
+import { elements, prefersReducedMotion } from "../core/index.ts";
 
 const BUTTON_VISIBILITY_DURATION = 180,
   BUTTON_VISIBILITY_EASING = "cubic-bezier(0.2, 0, 0, 1)";
 let visibilitySwapToken = 0;
 
-const prefersReducedMotion = () =>
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  ensureSendButton = () => {
+const ensureSendButton = () => {
     const { sendButton } = elements;
     if (!sendButton) {
       throw new Error("发送按钮未找到");

@@ -4,23 +4,13 @@ import {
   sendMessageToTab,
   waitForContentScript,
 } from "../../services/index.js";
+import { runTabAction } from "./tabAction.ts";
 
 type EnterTextArgs = {
   id: string;
   content: string;
   invalid?: boolean;
   errorMessage?: string;
-};
-
-type EnterTextState = {
-  errors: string[];
-  notFoundCount: number;
-  done: boolean;
-};
-
-type EnterTextResult = {
-  ok?: boolean;
-  reason?: string;
 };
 
 const getAllTabsSafe = getAllTabs as () => Promise<unknown>,
@@ -72,15 +62,6 @@ const parameters = {
     }
     return raw;
   },
-  resolveResult = (candidate: unknown): EnterTextResult => {
-    if (!candidate || typeof candidate !== "object") {
-      return {};
-    }
-    const record = candidate as Record<string, unknown>,
-      ok = typeof record.ok === "boolean" ? record.ok : undefined,
-      reason = typeof record.reason === "string" ? record.reason : undefined;
-    return { ok, reason };
-  },
   execute = async ({
     id,
     content,
@@ -107,47 +88,20 @@ const parameters = {
       console.error("未找到可用标签页");
       return "失败";
     }
-    const initialState: EnterTextState = {
-        errors: [],
-        notFoundCount: 0,
-        done: false,
-      },
-      finalState = await tabs.reduce<Promise<EnterTextState>>(
-        async (promise, tab) => {
-          const state = await promise;
-          if (state.done) {
-            return state;
-          }
-          const tabId = resolveTabId(tab);
-          if (!tabId) {
-            return { ...state, errors: [...state.errors, "标签页缺少 TabID"] };
-          }
-          try {
-            await waitForContentScriptSafe(tabId);
-            const result = resolveResult(
-              await sendMessageToTabSafe(tabId, {
-                type: "enterText",
-                id,
-                content,
-              }),
-            );
-            if (result.ok) {
-              return { ...state, done: true };
-            }
-            if (result.ok === false && result.reason === "not_found") {
-              return { ...state, notFoundCount: state.notFoundCount + 1 };
-            }
-            throw new Error("输入返回结果异常");
-          } catch (error) {
-            const message = error instanceof Error ? error.message : "输入失败";
-            return {
-              ...state,
-              errors: [...state.errors, `TabID ${String(tabId)}: ${message}`],
-            };
-          }
-        },
-        Promise.resolve(initialState),
-      );
+    const finalState = await runTabAction({
+      tabs,
+      waitForContentScript: waitForContentScriptSafe,
+      sendMessage: (tabId) =>
+        sendMessageToTabSafe(tabId, {
+          type: "enterText",
+          id,
+          content,
+        }),
+      invalidResultMessage: "输入返回结果异常",
+      buildErrorMessage: (error) =>
+        error instanceof Error ? error.message : "输入失败",
+      resolveTabId,
+    });
     if (finalState.done) {
       return "成功";
     }

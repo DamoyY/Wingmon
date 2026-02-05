@@ -1,5 +1,6 @@
 import { elements } from "../core/elements.ts";
 import {
+  ensureElement,
   normalizeTheme,
   normalizeThemeColor,
   normalizeThemeVariant,
@@ -30,12 +31,6 @@ const selectValue = (selectEl: SelectElement, value: string) => {
       throw new Error(`${label}必须是字符串`);
     }
     return value;
-  },
-  ensureElement = <T extends HTMLElement>(element: T | null, label: string) => {
-    if (!element) {
-      throw new Error(`${label}未找到`);
-    }
-    return element;
   },
   readInputValue = (input: TextInputElement | null, label: string): string => {
     if (!input) {
@@ -76,34 +71,42 @@ export const updateSettingsFormValues = (
   const keyInput = ensureElement(
       elements.keyInput as TextInputElement,
       "API Key 输入框",
+      "API Key 输入框未找到",
     ),
     baseUrlInput = ensureElement(
       elements.baseUrlInput as TextInputElement,
       "Base URL 输入框",
+      "Base URL 输入框未找到",
     ),
     modelInput = ensureElement(
       elements.modelInput as TextInputElement,
       "模型输入框",
+      "模型输入框未找到",
     ),
     apiTypeSelect = ensureElement(
       elements.apiTypeSelect as SelectElement,
       "API 类型选择框",
+      "API 类型选择框未找到",
     ),
     languageSelect = ensureElement(
       elements.languageSelect as SelectElement,
       "语言选择框",
+      "语言选择框未找到",
     ),
     themeSelect = ensureElement(
       elements.themeSelect as SelectElement,
       "主题选择框",
+      "主题选择框未找到",
     ),
     themeColorInput = ensureElement(
       elements.themeColorInput as TextInputElement,
       "主题色输入框",
+      "主题色输入框未找到",
     ),
     themeVariantSelect = ensureElement(
       elements.themeVariantSelect as SelectElement,
       "Variant 选择框",
+      "Variant 选择框未找到",
     );
   if (Object.hasOwn(values, "apiKey")) {
     keyInput.value = ensureString(values.apiKey, "API Key");
@@ -138,34 +141,42 @@ const fillSettingsForm = (settings: SettingsFormValues) => {
   const keyInput = ensureElement(
       elements.keyInput as TextInputElement,
       "API Key 输入框",
+      "API Key 输入框未找到",
     ),
     baseUrlInput = ensureElement(
       elements.baseUrlInput as TextInputElement,
       "Base URL 输入框",
+      "Base URL 输入框未找到",
     ),
     modelInput = ensureElement(
       elements.modelInput as TextInputElement,
       "模型输入框",
+      "模型输入框未找到",
     ),
     apiTypeSelect = ensureElement(
       elements.apiTypeSelect as SelectElement,
       "API 类型选择框",
+      "API 类型选择框未找到",
     ),
     languageSelect = ensureElement(
       elements.languageSelect as SelectElement,
       "语言选择框",
+      "语言选择框未找到",
     ),
     themeSelect = ensureElement(
       elements.themeSelect as SelectElement,
       "主题选择框",
+      "主题选择框未找到",
     ),
     themeColorInput = ensureElement(
       elements.themeColorInput as TextInputElement,
       "主题色输入框",
+      "主题色输入框未找到",
     ),
     themeVariantSelect = ensureElement(
       elements.themeVariantSelect as SelectElement,
       "Variant 选择框",
+      "Variant 选择框未找到",
     );
   keyInput.value = settings.apiKey || "";
   baseUrlInput.value = settings.baseUrl || "";

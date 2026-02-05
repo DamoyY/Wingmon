@@ -1,5 +1,5 @@
-import { elements } from "../core/elements.ts";
-import { resolveIndicesKey } from "./messageIndices.js";
+import { elements, prefersReducedMotion } from "../core/index.ts";
+import { resolveIndicesKey } from "../../utils/index.ts";
 
 const FADE_OUT_DURATION = 100,
   FADE_OUT_EASING = "cubic-bezier(0.2, 0, 0, 1)",
@@ -16,8 +16,6 @@ const ensureMessagesElement = () => {
     }
     return elements.messagesEl;
   },
-  prefersReducedMotion = () =>
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   resolveMessageRowEdgeOffset = (row, role, container) => {
     const rowRect = row.getBoundingClientRect(),
       containerRect = container.getBoundingClientRect();

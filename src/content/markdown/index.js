@@ -3,7 +3,7 @@ import convertPdfToMarkdown from "./pdfConverter.js";
 
 export { default as replaceButtons } from "./buttons.js";
 export { default as createTurndownService } from "./turndownService.js";
-export { normalizeUrl, isDataUrl, isSvgUrl } from "./url.js";
+export { normalizeUrl, isDataUrl, isSvgUrl } from "./url.ts";
 export { markViewportCenter, sliceContentAroundMarker } from "./viewport.js";
 export { convertPageContentToMarkdown };
 export { convertPdfToMarkdown };

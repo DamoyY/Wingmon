@@ -7,6 +7,7 @@ import {
 import ToolInputError from "../errors.js";
 import { ensureObjectArgs } from "../validation/index.js";
 import { buildPageReadResult, fetchPageMarkdownData } from "../pageRead.ts";
+import { runTabAction } from "./tabAction.ts";
 
 const parameters = {
     type: "object",
@@ -36,52 +37,27 @@ const parameters = {
     if (!tabs.length) {
       throw new Error("未找到可用标签页");
     }
-    const initialState = {
-        errors: [],
-        notFoundCount: 0,
-        done: false,
-        result: "",
+    const finalState = await runTabAction({
+      tabs,
+      waitForContentScript,
+      sendMessage: (tabId) =>
+        sendMessageToTab(tabId, {
+          type: "clickButton",
+          id,
+        }),
+      invalidResultMessage: "按钮点击返回结果异常",
+      buildErrorMessage: (error) => error?.message || "点击失败",
+      onSuccess: async (tabId) => {
+        const { title, url, content } = await fetchPageMarkdownData(tabId),
+          matchedTab = tabs.find((tab) => tab?.id === tabId),
+          internalUrl = url || matchedTab?.url || "";
+        return buildClickButtonOutput({
+          title,
+          content,
+          isInternal: isInternalUrl(internalUrl),
+        });
       },
-      finalState = await tabs.reduce(async (promise, tab) => {
-        const state = await promise;
-        if (state.done) {
-          return state;
-        }
-        if (typeof tab.id !== "number") {
-          return { ...state, errors: [...state.errors, "标签页缺少 TabID"] };
-        }
-        try {
-          await waitForContentScript(tab.id);
-          const result = await sendMessageToTab(tab.id, {
-            type: "clickButton",
-            id,
-          });
-          if (result?.ok) {
-            const { title, url, content } = await fetchPageMarkdownData(tab.id),
-              internalUrl = url || tab.url || "";
-            return {
-              ...state,
-              done: true,
-              result: buildClickButtonOutput({
-                title,
-                content,
-                isInternal: isInternalUrl(internalUrl),
-              }),
-              tabId: tab.id,
-            };
-          }
-          if (result?.ok === false && result.reason === "not_found") {
-            return { ...state, notFoundCount: state.notFoundCount + 1 };
-          }
-          throw new Error("按钮点击返回结果异常");
-        } catch (error) {
-          const message = error?.message || "点击失败";
-          return {
-            ...state,
-            errors: [...state.errors, `TabID ${tab.id}: ${message}`],
-          };
-        }
-      }, Promise.resolve(initialState));
+    });
     if (finalState.done) {
       return { content: finalState.result, pageReadTabId: finalState.tabId };
     }

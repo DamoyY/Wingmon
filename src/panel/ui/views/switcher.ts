@@ -1,14 +1,11 @@
-import { elements } from "../core/elements.ts";
-import setText from "../core/text.ts";
+import { elements, prefersReducedMotion, setText } from "../core/index.ts";
 
 const ANIMATION_DURATION = 320,
   ANIMATION_EASING = "cubic-bezier(0.2, 0, 0, 1)";
 
 let isAnimating = false;
 
-const prefersReducedMotion = (): boolean =>
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  resetViewStyles = (view: HTMLElement): void => {
+const resetViewStyles = (view: HTMLElement): void => {
     const target = view,
       { style } = target;
     style.transform = "";

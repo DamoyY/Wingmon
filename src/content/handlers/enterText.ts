@@ -1,21 +1,9 @@
+import { isEditableElement } from "../dom/editableElements.js";
+
 type EnterTextMessage = {
   id?: unknown;
   content?: unknown;
 };
-
-const EXCLUDED_INPUT_TYPES = new Set([
-  "hidden",
-  "submit",
-  "button",
-  "reset",
-  "image",
-  "file",
-  "checkbox",
-  "radio",
-  "range",
-  "color",
-]);
-const TEXT_INPUT_ROLES = new Set(["textbox", "searchbox", "combobox"]);
 
 const normalizeInputId = (
   message: EnterTextMessage | null | undefined,
@@ -37,39 +25,6 @@ const normalizeInputContent = (
     throw new Error("content 必须是字符串");
   }
   return message.content;
-};
-
-const isEditableElement = (element: Element): boolean => {
-  if (element instanceof HTMLInputElement) {
-    if (element.disabled || element.readOnly) {
-      return false;
-    }
-    return !EXCLUDED_INPUT_TYPES.has(element.type);
-  }
-  if (element instanceof HTMLTextAreaElement) {
-    if (element.disabled || element.readOnly) {
-      return false;
-    }
-    return true;
-  }
-  if (element instanceof HTMLSelectElement) {
-    if (element.disabled) {
-      return false;
-    }
-    return true;
-  }
-  const htmlElement = element as HTMLElement;
-  if (htmlElement.inert) {
-    return false;
-  }
-  if (htmlElement.isContentEditable) {
-    return true;
-  }
-  const role = htmlElement.getAttribute("role");
-  if (role && TEXT_INPUT_ROLES.has(role)) {
-    return true;
-  }
-  return false;
 };
 
 const findSingleInput = (normalizedId: string): Element | null => {

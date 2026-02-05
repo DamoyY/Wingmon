@@ -1,3 +1,4 @@
+import { isPdfUrl } from "../../shared/index.ts";
 import { t } from "../utils/index.ts";
 import {
   getToolCallArguments,
@@ -70,15 +71,6 @@ const resolvePageNumberKey = (pageNumber?: number): number => {
     return 1;
   },
   urlLabelPattern = /^\*\*URL[:：]\*\*$/i,
-  isPdfUrl = (url: string): boolean => {
-    try {
-      const parsed = new URL(url);
-      return parsed.pathname.toLowerCase().endsWith(".pdf");
-    } catch (error) {
-      console.error("PDF 地址解析失败", error);
-      return false;
-    }
-  },
   extractUrlFromGetPageOutput = (content: string): string | null => {
     const lines = content.split(/\r?\n/);
     for (let i = 0; i < lines.length - 1; i += 1) {

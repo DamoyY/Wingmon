@@ -1,3 +1,4 @@
+import { isPdfUrl } from "../../shared/index.ts";
 import { assignLlmIds, insertViewportMarker } from "../dom/index.js";
 import convertPageContentToMarkdown from "../markdown/converter.js";
 import convertPdfToMarkdown from "../markdown/pdfConverter.js";
@@ -17,17 +18,6 @@ type PageContentMessage = {
 
 const isPdfContentType = (): boolean => {
   return document.contentType.toLowerCase().includes("pdf");
-};
-
-const isPdfUrl = (url: string): boolean => {
-  try {
-    const parsed = new URL(url);
-    return parsed.pathname.toLowerCase().endsWith(".pdf");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(`PDF 地址解析失败：${message}`);
-    return false;
-  }
 };
 
 const hasPdfEmbed = (): boolean => {

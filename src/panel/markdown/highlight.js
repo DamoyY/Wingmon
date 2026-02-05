@@ -1,12 +1,7 @@
 import hljs from "highlight.js";
+import { ensureElement } from "../utils/index.ts";
 
-const ensureElement = (element, label) => {
-    if (!(element instanceof Element)) {
-      throw new Error(`${label}无效`);
-    }
-    return element;
-  },
-  highlightBlock = (block) => {
+const highlightBlock = (block) => {
     const target = ensureElement(block, "代码块");
     hljs.highlightElement(target);
   },

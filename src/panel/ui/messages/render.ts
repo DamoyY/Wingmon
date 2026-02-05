@@ -1,9 +1,10 @@
 import { elements } from "../core/elements.ts";
 import renderMessageContent from "./contentRenderer.js";
 import { animateMessageRowEnter } from "./animations.js";
-import { resolveIndicesKey } from "./messageIndices.js";
+import { resolveIndicesKey } from "../../utils/index.ts";
 import { applyMessageHeadingTypography } from "../theme/typography.ts";
-import { combineMessageContents, t } from "../../utils/index.ts";
+import { t } from "../../utils/index.ts";
+import type { DisplayMessage } from "../../app/features/messages/displayMessages.ts";
 
 type RenderedContent = { html: string; text: string };
 
@@ -17,26 +18,6 @@ const animateMessageRowEnterSafe = animateMessageRowEnter as (
 const resolveIndicesKeySafe = resolveIndicesKey as (
   indices: number[],
 ) => string;
-const combineMessageContentsSafe = combineMessageContents as (
-  segments: string[],
-) => string;
-
-type MessageEntry = {
-  role?: unknown;
-  content?: unknown;
-  hidden?: boolean;
-  pending?: boolean;
-  status?: unknown;
-};
-
-type MessageList = Array<MessageEntry | null | undefined>;
-
-type DisplayMessage = {
-  role: string;
-  content: string;
-  indices: number[];
-  status?: string;
-};
 
 type MessageActionHandler = (indices: number[]) => Promise<void> | void;
 
@@ -167,35 +148,6 @@ const ensureNewChatButton = (): HTMLElement => {
     body.setAttribute("data-rendered-text", text);
     return body;
   },
-  resolveMessageRole = (role: unknown): string => {
-    if (role === null || role === undefined) {
-      return "";
-    }
-    if (typeof role !== "string") {
-      throw new Error("消息角色格式无效");
-    }
-    return role;
-  },
-  resolveMessageContent = (content: unknown, role: string): string => {
-    if (content === null || content === undefined) {
-      return "";
-    }
-    if (typeof content !== "string") {
-      const label = role ? `：${role}` : "";
-      throw new Error(`消息内容格式无效${label}`);
-    }
-    return content;
-  },
-  resolveMessageStatus = (status: unknown, role: string): string => {
-    if (status === null || status === undefined) {
-      return "";
-    }
-    if (typeof status !== "string") {
-      const label = role ? `：${role}` : "";
-      throw new Error(`状态内容格式无效${label}`);
-    }
-    return status;
-  },
   createMessageStatusLine = (statusText: string): HTMLDivElement | null => {
     if (!statusText) {
       return null;
@@ -275,84 +227,6 @@ const ensureNewChatButton = (): HTMLElement => {
       index += 1;
     }
     return index;
-  },
-  buildDisplayMessages = (messages: MessageList): DisplayMessage[] => {
-    if (!Array.isArray(messages)) {
-      throw new Error("messages 必须是数组");
-    }
-    const entries: DisplayMessage[] = [];
-    let assistantGroup: {
-        contents: string[];
-        indices: number[];
-        hasPending: boolean;
-        status: string;
-      } | null = null,
-      hasToolBridge = false;
-    const flushAssistantGroup = () => {
-        if (!assistantGroup) {
-          return;
-        }
-        const content = combineMessageContentsSafe(assistantGroup.contents);
-        if (content || assistantGroup.hasPending) {
-          entries.push({
-            role: "assistant",
-            content,
-            indices: assistantGroup.indices,
-            status: assistantGroup.status,
-          });
-        }
-        assistantGroup = null;
-        hasToolBridge = false;
-      },
-      startAssistantGroup = (
-        content: string,
-        index: number,
-        pending: boolean,
-        status: string,
-      ) => {
-        assistantGroup = {
-          contents: [content],
-          indices: [index],
-          hasPending: pending,
-          status,
-        };
-      };
-    messages.forEach((msg, index) => {
-      if (!msg || typeof msg !== "object") {
-        throw new Error("消息格式无效");
-      }
-      if (msg.hidden) {
-        if (msg.role === "tool" && assistantGroup) {
-          hasToolBridge = true;
-        }
-        return;
-      }
-      const role = resolveMessageRole(msg.role);
-      const content = resolveMessageContent(msg.content, role);
-      if (role === "assistant") {
-        const isPending = msg.pending === true,
-          status = resolveMessageStatus(msg.status, role);
-        if (!assistantGroup) {
-          startAssistantGroup(content, index, isPending, status);
-          return;
-        }
-        if (hasToolBridge) {
-          assistantGroup.contents.push(content);
-          assistantGroup.indices.push(index);
-          assistantGroup.hasPending = assistantGroup.hasPending || isPending;
-          assistantGroup.status = status;
-          hasToolBridge = false;
-          return;
-        }
-        flushAssistantGroup();
-        startAssistantGroup(content, index, isPending, status);
-        return;
-      }
-      flushAssistantGroup();
-      entries.push({ role, content, indices: [index] });
-    });
-    flushAssistantGroup();
-    return entries;
   };
 
 const resolvePendingAnimateKey = (now: number): string | null => {
@@ -365,7 +239,7 @@ const resolvePendingAnimateKey = (now: number): string | null => {
 };
 
 export const renderMessages = (
-  messages: MessageList,
+  displayMessages: DisplayMessage[],
   handlers: MessageActionHandlers | null | undefined,
   options: RenderOptions = {},
 ): void => {
@@ -378,8 +252,7 @@ export const renderMessages = (
   }
   let hasVisibleMessages = false;
   const now = Date.now();
-  const displayMessages = buildDisplayMessages(messages),
-    animateKey =
+  const animateKey =
       options.animateIndices !== undefined
         ? resolveIndicesKeySafe(options.animateIndices)
         : null,
@@ -430,14 +303,14 @@ export const renderMessages = (
   setEmptyStateVisible(!hasVisibleMessages);
 };
 
-export const updateLastAssistantMessage = (messages: MessageList): boolean => {
+export const updateLastAssistantMessage = (
+  message: DisplayMessage | null | undefined,
+): boolean => {
   const { messagesEl } = elements as Partial<typeof elements>;
   if (!messagesEl) {
     throw new Error("消息容器未找到");
   }
-  const displayMessages = buildDisplayMessages(messages),
-    lastEntry = displayMessages.at(-1);
-  if (!lastEntry || lastEntry.role !== "assistant") {
+  if (!message || message.role !== "assistant") {
     return false;
   }
   const lastEl = messagesEl.lastElementChild;
@@ -450,7 +323,7 @@ export const updateLastAssistantMessage = (messages: MessageList): boolean => {
   }
   const previousRenderedText =
       contentEl.getAttribute("data-rendered-text") ?? "",
-    { html, text } = renderMessageContentSafe(lastEntry.content, {
+    { html, text } = renderMessageContentSafe(message.content, {
       decorateContainer: applyMessageHeadingTypography,
     });
   contentEl.innerHTML = html;
@@ -466,7 +339,7 @@ export const updateLastAssistantMessage = (messages: MessageList): boolean => {
   if (!messageEl) {
     return false;
   }
-  updateMessageStatusLine(messageEl, lastEntry.status || "");
+  updateMessageStatusLine(messageEl, message.status || "");
   messagesEl.scrollTop = messagesEl.scrollHeight;
   return true;
 };

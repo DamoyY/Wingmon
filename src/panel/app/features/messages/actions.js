@@ -3,7 +3,11 @@ import {
   deleteConversation,
   saveConversation,
 } from "../../../services/index.js";
-import { combineMessageContents, t } from "../../../utils/index.ts";
+import {
+  combineMessageContents,
+  normalizeIndices,
+  t,
+} from "../../../utils/index.ts";
 
 const persistConversation = async () => {
     if (!state.messages.length) {
@@ -16,19 +20,6 @@ const persistConversation = async () => {
       state.messages,
       state.updatedAt,
     );
-  },
-  normalizeIndices = (indices) => {
-    if (Number.isInteger(indices)) {
-      return [indices];
-    }
-    if (!Array.isArray(indices) || indices.length === 0) {
-      throw new Error("消息索引无效");
-    }
-    const normalized = indices.filter((index) => Number.isInteger(index));
-    if (normalized.length !== indices.length) {
-      throw new Error("消息索引无效");
-    }
-    return normalized;
   },
   resolveCombinedContent = (indices) => {
     const contents = indices.map((index) => {

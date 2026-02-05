@@ -3,6 +3,7 @@ export {
   handleCancelSettings,
   handleOpenSettings,
   handleSettingsFieldChange,
+  handleFollowModeChange,
   handleThemeChange,
   handleThemeColorChange,
   handleThemeVariantChange,

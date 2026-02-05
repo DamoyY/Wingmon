@@ -7,7 +7,7 @@ export {
   setSendUiState,
   syncComposerAfterSend,
 } from "./sendUi.ts";
-export { default as ensureSettingsReady } from "./settingsValidation.js";
+export { ensureSettingsReady } from "../settings/model.ts";
 export {
   refreshSendWithPageButton,
   setSendWithPagePromptReady,

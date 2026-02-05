@@ -1,21 +1,9 @@
 import { resolveButtonLabel } from "../markdown/buttons.js";
+import { isEditableElement } from "./editableElements.js";
 import { resolveInputLabel } from "../markdown/inputs.js";
 import { buildIdMap } from "../markdown/labels.js";
 
 const HASH_LENGTH = 6;
-const EXCLUDED_INPUT_TYPES = new Set([
-  "hidden",
-  "submit",
-  "button",
-  "reset",
-  "image",
-  "file",
-  "checkbox",
-  "radio",
-  "range",
-  "color",
-]);
-const TEXT_INPUT_ROLES = new Set(["textbox", "searchbox", "combobox"]);
 
 const getDomPath = (element: Element | null, root: Element | null): string => {
   if (!element) {
@@ -58,39 +46,6 @@ const hashPath = (path: string): string => {
   }
   const encoded = Math.floor(hash).toString(36).padStart(8, "0");
   return encoded.slice(-HASH_LENGTH);
-};
-
-const isEditableElement = (element: Element): boolean => {
-  if (element instanceof HTMLInputElement) {
-    if (element.disabled || element.readOnly) {
-      return false;
-    }
-    return !EXCLUDED_INPUT_TYPES.has(element.type);
-  }
-  if (element instanceof HTMLTextAreaElement) {
-    if (element.disabled || element.readOnly) {
-      return false;
-    }
-    return true;
-  }
-  if (element instanceof HTMLSelectElement) {
-    if (element.disabled) {
-      return false;
-    }
-    return true;
-  }
-  const htmlElement = element as HTMLElement;
-  if (htmlElement.inert) {
-    return false;
-  }
-  if (htmlElement.isContentEditable) {
-    return true;
-  }
-  const role = htmlElement.getAttribute("role");
-  if (role && TEXT_INPUT_ROLES.has(role)) {
-    return true;
-  }
-  return false;
 };
 
 const isVisibleAndInteractive = (element: Element, win: Window): boolean => {

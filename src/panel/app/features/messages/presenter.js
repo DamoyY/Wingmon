@@ -10,15 +10,20 @@ import {
   updateLastAssistantMessage,
 } from "../../../ui/index.ts";
 import createMessageActionHandlers from "./actions.js";
+import { buildDisplayMessages } from "./displayMessages.ts";
 
 let actionHandlers = null,
   unsubscribeMessages = null;
 
-const refreshMessages = () => {
+const buildMessagesForView = () => buildDisplayMessages(state.messages),
+  refreshMessages = () => {
     if (!actionHandlers) {
       throw new Error("消息操作处理器尚未初始化");
     }
-    renderMessages(state.messages, actionHandlers);
+    renderMessages(buildMessagesForView(), actionHandlers);
+  },
+  renderMessagesFromState = (options) => {
+    renderMessages(buildMessagesForView(), ensureActionHandlers(), options);
   },
   ensureActionHandlers = () => {
     if (!actionHandlers) {
@@ -82,7 +87,7 @@ const refreshMessages = () => {
           change.message?.role === "user" ||
           (change.message?.role === "assistant" &&
             previousRole !== "assistant");
-      renderMessages(state.messages, ensureActionHandlers(), {
+      renderMessagesFromState({
         animateIndices: shouldAnimate ? [change.index] : undefined,
       });
       return;
@@ -95,12 +100,16 @@ const refreshMessages = () => {
       change.message?.role === "assistant" &&
       isInLastAssistantGroup(change.index)
     ) {
-      const updated = updateLastAssistantMessage(state.messages);
+      const displayMessages = buildMessagesForView();
+      const lastEntry = displayMessages.at(-1);
+      const updated = updateLastAssistantMessage(lastEntry);
       if (updated) {
         return;
       }
+      renderMessages(displayMessages, ensureActionHandlers());
+      return;
     }
-    renderMessages(state.messages, ensureActionHandlers());
+    renderMessagesFromState();
   },
   ensureMessagesSubscription = () => {
     if (unsubscribeMessages) {
@@ -111,7 +120,7 @@ const refreshMessages = () => {
 
 export const renderMessagesView = () => {
   ensureMessagesSubscription();
-  renderMessages(state.messages, ensureActionHandlers());
+  renderMessagesFromState();
 };
 
 export const appendAssistantDelta = (delta) => {

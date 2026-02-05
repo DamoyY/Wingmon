@@ -13,6 +13,7 @@ import {
   normalizeThemeVariant,
   DEFAULT_THEME_VARIANT,
 } from "../../utils/index.ts";
+import { prefersReducedMotion } from "../core/index.ts";
 
 type ThemeMode = "light" | "dark" | "auto";
 type ApplyCallback = () => void;
@@ -55,17 +56,11 @@ const THEME_TRANSITION_CLASS = "theme-transition";
 const THEME_TRANSITION_DURATION = 240;
 let themeTransitionTimer: ReturnType<typeof window.setTimeout> | null = null;
 
-const shouldReduceMotion = (): boolean => {
-    if (typeof window.matchMedia !== "function") {
-      return false;
-    }
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  },
-  runThemeTransition = (apply: ApplyCallback): void => {
+const runThemeTransition = (apply: ApplyCallback): void => {
     if (typeof apply !== "function") {
       throw new Error("主题应用器必须是函数");
     }
-    if (!hasAppliedTheme || shouldReduceMotion()) {
+    if (!hasAppliedTheme || prefersReducedMotion()) {
       apply();
       hasAppliedTheme = true;
       return;
