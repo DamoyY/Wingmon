@@ -44,10 +44,18 @@
 }
 
 .message-row {
+  --message-content-single-line-height: calc(
+    var(--md-sys-typescale-body-medium-size, 14px) * 1.6
+  );
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: 4px;
   max-width: 85%;
+  min-height: calc(
+    var(--message-content-single-line-height) + 20px + 4px +
+      var(--md-icon-button-container-height, 40px)
+  );
 }
 
 .message-row.user {
@@ -67,10 +75,22 @@
 
 .message-content {
   line-height: 1.6;
+  min-height: var(--message-content-single-line-height);
+}
+
+.message-content:empty {
+  min-height: 0;
+}
+
+.message-content:not(:last-child) {
+  margin-bottom: 10px;
+}
+
+.message-content:empty:not(:last-child) {
+  margin-bottom: 0;
 }
 
 .message-status.status {
-  margin-top: 10px;
   text-align: right;
   color: var(--md-sys-color-on-tertiary-fixed);
 }
