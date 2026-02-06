@@ -100,7 +100,8 @@ const resolveHtmlFallbackScrollMetrics = (
   if (!body) {
     throw new Error("页面没有可用的 body");
   }
-  const ratio = (pageNumber - 0.5) / resolvedTotalPages,
+  const ratio =
+      resolvedTotalPages <= 1 ? 0 : (pageNumber - 1) / (resolvedTotalPages - 1),
     documentHeight = document.documentElement.scrollHeight,
     bodyHeight = body.scrollHeight,
     maxScrollTop = Math.max(documentHeight, bodyHeight) - window.innerHeight,
@@ -241,20 +242,8 @@ const handleSetPageHash = (
     const pageNumber = resolveMessagePageNumber(message),
       chunkAnchorId = resolveMessageChunkAnchorId(message);
     if (isHtmlDocument()) {
-      const providedTotalPages = resolveMessageTotalPages(message);
-      if (pageNumber === 1) {
-        scrollWindowTo(0);
-        sendResponse({
-          ok: true,
-          shouldReload: false,
-          pageNumber,
-          ...(providedTotalPages === null
-            ? {}
-            : { totalPages: providedTotalPages }),
-        });
-        return;
-      }
-      const totalPages = providedTotalPages ?? resolveHtmlTotalPages();
+      const providedTotalPages = resolveMessageTotalPages(message),
+        totalPages = providedTotalPages ?? resolveHtmlTotalPages();
       if (!chunkAnchorId) {
         const fallbackMetrics = scrollHtmlByPage(pageNumber, totalPages);
         warnFallbackToPageRatioScroll({
