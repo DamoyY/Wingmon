@@ -1,6 +1,6 @@
 import { assignLlmIds, insertViewportMarker } from "../dom/index.js";
 import { chunkAnchorAttribute } from "../dom/chunkAnchors.js";
-import convertPageContentToMarkdown from "../markdown/converter.js";
+import convertPageContentToMarkdown from "../extractors/converter.js";
 import type {
   SetPageHashRequest,
   SetPageHashResponse,

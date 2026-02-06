@@ -1,7 +1,7 @@
-import { resolveButtonLabel } from "../markdown/buttons.js";
+import { resolveButtonLabel } from "../extractors/buttons.js";
 import { isEditableElement } from "./editableElements.js";
-import { resolveInputLabel } from "../markdown/inputs.js";
-import { buildIdMap } from "../markdown/labels.js";
+import { resolveInputLabel } from "../extractors/inputs.js";
+import { buildIdMap } from "../extractors/labels.js";
 import {
   buildDomPath,
   hashDomPath,

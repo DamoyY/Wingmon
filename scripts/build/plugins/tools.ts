@@ -17,8 +17,8 @@ const toModuleName = (file: string): string => {
 };
 
 export const getToolIndexPlugin = async (): Promise<Plugin> => {
-  const toolsDir = path.join(rootDir, "src/panel/tools/modules");
-  const toolsIndexPath = path.join(toolsDir, "index.js");
+  const toolsDir = path.join(rootDir, "src/sidepanel/core/agent/modules");
+  const toolsIndexPath = path.join(toolsDir, "index.ts");
   const toolExtensions = new Set([".js", ".ts", ".tsx"]);
   const excludedToolBases = new Set([
     "index",
@@ -57,7 +57,7 @@ export const getToolIndexPlugin = async (): Promise<Plugin> => {
   return {
     name: "tool-index",
     setup(buildContext: PluginBuild) {
-      buildContext.onResolve({ filter: /index\.js$/ }, (args) => {
+      buildContext.onResolve({ filter: /index\.(js|ts)$/ }, (args) => {
         const resolvedPath = path.resolve(args.resolveDir, args.path);
         if (resolvedPath === toolsIndexPath) {
           return { path: resolvedPath, namespace: toolIndexNamespace };

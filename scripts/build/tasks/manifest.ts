@@ -23,11 +23,11 @@ const normalizeManifestIcons = (icons: GuardRecord): GuardRecord =>
   );
 
 export const buildManifest = async (): Promise<void> => {
-  const manifestPath = path.join(rootDir, "manifest.json");
+  const manifestPath = path.join(rootDir, "src/manifest.json");
   const manifestContents = await readFile(manifestPath, "utf8");
   const manifestData = JSON.parse(manifestContents) as GuardValue;
   if (!isRecord(manifestData)) {
-    throw new Error("manifest.json 必须是对象");
+    throw new Error("src/manifest.json 必须是对象");
   }
   const manifest: Manifest = manifestData;
   const hasBackground = Object.hasOwn(manifest, "background");

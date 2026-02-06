@@ -15,10 +15,10 @@ export const buildBundles = async (): Promise<void> => {
   const loader = { ".md": "text", ".wasm": "binary" };
 
   const panelEntryPoint = await resolveEntryPath(
-    path.join(rootDir, "src/panel/index"),
+    path.join(rootDir, "src/sidepanel/index"),
   );
   const showHtmlEntryPoint = await resolveEntryPath(
-    path.join(rootDir, "src/panel/pages/showHtmlPage"),
+    path.join(rootDir, "src/sidepanel/pages/show-html/index"),
   );
   const contentEntryPoint = await resolveEntryPath(
     path.join(rootDir, "src/content/index"),
@@ -27,7 +27,7 @@ export const buildBundles = async (): Promise<void> => {
     path.join(rootDir, "src/background/index"),
   );
   const sandboxEntryPoint = await resolveEntryPath(
-    path.join(rootDir, "public/sandbox/index"),
+    path.join(rootDir, "src/sandbox/index"),
   );
 
   const panelBundlePath = path.join(outputPublicDir, "panel.bundle.js");

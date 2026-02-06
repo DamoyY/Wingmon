@@ -8,8 +8,8 @@ import {
   assignLlmIds,
   insertViewportMarker,
 } from "../dom/index.js";
-import convertPageContentToMarkdown from "../markdown/converter.js";
-import convertPdfToMarkdown from "../markdown/pdfConverter.js";
+import convertPageContentToMarkdown from "../extractors/converter.js";
+import convertPdfToMarkdown from "../extractors/pdfConverter.js";
 import { resolveAliasedPageNumberInput } from "../shared/index.ts";
 
 type SendResponse = (response: GetPageContentResponse) => void;

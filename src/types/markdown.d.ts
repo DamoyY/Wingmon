@@ -39,3 +39,15 @@ declare module "turndown-plugin-gfm" {
   export const tables: TurndownPlugin;
   export const gfm: TurndownPlugin;
 }
+
+declare module "md4w" {
+  type MdToHtmlOptions = {
+    parseFlags?: string[];
+  };
+
+  export const init: (wasmBuffer: BufferSource) => Promise<void>;
+  export const mdToHtml: (
+    markdown: string,
+    options?: MdToHtmlOptions,
+  ) => string;
+}
