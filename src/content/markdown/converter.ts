@@ -2,6 +2,8 @@ import replaceButtons from "./buttons.js";
 import replaceInputs from "./inputs.js";
 import { cloneBodyWithShadowDom, resolveRenderedText } from "./shadowDom.ts";
 import createTurndownService from "./turndownService.js";
+import { Tiktoken as JsTiktoken } from "js-tiktoken/lite";
+import o200kBase from "js-tiktoken/ranks/o200k_base";
 import * as tiktoken from "tiktoken/init";
 import tiktokenWasmBytes from "tiktoken/tiktoken_bg.wasm";
 
@@ -31,6 +33,9 @@ type TiktokenInitModule = typeof tiktoken & {
 };
 
 type CreateTurndownService = () => TurndownService;
+type MarkdownEncoding = {
+  encode: (text: string) => ArrayLike<number>;
+};
 type ChunkResult = {
   chunks: string[];
   boundaries: number[];
@@ -46,7 +51,7 @@ const createTurndownServiceTyped =
 const turndown = createTurndownServiceTyped();
 const tiktokenInit = tiktoken as TiktokenInitModule;
 
-const createMarkdownEncoding = (): tiktoken.Tiktoken => {
+const createMarkdownEncoding = (): MarkdownEncoding => {
   try {
     const wasmModule = new WebAssembly.Module(tiktokenWasmBytes),
       wasmInstance = new WebAssembly.Instance(wasmModule, {
@@ -54,9 +59,14 @@ const createMarkdownEncoding = (): tiktoken.Tiktoken => {
       });
     tiktokenInit.__wbg_set_wasm(wasmInstance.exports);
     return tiktoken.get_encoding("o200k_base");
-  } catch (error) {
-    console.error("tiktoken 初始化失败", error);
-    throw error;
+  } catch (wasmError) {
+    console.warn("tiktoken WASM 初始化失败，回退至 js-tiktoken", wasmError);
+    try {
+      return new JsTiktoken(o200kBase);
+    } catch (jsError) {
+      console.error("js-tiktoken 初始化失败", jsError);
+      throw jsError;
+    }
   }
 };
 
