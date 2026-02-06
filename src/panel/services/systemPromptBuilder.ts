@@ -1,10 +1,6 @@
-import { setStateValue, state } from "../state/index.js";
+import { setStateValue, state } from "../state/index.ts";
 import { systemPromptContent } from "./systemPromptContent.ts";
-import { getActiveTab } from "./tabs.js";
-
-type SystemPromptState = {
-  systemPrompt: string | null;
-};
+import { getActiveTab } from "./tabs.ts";
 
 type ChromeI18n = {
   getUILanguage: () => string;
@@ -14,24 +10,14 @@ type ChromeApi = {
   i18n: ChromeI18n;
 };
 
-type ActiveTab = {
-  id?: number;
-};
-
-type SetStateValue = (key: "systemPrompt", value: string) => void;
-type GetActiveTab = () => Promise<ActiveTab | null>;
-
-const chromeApi = chrome as ChromeApi;
-const systemPromptState = state as SystemPromptState;
-const setSystemPromptValue = setStateValue as SetStateValue;
-const getActiveTabSafe = getActiveTab as GetActiveTab;
+declare const chrome: ChromeApi;
 
 const loadSystemPrompt = (): string => {
-    if (systemPromptState.systemPrompt !== null) {
-      return systemPromptState.systemPrompt;
+    if (state.systemPrompt !== null) {
+      return state.systemPrompt;
     }
     const content = systemPromptContent || "";
-    setSystemPromptValue("systemPrompt", content);
+    setStateValue("systemPrompt", content);
     return content;
   },
   formatTime = (date: Date): string => {
@@ -41,7 +27,7 @@ const loadSystemPrompt = (): string => {
     if (Number.isNaN(date.getTime())) {
       throw new Error("时间格式化失败：日期无效");
     }
-    return date.toLocaleString(chromeApi.i18n.getUILanguage(), {
+    return date.toLocaleString(chrome.i18n.getUILanguage(), {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -58,8 +44,8 @@ const loadSystemPrompt = (): string => {
     return ua;
   },
   resolveFocusTabId = async (): Promise<string> => {
-    const activeTab = await getActiveTabSafe();
-    if (!activeTab || typeof activeTab.id !== "number") {
+    const activeTab = await getActiveTab();
+    if (typeof activeTab.id !== "number") {
       throw new Error("无法获取当前标签页 TabID");
     }
     return String(activeTab.id);

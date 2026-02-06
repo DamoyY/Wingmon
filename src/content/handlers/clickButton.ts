@@ -1,3 +1,5 @@
+import { normalizeLlmId } from "../shared/index.ts";
+
 type ClickButtonMessage = {
   id?: string | null;
 };
@@ -8,18 +10,7 @@ type ClickButtonResponse = {
 };
 
 type SendResponse = (response: ClickButtonResponse) => void;
-
-const normalizeButtonId = (message: ClickButtonMessage | null): string => {
-    const id = typeof message?.id === "string" ? message.id.trim() : "";
-    if (!id) {
-      throw new Error("id 必须是非空字符串");
-    }
-    if (!/^[0-9a-z]+$/i.test(id)) {
-      throw new Error("id 仅支持字母数字");
-    }
-    return id.toLowerCase();
-  },
-  findSingleButton = (normalizedId: string): HTMLElement | null => {
+const findSingleButton = (normalizedId: string): HTMLElement | null => {
     const matches = document.querySelectorAll<HTMLElement>(
       `[data-llm-id="${normalizedId}"]`,
     );
@@ -35,7 +26,7 @@ const normalizeButtonId = (message: ClickButtonMessage | null): string => {
     message: ClickButtonMessage,
     sendResponse: SendResponse,
   ): void => {
-    const normalizedId = normalizeButtonId(message),
+    const normalizedId = normalizeLlmId(message.id ?? null),
       target = findSingleButton(normalizedId);
     if (!target) {
       sendResponse({ error: `未找到 id 为 ${normalizedId} 的按钮` });

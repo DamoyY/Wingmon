@@ -2,7 +2,7 @@ import {
   getSettings,
   initTabListeners,
   registerSandboxWindowProvider,
-} from "../../services/index.js";
+} from "../../services/index.ts";
 import { initMarkdownRenderer } from "../../markdown/index.js";
 import {
   applyTheme,

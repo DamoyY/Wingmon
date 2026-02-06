@@ -19,6 +19,7 @@ import {
   isSettingsComplete,
   isSettingsDirty,
   syncSettingsSnapshotState,
+  type SettingsInput,
   validateRequiredSettings,
 } from "./model.ts";
 
@@ -29,15 +30,20 @@ const updateSaveButtonVisibility = () => {
   );
 };
 
-const getErrorMessage = (error: unknown): string => {
+type ErrorLike = Error | string | null | undefined;
+
+const getErrorMessage = (error: ErrorLike): string => {
   console.error("设置操作失败", error);
   if (error instanceof Error) {
     return error.message;
   }
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
   return "操作失败，请稍后重试";
 };
 
-export const syncSettingsSnapshot = (settings: Record<string, unknown>) => {
+export const syncSettingsSnapshot = (settings: SettingsInput) => {
   syncSettingsSnapshotState(settings);
   updateSaveButtonVisibility();
 };
@@ -67,7 +73,9 @@ export const handleSaveSettings = async () => {
   try {
     themePayload = buildThemePayload(formValues);
   } catch (error) {
-    setSettingsStatus(getErrorMessage(error));
+    const resolvedError =
+      error instanceof Error || typeof error === "string" ? error : undefined;
+    setSettingsStatus(getErrorMessage(resolvedError));
     return;
   }
   const next = await updateSettings({
@@ -124,7 +132,9 @@ const handleThemeUpdate = async () => {
     });
     syncSettingsSnapshot(next);
   } catch (error) {
-    setSettingsStatus(getErrorMessage(error));
+    const resolvedError =
+      error instanceof Error || typeof error === "string" ? error : undefined;
+    setSettingsStatus(getErrorMessage(resolvedError));
     return;
   }
 };

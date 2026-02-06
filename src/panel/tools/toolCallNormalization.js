@@ -1,4 +1,4 @@
-import { addMessage, state, updateMessage } from "../state/index.js";
+import { addMessage, state, updateMessage } from "../state/index.ts";
 import { createRandomId } from "../utils/index.ts";
 
 const normalizeToolCall = ({

@@ -1,6 +1,6 @@
-import { createTab, focusTab, saveHtmlPreview } from "../../services/index.js";
+import { createTab, focusTab, saveHtmlPreview } from "../../services/index.ts";
 import { t } from "../../utils/index.ts";
-import ToolInputError from "../errors.js";
+import ToolInputError from "../errors.ts";
 import { ensureObjectArgs } from "../validation/index.js";
 
 const parameters = {

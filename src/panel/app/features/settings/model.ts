@@ -18,6 +18,8 @@ export type SettingsInput = {
   language?: string;
 };
 
+type SettingsInputOrNull = SettingsInput | null | undefined;
+
 type NormalizedSettings = {
   apiKey: string;
   baseUrl: string;
@@ -48,15 +50,9 @@ type RequiredSettingsPayload = {
 
 let settingsSnapshot: NormalizedSettings | null = null;
 
-const isSettingsInput = (value: unknown): value is SettingsInput =>
-    Boolean(value && typeof value === "object" && !Array.isArray(value)),
-  ensureSettingsInput = (settings: unknown): SettingsInput => {
-    if (!isSettingsInput(settings)) {
-      throw new Error("设置信息无效");
-    }
-    return settings;
-  },
-  trimString = (value: unknown): string =>
+const ensureSettingsInput = (settings: SettingsInputOrNull): SettingsInput =>
+    settings ?? {},
+  trimString = (value: string | null | undefined): string =>
     typeof value === "string" ? value.trim() : "",
   normalizeSettings = (settings: SettingsInput): NormalizedSettings => ({
     apiKey: trimString(settings.apiKey),
@@ -93,7 +89,7 @@ export const isSettingsComplete = (formValues: SettingsInput): boolean => {
   return Boolean(current.apiKey && current.baseUrl && current.model);
 };
 
-export const ensureSettingsReady = (settings: unknown): boolean => {
+export const ensureSettingsReady = (settings: SettingsInputOrNull): boolean => {
   const input = ensureSettingsInput(settings);
   return isSettingsComplete(input);
 };

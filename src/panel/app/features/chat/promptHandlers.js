@@ -1,5 +1,5 @@
-import { updateComposerButtonsState } from "./composerView.js";
-import { setPromptContent } from "./composerState.js";
+import { updateComposerButtonsState } from "./composerView.ts";
+import { setPromptContent } from "./composerState.ts";
 
 const resolvePromptValue = (event) => {
   const target = event?.target;

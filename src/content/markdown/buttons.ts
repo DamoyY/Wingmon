@@ -1,54 +1,30 @@
-import { buildIdMap, getLabelFromIds, normalizeText } from "./labels.js";
+import { buildIdMap, normalizeText, resolveElementLabel } from "./labels.js";
 
 const resolveButtonLabel = (
   idMap: Map<string, Element>,
   button: Element,
-): string => {
-  const directText =
-      button instanceof HTMLInputElement ? button.value : button.textContent,
-    normalizedText = normalizeText(directText);
-  if (normalizedText) {
-    return normalizedText;
-  }
-  const ariaLabel = normalizeText(button.getAttribute("aria-label"));
-  if (ariaLabel) {
-    return ariaLabel;
-  }
-  const ariaLabelledby = normalizeText(button.getAttribute("aria-labelledby"));
-  if (ariaLabelledby) {
-    const ids = ariaLabelledby.split(/\s+/).filter(Boolean);
-    if (!ids.length) {
-      throw new Error("aria-labelledby 为空，无法解析按钮名称");
-    }
-    const labeledText = getLabelFromIds(idMap, ids);
-    if (labeledText) {
-      return labeledText;
-    }
-  }
-  const titleText = normalizeText(button.getAttribute("title"));
-  if (titleText) {
-    return titleText;
-  }
-  const imgAlt = normalizeText(
-    button.querySelector("img")?.getAttribute("alt"),
+): string =>
+  resolveElementLabel(
+    idMap,
+    button,
+    [
+      () => {
+        const directText =
+          button instanceof HTMLInputElement
+            ? button.value
+            : button.textContent;
+        return normalizeText(directText);
+      },
+    ],
+    [
+      () => normalizeText(button.getAttribute("title")),
+      () => normalizeText(button.querySelector("img")?.getAttribute("alt")),
+      () => normalizeText(button.querySelector("svg title")?.textContent),
+      () =>
+        normalizeText(button.querySelector("svg")?.getAttribute("aria-label")),
+    ],
+    "aria-labelledby 为空，无法解析按钮名称",
   );
-  if (imgAlt) {
-    return imgAlt;
-  }
-  const svgTitle = normalizeText(
-    button.querySelector("svg title")?.textContent,
-  );
-  if (svgTitle) {
-    return svgTitle;
-  }
-  const svgLabel = normalizeText(
-    button.querySelector("svg")?.getAttribute("aria-label"),
-  );
-  if (svgLabel) {
-    return svgLabel;
-  }
-  return "";
-};
 
 const applyReplacementToButton = (
   button: Element,

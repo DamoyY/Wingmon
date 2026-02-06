@@ -1,5 +1,5 @@
 import { t } from "../../utils/index.ts";
-import { getAllTabs } from "../../services/index.js";
+import { getAllTabs } from "../../services/index.ts";
 import { ensureObjectArgs } from "../validation/index.js";
 
 const parameters = {

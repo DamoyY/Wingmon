@@ -8,4 +8,4 @@ export {
 } from "./sandbox.js";
 export * from "./settingsStorage.ts";
 export { default as buildSystemPrompt } from "./systemPromptBuilder.ts";
-export * from "./tabs.js";
+export * from "./tabs.ts";

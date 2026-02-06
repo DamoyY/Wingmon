@@ -1,9 +1,24 @@
+import {
+  buildDomPath,
+  hashDomPath,
+  type DomPathErrorMessages,
+} from "./domPathHash.js";
+import {
+  isElementVisible,
+  type ElementVisibilityOptions,
+} from "./visibility.js";
+
 const HASH_LENGTH = 8;
 const chunkAnchorPrefix = "LLMCHUNKANCHORSTART_";
 const chunkAnchorSuffix = "_LLMCHUNKANCHOREND";
 const minimumAnchorGapPx = 120;
 const maximumAnchorCount = 240;
 const minimumTextLength = 24;
+const anchorVisibilityOptions: ElementVisibilityOptions = {
+  minimumWidth: 8,
+  minimumHeight: 8,
+  requirePointerEvents: false,
+};
 const excludedTagNames = new Set([
   "SCRIPT",
   "STYLE",
@@ -19,6 +34,12 @@ const excludedTagNames = new Set([
 export const chunkAnchorAttribute = "data-llm-chunk-anchor-id";
 export const chunkAnchorMarkerPattern =
   /LLMCHUNKANCHORSTART\\?_([a-z0-9]+)\\?_LLMCHUNKANCHOREND/g;
+const chunkAnchorPathErrorMessages: DomPathErrorMessages = {
+  invalidElement: "锚点节点无效",
+  invalidRoot: "根节点无效",
+  outsideRoot: "锚点元素不在根节点内",
+  emptyPath: "无法生成锚点 DOM 路径",
+};
 
 const clearChunkAnchors = (root: HTMLElement): void => {
   root.querySelectorAll(`[${chunkAnchorAttribute}]`).forEach((element) => {
@@ -29,49 +50,15 @@ const clearChunkAnchors = (root: HTMLElement): void => {
 const normalizeText = (value: string): string =>
   value.replace(/\s+/g, " ").trim();
 
-const getDomPath = (element: Element, root: Element): string => {
-  if (!root.contains(element)) {
-    throw new Error("锚点元素不在根节点内");
-  }
-  const segments: string[] = [];
-  let current: Element | null = element;
-  while (current) {
-    const tag = current.tagName.toLowerCase();
-    let index = 1;
-    let sibling: Element | null = current.previousElementSibling;
-    while (sibling) {
-      if (sibling.tagName.toLowerCase() === tag) {
-        index += 1;
-      }
-      sibling = sibling.previousElementSibling;
-    }
-    segments.push(`${tag}:nth-of-type(${String(index)})`);
-    if (current === root) {
-      break;
-    }
-    current = current.parentElement;
-  }
-  if (!segments.length) {
-    throw new Error("无法生成锚点 DOM 路径");
-  }
-  return segments.reverse().join(">");
-};
-
-const hashPath = (path: string): string => {
-  let hash = 0;
-  for (let i = 0; i < path.length; i += 1) {
-    hash = (hash * 131 + path.charCodeAt(i)) % 4294967296;
-  }
-  const encoded = Math.floor(hash).toString(36).padStart(8, "0");
-  return encoded.slice(-HASH_LENGTH);
-};
-
 const resolveAnchorId = (
   element: Element,
   root: Element,
   usedIds: Set<string>,
 ): string => {
-  const base = hashPath(getDomPath(element, root));
+  const base = hashDomPath(
+    buildDomPath(element, root, chunkAnchorPathErrorMessages),
+    HASH_LENGTH,
+  );
   if (!usedIds.has(base)) {
     usedIds.add(base);
     return base;
@@ -84,27 +71,6 @@ const resolveAnchorId = (
     }
   }
   throw new Error("锚点 ID 生成失败");
-};
-
-const isVisibleElement = (element: HTMLElement, win: Window): boolean => {
-  const style = win.getComputedStyle(element);
-  if (
-    style.display === "none" ||
-    style.display === "contents" ||
-    style.visibility === "hidden" ||
-    style.visibility === "collapse"
-  ) {
-    return false;
-  }
-  const opacity = Number(style.opacity);
-  if (Number.isFinite(opacity) && opacity <= 0) {
-    return false;
-  }
-  const rect = element.getBoundingClientRect();
-  if (rect.width < 8 || rect.height < 8) {
-    return false;
-  }
-  return true;
 };
 
 const isAnchorCandidate = (
@@ -131,7 +97,7 @@ const isAnchorCandidate = (
   ) {
     return false;
   }
-  if (!isVisibleElement(element, win)) {
+  if (!isElementVisible(element, win, anchorVisibilityOptions)) {
     return false;
   }
   const text = normalizeText(element.innerText || element.textContent || "");

@@ -1,4 +1,4 @@
-import { getHtmlPreview, normalizePreviewHtml } from "../services/index.js";
+import { getHtmlPreview, normalizePreviewHtml } from "../services/index.ts";
 
 const loadPreview = async () => {
   const id = new URLSearchParams(window.location.search).get("id");

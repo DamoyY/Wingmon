@@ -4,9 +4,9 @@ import {
   setStateValue,
   state,
   touchUpdatedAt,
-} from "../../../state/index.js";
-import { getSettings, saveConversation } from "../../../services/index.js";
-import { getPromptContent } from "../chat/composerState.js";
+} from "../../../state/index.ts";
+import { getSettings, saveConversation } from "../../../services/index.ts";
+import { getPromptContent } from "../chat/composerState.ts";
 import appendSharedPageContext from "./pageContext.js";
 import createResponseStream from "./requestCycle.js";
 import { createRandomId } from "../../../utils/index.ts";

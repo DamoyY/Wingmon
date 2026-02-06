@@ -1,5 +1,5 @@
 export { default as createMessageActionHandlers } from "./actions.js";
-export { renderMessagesView } from "./presenter.js";
+export { renderMessagesView } from "./presenter.ts";
 export { sendMessage, sendMessageWithPage, stopSending } from "./sendFlow.js";
 export {
   requestSettingsCompletion,

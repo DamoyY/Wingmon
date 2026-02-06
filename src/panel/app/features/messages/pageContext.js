@@ -1,5 +1,5 @@
-import { addMessage } from "../../../state/index.js";
-import { getActiveTab } from "../../../services/index.js";
+import { addMessage } from "../../../state/index.ts";
+import { getActiveTab } from "../../../services/index.ts";
 import { handleToolCalls, toolNames } from "../../../tools/index.js";
 import { fetchPageMarkdownData } from "../../../tools/pageReadHelpers.ts";
 import { createRandomId } from "../../../utils/index.ts";

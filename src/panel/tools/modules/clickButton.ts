@@ -1,11 +1,12 @@
-import { isInternalUrl, t } from "../../utils/index.ts";
+import { isInternalUrl, t, type JsonValue } from "../../utils/index.ts";
 import {
+  type BrowserTab,
   getAllTabs,
   sendMessageToTab,
   waitForContentScript,
-} from "../../services/index.js";
-import ToolInputError from "../errors.js";
-import { ensureObjectArgs } from "../validation/index.js";
+} from "../../services/index.ts";
+import ToolInputError from "../errors.ts";
+import { ensureObjectArgs } from "../validation/toolArgsValidation.ts";
 import {
   buildPageReadResult,
   fetchPageMarkdownData,
@@ -27,46 +28,10 @@ type ClickButtonMessage = {
   id: string;
 };
 
-type TabLike = {
-  id?: number;
-  url?: string;
-};
-
-type PageMarkdownData = {
-  title: string;
-  url: string;
-  content: string;
-};
-
 type ClickButtonResult = {
   content: string;
   pageReadTabId: number;
 };
-
-type ToolInputErrorCtor = new (message: string) => Error;
-
-const ToolInputErrorSafe = ToolInputError as ToolInputErrorCtor,
-  tSafe: (key: string) => string = t as (key: string) => string,
-  isInternalUrlSafe: (url: string) => boolean = isInternalUrl as (
-    url: string,
-  ) => boolean,
-  ensureObjectArgsSafe: (args: unknown) => void = ensureObjectArgs as (
-    args: unknown,
-  ) => void,
-  getAllTabsSafe: () => Promise<TabLike[]> = getAllTabs as () => Promise<
-    TabLike[]
-  >,
-  sendMessageToTabSafe: (
-    tabId: number,
-    payload: ClickButtonMessage,
-  ) => Promise<unknown> = sendMessageToTab as (
-    tabId: number,
-    payload: ClickButtonMessage,
-  ) => Promise<unknown>,
-  waitForContentScriptSafe: (tabId: number) => Promise<unknown> =
-    waitForContentScript as (tabId: number) => Promise<unknown>,
-  fetchPageMarkdownDataSafe: (tabId: number) => Promise<PageMarkdownData> =
-    fetchPageMarkdownData as (tabId: number) => Promise<PageMarkdownData>;
 
 const clickPageReadDelayMs = 500,
   waitForDelay = (delayMs: number) =>
@@ -76,7 +41,7 @@ const clickPageReadDelayMs = 500,
 
 const parameters = {
     type: "object",
-    properties: { id: { type: "string", description: tSafe("toolParamId") } },
+    properties: { id: { type: "string", description: t("toolParamId") } },
     required: ["id"],
     additionalProperties: false,
   },
@@ -87,50 +52,51 @@ const parameters = {
   }: ClickButtonOutputArgs): string =>
     buildPageReadResult({
       headerLines: [
-        tSafe("statusClickSuccess"),
-        `${tSafe("statusTitle")}："${title}"；`,
+        t("statusClickSuccess"),
+        `${t("statusTitle")}："${title}"；`,
       ],
-      contentLabel: `${tSafe("statusContent")}：`,
+      contentLabel: `${t("statusContent")}：`,
       content,
       isInternal,
     }),
-  validateArgs = (args: unknown): ClickButtonArgs => {
-    ensureObjectArgsSafe(args);
-    const record = args as Record<string, unknown>,
-      id = typeof record.id === "string" ? record.id.trim() : "";
+  validateArgs = (args: JsonValue): ClickButtonArgs => {
+    const record = ensureObjectArgs(args);
+    const id = typeof record.id === "string" ? record.id.trim() : "";
     if (!id) {
-      throw new ToolInputErrorSafe("id 必须是非空字符串");
+      throw new ToolInputError("id 必须是非空字符串");
     }
     if (!/^[0-9a-z]+$/i.test(id)) {
-      throw new ToolInputErrorSafe("id 仅支持字母数字");
+      throw new ToolInputError("id 仅支持字母数字");
     }
     return { id };
   },
   execute = async ({ id }: ClickButtonArgs): Promise<ClickButtonResult> => {
-    const tabs = await getAllTabsSafe();
+    const tabs: BrowserTab[] = await getAllTabs();
     if (!tabs.length) {
       throw new Error("未找到可用标签页");
     }
     const finalState = await runTabAction({
       tabs,
-      waitForContentScript: waitForContentScriptSafe,
-      sendMessage: (tabId) =>
-        sendMessageToTabSafe(tabId, {
+      waitForContentScript,
+      sendMessage: (tabId) => {
+        const message: ClickButtonMessage = {
           type: "clickButton",
           id,
-        }),
+        };
+        return sendMessageToTab(tabId, message);
+      },
       invalidResultMessage: "按钮点击返回结果异常",
       buildErrorMessage: (error) =>
         error instanceof Error ? error.message : "点击失败",
       onSuccess: async (tabId) => {
         await waitForDelay(clickPageReadDelayMs);
-        const { title, url, content } = await fetchPageMarkdownDataSafe(tabId),
+        const { title, url, content } = await fetchPageMarkdownData(tabId),
           matchedTab = tabs.find((tab) => tab.id === tabId),
           internalUrl = url || matchedTab?.url || "";
         return buildClickButtonOutput({
           title,
           content,
-          isInternal: isInternalUrlSafe(internalUrl),
+          isInternal: isInternalUrl(internalUrl),
         });
       },
     });
@@ -155,7 +121,7 @@ const parameters = {
 export default {
   key: "clickButton",
   name: "click_button",
-  description: tSafe("toolClickButton"),
+  description: t("toolClickButton"),
   parameters,
   validateArgs,
   execute,

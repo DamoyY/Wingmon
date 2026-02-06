@@ -1,70 +1,49 @@
-import { addMessage, state, updateMessage } from "./store.js";
+import {
+  addMessage,
+  state,
+  updateMessage,
+  type MessageRecord,
+} from "./store.ts";
 import { createRandomId } from "../utils/index.ts";
 
-type MessageRecord = {
-  role?: string;
-  pending?: boolean;
-  content?: string;
-  groupId?: string;
-};
-
-type StateShape = {
-  messages: Array<MessageRecord | undefined>;
-};
-
-const addMessageSafe = addMessage as (message: MessageRecord) => MessageRecord,
-  updateMessageSafe = updateMessage as (
-    index: number,
-    patch: Partial<MessageRecord>,
-  ) => MessageRecord;
-
-const resolveMessageContent = (message?: MessageRecord): string => {
-  if (!message || message.content === undefined) {
+const resolveMessageContent = (message: MessageRecord): string => {
+  if (message.content === undefined) {
     return "";
-  }
-  if (typeof message.content !== "string") {
-    throw new Error("助手消息内容必须为字符串");
   }
   return message.content;
 };
 
-export const appendAssistantDelta = (delta: unknown): void => {
+export const appendAssistantDelta = (
+  delta: string | null | undefined,
+): void => {
   if (delta === undefined || delta === null) {
     return;
-  }
-  if (typeof delta !== "string") {
-    throw new Error("助手增量内容必须为字符串");
   }
   if (delta.length === 0) {
     return;
   }
-  const currentState = state as StateShape;
   let targetIndex: number | null = null;
-  for (let i = currentState.messages.length - 1; i >= 0; i -= 1) {
-    const message = currentState.messages[i];
-    if (message && message.role === "assistant" && message.pending === true) {
+  for (let i = state.messages.length - 1; i >= 0; i -= 1) {
+    const message = state.messages[i];
+    if (message.role === "assistant" && message.pending === true) {
       targetIndex = i;
       break;
     }
   }
   if (targetIndex === null) {
-    const lastIndex = currentState.messages.length - 1,
-      last = currentState.messages[lastIndex];
+    const last = state.messages.at(-1);
     if (!last || last.role !== "assistant") {
-      addMessageSafe({
+      addMessage({
         role: "assistant",
         content: delta,
         groupId: createRandomId("assistant"),
       });
       return;
     }
-    targetIndex = lastIndex;
+    targetIndex = state.messages.length - 1;
   }
-  const target = currentState.messages[targetIndex];
-  if (!target) {
-    throw new Error("助手消息状态无效");
-  }
-  updateMessageSafe(targetIndex, {
-    content: `${resolveMessageContent(target)}${delta}`,
-  });
+  updateMessage(targetIndex, (current) => ({
+    ...current,
+    content: `${resolveMessageContent(current)}${delta}`,
+  }));
 };

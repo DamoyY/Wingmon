@@ -1,10 +1,11 @@
 import { t } from "../utils/index.ts";
+import { tryParsePositiveNumber } from "../../shared/index.ts";
 import {
   getSettings,
   reloadTab,
   sendMessageToTab,
   waitForContentScript,
-} from "../services/index.js";
+} from "../services/index.ts";
 import { parseOptionalPositiveInteger } from "./validation/index.js";
 
 type PageReadResultArgs = {
@@ -57,21 +58,6 @@ type PageHashResponse = {
   shouldReload?: boolean;
 };
 
-const tSafe = t as (key: string) => string,
-  sendMessageToTabSafe = sendMessageToTab as (
-    tabId: number,
-    payload: PageContentMessage,
-  ) => Promise<PageContentResponse | null>,
-  sendPageHashMessageSafe = sendMessageToTab as (
-    tabId: number,
-    payload: PageHashMessage,
-  ) => Promise<PageHashResponse | null>,
-  reloadTabSafe = reloadTab as (tabId: number) => Promise<void>,
-  waitForContentScriptSafe = waitForContentScript as (
-    tabId: number,
-  ) => Promise<boolean>,
-  getSettingsSafe = getSettings as () => Promise<{ followMode?: boolean }>;
-
 const pageContentRetryBaseDelayMs = 200,
   pageContentRetryMaxDelayMs = 2000,
   pageContentRetryTimeoutMs = 10000,
@@ -92,14 +78,9 @@ const parsePositiveNumber = (
     if (value === undefined || value === null) {
       return undefined;
     }
-    if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-      return value;
-    }
-    if (typeof value === "string" && value.trim()) {
-      const parsed = Number(value);
-      if (Number.isFinite(parsed) && parsed > 0) {
-        return parsed;
-      }
+    const parsedValue = tryParsePositiveNumber(value);
+    if (parsedValue !== null) {
+      return parsedValue;
     }
     throw new Error(`${fieldName} 必须是正数`);
   },
@@ -164,7 +145,7 @@ export const buildPageReadResult = ({
 }: PageReadResultArgs): string => {
   const header = headerLines.join("\n");
   if (isInternal) {
-    return `${header}\n${tSafe("statusReadFailedInternal")}`;
+    return `${header}\n${t("statusReadFailedInternal")}`;
   }
   return `${header}\n${contentLabel}\n${content}`;
 };
@@ -193,13 +174,13 @@ export const fetchPageMarkdownData = async (
   tabId: number,
   pageNumber?: number,
 ): Promise<PageMarkdownData> => {
-  const isComplete = await waitForContentScriptSafe(tabId),
+  const isComplete = await waitForContentScript(tabId),
     fetchOnce = async () => {
-      const pageData = await sendMessageToTabSafe(
+      const pageData = await sendMessageToTab<PageContentResponse>(
         tabId,
         buildPageContentMessage(pageNumber),
       );
-      if (!pageData || typeof pageData.content !== "string") {
+      if (typeof pageData.content !== "string") {
         throw new Error("页面内容为空");
       }
       const metadata = resolvePageMetadata(pageData, pageNumber);
@@ -253,12 +234,12 @@ export const syncPageHash = async (
     chunkAnchorId?: string;
   },
 ): Promise<void> => {
-  await waitForContentScriptSafe(tabId);
-  const response = await sendPageHashMessageSafe(
+  await waitForContentScript(tabId);
+  const response = await sendMessageToTab<PageHashResponse>(
     tabId,
     buildPageHashMessage(pageData),
   );
-  if (!response?.ok || response.skipped) {
+  if (!response.ok || response.skipped) {
     return;
   }
   const shouldReload =
@@ -270,10 +251,10 @@ export const syncPageHash = async (
   if (!shouldReload) {
     return;
   }
-  await reloadTabSafe(tabId);
+  await reloadTab(tabId);
 };
 
 export const shouldFollowMode = async (): Promise<boolean> => {
-  const settings = await getSettingsSafe();
-  return Boolean(settings.followMode);
+  const settings = await getSettings();
+  return settings.followMode;
 };

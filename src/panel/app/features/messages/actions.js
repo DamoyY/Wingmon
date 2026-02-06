@@ -1,8 +1,8 @@
-import { removeMessage, state, touchUpdatedAt } from "../../../state/index.js";
+import { removeMessage, state, touchUpdatedAt } from "../../../state/index.ts";
 import {
   deleteConversation,
   saveConversation,
-} from "../../../services/index.js";
+} from "../../../services/index.ts";
 import {
   combineMessageContents,
   normalizeIndices,

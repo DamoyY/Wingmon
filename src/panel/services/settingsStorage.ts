@@ -4,21 +4,24 @@ import {
   normalizeThemeVariant,
 } from "../utils/index.ts";
 
-type ApiType = "chat" | "responses";
+type StoredSettingValue = string | boolean | undefined;
+type StoredSettings = Record<string, StoredSettingValue>;
 
 interface ChromeStorage {
   local: {
     get: (
-      keys: string[] | Record<string, unknown> | null,
-      callback: (result: Record<string, unknown>) => void,
+      keys: string[] | Record<string, StoredSettingValue> | null,
+      callback: (result: StoredSettings) => void,
     ) => void;
-    set: (items: Record<string, unknown>, callback?: () => void) => void;
+    set: (items: StoredSettings, callback?: () => void) => void;
   };
 }
 
 declare const chrome: { storage: ChromeStorage };
 
-type Settings = {
+export type ApiType = "chat" | "responses";
+
+export type Settings = {
   apiKey: string;
   baseUrl: string;
   model: string;
@@ -43,33 +46,33 @@ const settingsKeys = {
     followMode: "follow_mode",
     language: "language",
   },
-  toSettings = (data: Record<string, unknown>): Settings => ({
+  toSettings = (data: StoredSettings): Settings => ({
     apiKey:
       typeof data[settingsKeys.apiKey] === "string"
-        ? (data[settingsKeys.apiKey] as string)
+        ? data[settingsKeys.apiKey]
         : "",
     baseUrl:
       typeof data[settingsKeys.baseUrl] === "string"
-        ? (data[settingsKeys.baseUrl] as string)
+        ? data[settingsKeys.baseUrl]
         : "",
     model:
       typeof data[settingsKeys.model] === "string"
-        ? (data[settingsKeys.model] as string)
+        ? data[settingsKeys.model]
         : "",
     apiType: data[settingsKeys.apiType] === "responses" ? "responses" : "chat",
     theme: normalizeTheme(
       typeof data[settingsKeys.theme] === "string"
-        ? (data[settingsKeys.theme] as string)
+        ? data[settingsKeys.theme]
         : null,
     ),
     themeColor: normalizeThemeColor(
       typeof data[settingsKeys.themeColor] === "string"
-        ? (data[settingsKeys.themeColor] as string)
+        ? data[settingsKeys.themeColor]
         : null,
     ),
     themeVariant: normalizeThemeVariant(
       typeof data[settingsKeys.themeVariant] === "string"
-        ? (data[settingsKeys.themeVariant] as string)
+        ? data[settingsKeys.themeVariant]
         : null,
     ),
     followMode:
@@ -78,7 +81,7 @@ const settingsKeys = {
         : Boolean(data[settingsKeys.followMode]),
     language:
       typeof data[settingsKeys.language] === "string"
-        ? (data[settingsKeys.language] as string)
+        ? data[settingsKeys.language]
         : "en",
   });
 

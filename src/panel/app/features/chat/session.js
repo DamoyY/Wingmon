@@ -1,5 +1,5 @@
 import { fadeOutMessages, resetMessagesFade } from "../../../ui/index.ts";
-import { resetConversation, state } from "../../../state/index.js";
+import { resetConversation, state } from "../../../state/index.ts";
 import { renderMessagesView } from "../messages/index.js";
 
 const handleNewChat = async () => {

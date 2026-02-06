@@ -1,4 +1,3 @@
-import { MdSwitch } from "@material/web/switch/switch.js";
 import { elements } from "../../ui/index.ts";
 import {
   handleCancelSettings,
@@ -53,7 +52,7 @@ const bindSettingsEvents = () => {
     void handleLanguageChange();
   });
   followModeSwitch.addEventListener("change", () => {
-    void handleFollowModeChange((followModeSwitch as MdSwitch).selected);
+    void handleFollowModeChange(followModeSwitch.selected);
   });
 };
 

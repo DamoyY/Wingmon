@@ -1,10 +1,16 @@
 import { t } from "../utils/index.ts";
 
+type ToolErrorOutputArgs = {
+  message?: string;
+  isInputError: boolean;
+  isCloseTool: boolean;
+};
+
 export const buildToolErrorOutput = ({
   message,
   isInputError,
   isCloseTool,
-}) => {
+}: ToolErrorOutputArgs): string => {
   if (!isInputError) {
     return t("statusInternalToolError");
   }

@@ -17,7 +17,7 @@ type ChromeApi = {
   tabs: ChromeTabs;
 };
 
-const chromeApi = chrome as unknown as ChromeApi;
+declare const chrome: ChromeApi;
 
 export const reloadTab = (tabId: number): Promise<void> => {
   if (typeof tabId !== "number") {
@@ -26,10 +26,10 @@ export const reloadTab = (tabId: number): Promise<void> => {
     return Promise.reject(error);
   }
   return new Promise((resolve, reject) => {
-    chromeApi.tabs.reload(tabId, {}, () => {
-      if (chromeApi.runtime.lastError) {
+    chrome.tabs.reload(tabId, {}, () => {
+      if (chrome.runtime.lastError) {
         const message =
-          chromeApi.runtime.lastError.message || "无法重新加载标签页";
+          chrome.runtime.lastError.message || "无法重新加载标签页";
         const error = new Error(message);
         console.error(error.message);
         reject(error);

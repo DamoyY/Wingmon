@@ -1,10 +1,6 @@
 import { styles as typescaleStyles } from "@material/web/typography/md-typescale-styles.js";
 import { ensureElement } from "../../utils/index.ts";
 
-interface CSSResult {
-  styleSheet?: CSSStyleSheet;
-}
-
 const headingClassMap = new Map<string, string>([
     ["H1", "md-typescale-headline-medium"],
     ["H2", "md-typescale-headline-small"],
@@ -14,7 +10,7 @@ const headingClassMap = new Map<string, string>([
     ["H6", "md-typescale-body-medium"],
   ]),
   ensureStylesheet = (): CSSStyleSheet => {
-    const styleSheet = (typescaleStyles as unknown as CSSResult).styleSheet;
+    const styleSheet = typescaleStyles.styleSheet;
     if (!styleSheet) {
       throw new Error("无法加载 Material Typography 样式表");
     }

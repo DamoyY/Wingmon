@@ -5,32 +5,17 @@ import {
   getToolModule,
   parseToolArguments,
   toolNames,
-} from "./definitions.js";
-import { buildToolErrorOutput, defaultToolSuccessOutput } from "./output.js";
-import ToolInputError from "./errors.js";
-
-type ToolCallFunction = {
-  name?: string;
-  arguments?: string;
-};
-
-type JsonPrimitive = string | number | boolean | null;
-
-type JsonValue = JsonPrimitive | { [key: string]: JsonValue } | JsonValue[];
-
-type ToolCall = {
-  id?: string;
-  call_id?: string;
-  name?: string;
-  arguments?: JsonValue;
-  function?: ToolCallFunction;
-};
+  type JsonValue,
+  type ToolCall,
+} from "./definitions.ts";
+import { buildToolErrorOutput, defaultToolSuccessOutput } from "./output.ts";
+import ToolInputError from "./errors.ts";
 
 type NormalizedToolCall = {
   id: string;
   call_id: string;
   name: string;
-  arguments: JsonValue;
+  arguments: string | JsonValue;
 };
 
 type ToolOutput = {
@@ -46,48 +31,6 @@ type ToolMessage = {
   pageReadTabId?: number;
 };
 
-type ToolArguments = JsonValue;
-
-type ToolResult = JsonValue;
-
-type ToolModule = {
-  execute: (args: ToolArguments) => ToolResult | Promise<ToolResult>;
-  validateArgs: (args: ToolArguments) => ToolArguments;
-};
-
-type ToolErrorOutputArgs = {
-  message?: string;
-  isInputError: boolean;
-  isCloseTool: boolean;
-};
-
-type ToolInputErrorCtor = new (message: string) => Error;
-
-type ErrorLike =
-  | Error
-  | { message?: string }
-  | string
-  | number
-  | boolean
-  | null;
-
-const ToolInputErrorSafe = ToolInputError as ToolInputErrorCtor,
-  getToolCallArgumentsSafe = getToolCallArguments as (
-    call: ToolCall,
-  ) => JsonValue,
-  getToolCallIdSafe = getToolCallId as (call: ToolCall) => string,
-  getToolCallNameSafe = getToolCallName as (call: ToolCall) => string,
-  getToolModuleSafe = getToolModule as (name: string) => ToolModule,
-  parseToolArgumentsSafe = parseToolArguments as (text: string) => JsonValue,
-  buildToolErrorOutputSafe = buildToolErrorOutput as (
-    args: ToolErrorOutputArgs,
-  ) => string,
-  defaultToolSuccessOutputSafe = defaultToolSuccessOutput as string,
-  toolNamesSafe = toolNames as {
-    getPageMarkdown: string;
-    closeBrowserPage: string;
-  };
-
 const normalizeToolCall = (
     toolCall: ToolCall | null,
   ): NormalizedToolCall | null => {
@@ -97,7 +40,7 @@ const normalizeToolCall = (
     if (toolCall.function) {
       const { id } = toolCall,
         name = toolCall.function.name,
-        args = getToolCallArgumentsSafe(toolCall);
+        args = getToolCallArguments(toolCall);
       if (!id || !name) {
         return null;
       }
@@ -122,36 +65,39 @@ const normalizeToolCall = (
     }
     return null;
   },
-  resolveToolArguments = (rawArgs: JsonValue): ToolArguments =>
-    typeof rawArgs === "string"
-      ? parseToolArgumentsSafe(rawArgs || "{}")
-      : rawArgs,
-  executeTool = (name: string, args: ToolArguments): Promise<ToolResult> => {
-    const tool = getToolModuleSafe(name);
+  resolveToolArguments = (rawArgs: string | JsonValue): JsonValue =>
+    typeof rawArgs === "string" ? parseToolArguments(rawArgs || "{}") : rawArgs,
+  isToolOutputRecord = (
+    value: unknown,
+  ): value is { content?: unknown; pageReadTabId?: unknown } =>
+    typeof value === "object" && value !== null && !Array.isArray(value),
+  hasMessageField = (value: unknown): value is { message?: unknown } =>
+    typeof value === "object" && value !== null && "message" in value,
+  executeTool = (name: string, args: JsonValue): Promise<unknown> => {
+    const tool = getToolModule(name);
     return Promise.resolve(tool.execute(tool.validateArgs(args)));
   },
-  executeToolCall = async (toolCall: ToolCall): Promise<ToolResult> => {
+  executeToolCall = async (toolCall: ToolCall): Promise<unknown> => {
     const normalized = normalizeToolCall(toolCall);
     if (!normalized) {
-      throw new ToolInputErrorSafe("工具调用格式不正确");
+      throw new ToolInputError("工具调用格式不正确");
     }
     const args = resolveToolArguments(normalized.arguments);
     return executeTool(normalized.name, args);
   },
-  resolveToolOutput = (output: ToolResult, name: string): ToolOutput => {
+  resolveToolOutput = (output: unknown, name: string): ToolOutput => {
     if (typeof output === "string") {
       return { content: output };
     }
-    if (!output || typeof output !== "object" || Array.isArray(output)) {
+    if (!isToolOutputRecord(output)) {
       throw new Error(`工具输出无效：${name}`);
     }
-    const outputRecord = output as Record<string, JsonValue>;
-    if (typeof outputRecord.content !== "string") {
+    if (typeof output.content !== "string") {
       throw new Error(`工具输出内容无效：${name}`);
     }
-    const result: ToolOutput = { content: outputRecord.content };
-    if ("pageReadTabId" in outputRecord) {
-      const pageReadTabId = outputRecord.pageReadTabId;
+    const result: ToolOutput = { content: output.content };
+    if ("pageReadTabId" in output) {
+      const { pageReadTabId } = output;
       if (!Number.isInteger(pageReadTabId) || pageReadTabId <= 0) {
         throw new Error(`工具输出 TabID 无效：${name}`);
       }
@@ -167,8 +113,8 @@ export const buildPageMarkdownToolOutput = async (
     tabId,
     page_number: pageNumber,
   };
-  const output = await executeTool(toolNamesSafe.getPageMarkdown, args);
-  return resolveToolOutput(output, toolNamesSafe.getPageMarkdown).content;
+  const output = await executeTool(toolNames.getPageMarkdown, args);
+  return resolveToolOutput(output, toolNames.getPageMarkdown).content;
 };
 const buildToolMessage = ({
     callId,
@@ -192,8 +138,8 @@ const buildToolMessage = ({
     }
     return message;
   },
-  resolveErrorMessage = (error: ErrorLike): string => {
-    if (error == null) {
+  resolveErrorMessage = (error: unknown): string => {
+    if (error === null || error === undefined) {
       return "未知错误";
     }
     if (error instanceof Error) {
@@ -205,8 +151,8 @@ const buildToolMessage = ({
     if (typeof error === "number" || typeof error === "boolean") {
       return String(error);
     }
-    if (typeof error === "object" && "message" in error) {
-      const message = error.message;
+    if (hasMessageField(error)) {
+      const { message } = error;
       if (typeof message === "string" && message.trim()) {
         return message;
       }
@@ -216,27 +162,26 @@ const buildToolMessage = ({
   executeToolCallToMessage = async (call: ToolCall): Promise<ToolMessage> => {
     let callId = "",
       name = "",
-      output: string = defaultToolSuccessOutputSafe,
+      output: string = defaultToolSuccessOutput,
       pageReadTabId: number | null = null;
     try {
-      callId = getToolCallIdSafe(call);
-      name = getToolCallNameSafe(call);
+      callId = getToolCallId(call);
+      name = getToolCallName(call);
       const resolved = resolveToolOutput(await executeToolCall(call), name);
       output = resolved.content;
       pageReadTabId = resolved.pageReadTabId ?? null;
     } catch (error) {
-      const safeError = error as ErrorLike;
-      const isInputError = safeError instanceof ToolInputErrorSafe;
-      const errorMessage = resolveErrorMessage(safeError);
+      const isInputError = error instanceof ToolInputError;
+      const errorMessage = resolveErrorMessage(error);
       console.error(`工具执行失败: ${name || "未知工具"}`, errorMessage);
-      output = buildToolErrorOutputSafe({
+      output = buildToolErrorOutput({
         message: errorMessage,
         isInputError,
-        isCloseTool: name === toolNamesSafe.closeBrowserPage,
+        isCloseTool: name === toolNames.closeBrowserPage,
       });
     }
     if (!callId || !name) {
-      throw new ToolInputErrorSafe("工具调用缺少 call_id 或 name");
+      throw new ToolInputError("工具调用缺少 call_id 或 name");
     }
     return buildToolMessage({
       callId,

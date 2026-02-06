@@ -3,9 +3,9 @@ import {
   removeMessage,
   state,
   updateMessage,
-} from "../../../state/index.js";
+} from "../../../state/index.ts";
 import { attachToolCallsToAssistant } from "../../../tools/index.js";
-import { renderMessagesView } from "./presenter.js";
+import { renderMessagesView } from "./presenter.ts";
 import { createRandomId } from "../../../utils/index.ts";
 
 const normalizeToolCalls = (toolCalls) =>

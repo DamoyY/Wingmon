@@ -2,88 +2,27 @@ import { resolveButtonLabel } from "../markdown/buttons.js";
 import { isEditableElement } from "./editableElements.js";
 import { resolveInputLabel } from "../markdown/inputs.js";
 import { buildIdMap } from "../markdown/labels.js";
+import {
+  buildDomPath,
+  hashDomPath,
+  type DomPathErrorMessages,
+} from "./domPathHash.js";
+import {
+  isElementVisible,
+  type ElementVisibilityOptions,
+} from "./visibility.js";
 
 const HASH_LENGTH = 6;
-
-const getDomPath = (element: Element | null, root: Element | null): string => {
-  if (!element) {
-    throw new Error("控件节点无效");
-  }
-  if (!root) {
-    throw new Error("根节点无效");
-  }
-  if (!root.contains(element)) {
-    throw new Error("控件不在根节点之内");
-  }
-  const segments: string[] = [];
-  let current: Element | null = element;
-  while (current) {
-    const tag = current.tagName.toLowerCase();
-    let index = 1,
-      sibling = current.previousElementSibling;
-    while (sibling) {
-      if (sibling.tagName && sibling.tagName.toLowerCase() === tag) {
-        index += 1;
-      }
-      sibling = sibling.previousElementSibling;
-    }
-    segments.push(`${tag}:nth-of-type(${String(index)})`);
-    if (current === root) {
-      break;
-    }
-    current = current.parentElement;
-  }
-  if (!segments.length) {
-    throw new Error("无法生成控件的 DOM 路径");
-  }
-  return segments.reverse().join(">");
+const llmIdPathErrorMessages: DomPathErrorMessages = {
+  invalidElement: "控件节点无效",
+  invalidRoot: "根节点无效",
+  outsideRoot: "控件不在根节点之内",
+  emptyPath: "无法生成控件的 DOM 路径",
 };
-
-const hashPath = (path: string): string => {
-  let hash = 0;
-  for (let i = 0; i < path.length; i += 1) {
-    hash = (hash * 131 + path.charCodeAt(i)) % 4294967296;
-  }
-  const encoded = Math.floor(hash).toString(36).padStart(8, "0");
-  return encoded.slice(-HASH_LENGTH);
-};
-
-const isVisibleAndInteractive = (element: Element, win: Window): boolean => {
-  const visibilityChecker = (
-    element as Element & {
-      checkVisibility?: (options?: {
-        checkOpacity?: boolean;
-        checkVisibilityCSS?: boolean;
-      }) => boolean;
-    }
-  ).checkVisibility;
-  if (typeof visibilityChecker === "function") {
-    if (
-      !visibilityChecker.call(element, {
-        checkOpacity: true,
-        checkVisibilityCSS: true,
-      })
-    ) {
-      return false;
-    }
-  } else {
-    const htmlElement = element as HTMLElement;
-    if (
-      htmlElement.offsetParent === null &&
-      win.getComputedStyle(htmlElement).position !== "fixed"
-    ) {
-      return false;
-    }
-  }
-  const rect = element.getBoundingClientRect();
-  if (rect.width < 4 || rect.height < 4) {
-    return false;
-  }
-  const style = win.getComputedStyle(element);
-  if (style.pointerEvents === "none") {
-    return false;
-  }
-  return true;
+const llmInputVisibilityOptions: ElementVisibilityOptions = {
+  minimumWidth: 4,
+  minimumHeight: 4,
+  requirePointerEvents: true,
 };
 
 const collectVisibleInputs = (root: Element): Element[] => {
@@ -115,7 +54,7 @@ const collectVisibleInputs = (root: Element): Element[] => {
   while (node) {
     const element = node as Element;
     if (isEditableElement(element)) {
-      if (isVisibleAndInteractive(element, win)) {
+      if (isElementVisible(element, win, llmInputVisibilityOptions)) {
         inputs.push(element);
       }
     }
@@ -149,8 +88,8 @@ const assignLlmIds = (root: Element): void => {
     ),
     totalTargets = namedButtons.length + namedInputs.length,
     assignId = (element: Element): void => {
-      const path = getDomPath(element, root),
-        id = hashPath(path);
+      const path = buildDomPath(element, root, llmIdPathErrorMessages),
+        id = hashDomPath(path, HASH_LENGTH);
       if (usedIds.has(id)) {
         throw new Error(
           `控件 ID 冲突：${id}，控件总量：${String(totalTargets)}`,

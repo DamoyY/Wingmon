@@ -4,41 +4,31 @@ import {
   setText,
   showKeyView,
 } from "../../../ui/index.ts";
-import { state, updateMessage } from "../../../state/index.js";
-import { renderMessagesView } from "./presenter.js";
-import { clearPromptContent } from "../chat/composerState.js";
+import { state, updateMessage } from "../../../state/index.ts";
+import { renderMessagesView } from "./presenter.ts";
+import { clearPromptContent } from "../chat/composerState.ts";
 import {
   clearPromptInput,
   setComposerSending,
   updateComposerButtonsState,
-} from "../chat/composerView.js";
+} from "../chat/composerView.ts";
 
 type SettingsFormValues = Parameters<typeof fillSettingsForm>[0];
-type MessageRecord = {
-  role?: string;
-  status?: string;
-  pending?: boolean;
-  hidden?: boolean;
-};
-type MessageState = { messages: Array<MessageRecord | undefined> };
 
-const normalizeStatusMessage = (message: unknown): string => {
+const normalizeStatusMessage = (message: string | null | undefined): string => {
   if (message === undefined || message === null) {
     return "";
-  }
-  if (typeof message !== "string") {
-    throw new Error("状态内容必须为字符串");
   }
   return message;
 };
 
 const resolveStatusTargetIndex = (): number | null => {
-  const { messages } = state as MessageState;
+  const { messages } = state;
   let lastAssistantIndex: number | null = null;
   let lastVisibleAssistantIndex: number | null = null;
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const message = messages[i];
-    if (message?.role !== "assistant") {
+    if (message.role !== "assistant") {
       continue;
     }
     const isHidden = message.hidden === true;
@@ -56,22 +46,19 @@ const resolveStatusTargetIndex = (): number | null => {
 };
 
 const updateAssistantStatus = (index: number, status: string): void => {
-  const { messages } = state as MessageState;
-  const message = messages[index];
-  if (!message) {
+  const { messages } = state;
+  if (index < 0 || index >= messages.length) {
     console.error("未找到可更新的助手消息状态");
     return;
   }
+  const message = messages[index];
   if (message.status === status) {
     return;
   }
-  (updateMessage as (target: number, patch: Partial<MessageRecord>) => void)(
-    index,
-    { status },
-  );
+  updateMessage(index, { status });
 };
 
-export const reportSendStatus = (message: unknown): void => {
+export const reportSendStatus = (message: string | null | undefined): void => {
   const normalizedMessage = normalizeStatusMessage(message);
   const targetIndex = resolveStatusTargetIndex();
   if (targetIndex === null) {
@@ -88,20 +75,16 @@ export const requestSettingsCompletion = (
 ): void => {
   void showKeyView({ isFirstUse: true });
   fillSettingsForm(settings);
-  const keyStatus = elements.keyStatus as HTMLElement | null;
-  if (!keyStatus) {
-    throw new Error("状态提示元素未初始化");
-  }
-  setText(keyStatus, "请先补全 API Key、Base URL 和模型");
+  setText(elements.keyStatus, "请先补全 API Key、Base URL 和模型");
 };
 
 export const syncComposerAfterSend = (): void => {
-  (clearPromptContent as () => void)();
-  (clearPromptInput as () => void)();
-  (updateComposerButtonsState as () => void)();
-  (renderMessagesView as () => void)();
+  clearPromptContent();
+  clearPromptInput();
+  updateComposerButtonsState();
+  renderMessagesView();
 };
 
 export const setSendUiState = (sending: boolean): void => {
-  (setComposerSending as (value: boolean) => void)(sending);
+  setComposerSending(sending);
 };

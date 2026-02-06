@@ -7,9 +7,9 @@ export {
   clearPromptContent,
   getPromptContent,
   hasPromptContent,
-} from "./composerState.js";
+} from "./composerState.ts";
 export {
   setComposerSending,
   clearPromptInput,
   updateComposerButtonsState,
-} from "./composerView.js";
+} from "./composerView.ts";

@@ -6,24 +6,13 @@ import {
   getToolValidator,
   parseToolArguments,
   toolNames,
-} from "./definitions.js";
-
-type ToolCallFunction = {
-  name?: string;
-  arguments?: string;
-};
-
-type ToolCall = {
-  id?: string;
-  call_id?: string;
-  name?: string;
-  arguments?: unknown;
-  function?: ToolCallFunction;
-};
+  type JsonValue,
+  type ToolCall,
+} from "./definitions.ts";
 
 type Message = {
   role?: string;
-  content?: string;
+  content?: unknown;
   tool_calls?: ToolCall[];
   tool_call_id?: string;
   name?: string;
@@ -46,10 +35,14 @@ type PageReadEvent = {
   url?: string;
 };
 
-type ToolNames = {
-  getPageMarkdown: string;
-  openBrowserPage: string;
-  clickButton: string;
+type GetPageArgs = {
+  tabId: number;
+  pageNumber?: number;
+};
+
+type OpenPageArgs = {
+  pageNumber?: number;
+  url: string;
 };
 
 export type ViewportChunkPlan = {
@@ -58,16 +51,6 @@ export type ViewportChunkPlan = {
   currentChunk: number;
   nearbyChunk: number | null;
 };
-
-const tSafe = t as (key: string) => string,
-  toolNamesSafe = toolNames as ToolNames,
-  getToolCallArgumentsSafe = getToolCallArguments as (call: ToolCall) => string,
-  getToolCallIdSafe = getToolCallId as (call: ToolCall) => string,
-  getToolCallNameSafe = getToolCallName as (call: ToolCall) => string,
-  getToolValidatorSafe = getToolValidator as (
-    name: string,
-  ) => (args: unknown) => unknown,
-  parseToolArgumentsSafe = parseToolArguments as (text: string) => unknown;
 
 const resolvePageNumberKey = (pageNumber?: number): number => {
     if (Number.isInteger(pageNumber) && pageNumber > 0) {
@@ -151,14 +134,33 @@ const resolvePageNumberKey = (pageNumber?: number): number => {
     }
     return viewportPlan.currentChunk;
   },
+  resolveErrorMessage = (error: unknown): string => {
+    if (error instanceof Error && error.message.trim()) {
+      return error.message;
+    }
+    return "未知错误";
+  },
+  parseToolCallArguments = (call: ToolCall, toolLabel: string): JsonValue => {
+    const rawArgs = getToolCallArguments(call);
+    if (typeof rawArgs !== "string") {
+      return rawArgs;
+    }
+    try {
+      return parseToolArguments(rawArgs || "{}");
+    } catch (error) {
+      throw new Error(
+        `${toolLabel} 工具参数解析失败：${resolveErrorMessage(error)}`,
+      );
+    }
+  },
   urlLabelPattern = /^(?:\*\*)?URL[:：](?:\*\*)?$/i,
   extractUrlFromGetPageOutput = (content: string): string | null => {
     const lines = content.split(/\r?\n/);
     for (let i = 0; i < lines.length - 1; i += 1) {
       const line = lines[i].trim();
       if (
-        line === tSafe("statusUrlLabel") ||
-        line === tSafe("statusUrlPlain") ||
+        line === t("statusUrlLabel") ||
+        line === t("statusUrlPlain") ||
         urlLabelPattern.test(line)
       ) {
         const urlLine = lines[i + 1]?.trim();
@@ -180,40 +182,14 @@ const resolvePageNumberKey = (pageNumber?: number): number => {
     }
     return `${String(event.tabId)}:${String(pageNumber)}`;
   },
-  extractGetPageInfoFromCall = (call: ToolCall) => {
-    const argsText = getToolCallArgumentsSafe(call);
-    let args: unknown;
-    try {
-      args = parseToolArgumentsSafe(argsText || "{}");
-    } catch (error) {
-      const message = (error as Error | undefined)?.message || "未知错误";
-      throw new Error(`get_page 工具参数解析失败：${message}`);
-    }
-    const { tabId, pageNumber } = getToolValidatorSafe(
-      toolNamesSafe.getPageMarkdown,
-    )(args) as {
-      tabId: number;
-      pageNumber?: number;
-    };
-    return { tabId, pageNumber };
-  },
-  extractOpenPageInfoFromCall = (call: ToolCall) => {
-    const argsText = getToolCallArgumentsSafe(call);
-    let args: unknown;
-    try {
-      args = parseToolArgumentsSafe(argsText || "{}");
-    } catch (error) {
-      const message = (error as Error | undefined)?.message || "未知错误";
-      throw new Error(`open_page 工具参数解析失败：${message}`);
-    }
-    const { pageNumber, url } = getToolValidatorSafe(
-      toolNamesSafe.openBrowserPage,
-    )(args) as {
-      pageNumber?: number;
-      url: string;
-    };
-    return { pageNumber, url };
-  },
+  extractGetPageInfoFromCall = (call: ToolCall): GetPageArgs =>
+    getToolValidator<GetPageArgs>(toolNames.getPageMarkdown)(
+      parseToolCallArguments(call, "get_page"),
+    ),
+  extractOpenPageInfoFromCall = (call: ToolCall): OpenPageArgs =>
+    getToolValidator<OpenPageArgs>(toolNames.openBrowserPage)(
+      parseToolCallArguments(call, "open_page"),
+    ),
   extractPageReadTabIdFromOutput = (
     content: unknown,
     successLabel: string,
@@ -245,8 +221,8 @@ const resolvePageNumberKey = (pageNumber?: number): number => {
   extractOpenPageTabIdFromOutput = (content: unknown) =>
     extractPageReadTabIdFromOutput(
       content,
-      tSafe("statusOpenSuccess"),
-      toolNamesSafe.openBrowserPage,
+      t("statusOpenSuccess"),
+      toolNames.openBrowserPage,
     ),
   extractClickButtonTabIdFromMessage = (message: Message) => {
     const storedTabId = message.pageReadTabId;
@@ -255,8 +231,8 @@ const resolvePageNumberKey = (pageNumber?: number): number => {
     }
     const tabId = extractPageReadTabIdFromOutput(
       message.content,
-      tSafe("statusClickSuccess"),
-      toolNamesSafe.clickButton,
+      t("statusClickSuccess"),
+      toolNames.clickButton,
     );
     if (!tabId) {
       return null;
@@ -265,7 +241,7 @@ const resolvePageNumberKey = (pageNumber?: number): number => {
   },
   isGetPageSuccessOutput = (content: unknown): content is string =>
     typeof content === "string" &&
-    content.trim().startsWith(tSafe("statusReadSuccess"));
+    content.trim().startsWith(t("statusReadSuccess"));
 
 export const resolveViewportChunkPlan = (
   content: string,
@@ -303,8 +279,8 @@ export const collectPageReadDedupeSets = (messages: Message[]) => {
       return;
     }
     msg.tool_calls.forEach((call) => {
-      const callId = getToolCallIdSafe(call),
-        name = getToolCallNameSafe(call);
+      const callId = getToolCallId(call),
+        name = getToolCallName(call);
       if (callInfoById.has(callId)) {
         const existing = callInfoById.get(callId);
         if (existing?.name !== name) {
@@ -313,12 +289,12 @@ export const collectPageReadDedupeSets = (messages: Message[]) => {
         return;
       }
       const info: PageReadCallInfo = { name };
-      if (name === toolNamesSafe.getPageMarkdown) {
+      if (name === toolNames.getPageMarkdown) {
         const { tabId, pageNumber } = extractGetPageInfoFromCall(call);
         info.tabId = tabId;
         info.pageNumber = pageNumber;
       }
-      if (name === toolNamesSafe.openBrowserPage) {
+      if (name === toolNames.openBrowserPage) {
         const { pageNumber, url } = extractOpenPageInfoFromCall(call);
         info.pageNumber = pageNumber;
         info.url = url;
@@ -340,7 +316,7 @@ export const collectPageReadDedupeSets = (messages: Message[]) => {
     if (!name) {
       throw new Error(`工具响应缺少 name：${callId}`);
     }
-    if (name === toolNamesSafe.getPageMarkdown) {
+    if (name === toolNames.getPageMarkdown) {
       const content = msg.content;
       if (!isGetPageSuccessOutput(content)) {
         return;
@@ -363,7 +339,7 @@ export const collectPageReadDedupeSets = (messages: Message[]) => {
       });
       return;
     }
-    if (name === toolNamesSafe.openBrowserPage) {
+    if (name === toolNames.openBrowserPage) {
       const tabId = extractOpenPageTabIdFromOutput(msg.content);
       if (!tabId) {
         return;
@@ -378,7 +354,7 @@ export const collectPageReadDedupeSets = (messages: Message[]) => {
       });
       return;
     }
-    if (name === toolNamesSafe.clickButton) {
+    if (name === toolNames.clickButton) {
       const tabId = extractClickButtonTabIdFromMessage(msg);
       if (!tabId) {
         return;
@@ -406,13 +382,13 @@ export const collectPageReadDedupeSets = (messages: Message[]) => {
     if (!latest || latest.callId === event.callId) {
       return;
     }
-    if (event.type === toolNamesSafe.getPageMarkdown) {
+    if (event.type === toolNames.getPageMarkdown) {
       removeToolCallIds.add(event.callId);
       return;
     }
     if (
-      event.type === toolNamesSafe.openBrowserPage ||
-      event.type === toolNamesSafe.clickButton
+      event.type === toolNames.openBrowserPage ||
+      event.type === toolNames.clickButton
     ) {
       trimToolResponseIds.add(event.callId);
     }
@@ -425,7 +401,7 @@ export const getToolOutputContent = (
   trimToolResponseIds: Set<string>,
 ) =>
   trimToolResponseIds.has(msg.tool_call_id || "")
-    ? `**${tSafe("statusSuccess")}**`
+    ? `**${t("statusSuccess")}**`
     : (() => {
         if (typeof msg.content !== "string") {
           throw new Error("工具响应内容无效");

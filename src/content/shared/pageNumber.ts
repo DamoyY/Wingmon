@@ -1,4 +1,5 @@
 import { resolveAliasedInput } from "./aliasedInput.ts";
+import { tryParsePositiveInteger } from "../../shared/index.ts";
 
 export type PageNumberInput = number | string | null;
 
@@ -19,14 +20,9 @@ export const resolvePageNumberInput = (
   if (value === null) {
     return 1;
   }
-  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-    return value;
-  }
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    if (Number.isInteger(parsed) && parsed > 0) {
-      return parsed;
-    }
+  const parsedValue = tryParsePositiveInteger(value);
+  if (parsedValue !== null) {
+    return parsedValue;
   }
   throw new Error(`${fieldName} 必须是正整数`);
 };

@@ -6,6 +6,7 @@ export {
   resolveIndicesKey,
 } from "./messageIndices.ts";
 export { default as parseJson } from "./json.ts";
+export type { JsonValue } from "./json.ts";
 export { default as normalizeTheme } from "./theme.ts";
 export type { ThemeMode } from "./theme.ts";
 export {

@@ -1,28 +1,17 @@
-import * as tiktoken from "tiktoken/init";
-import tiktokenWasmBytes from "tiktoken/tiktoken_bg.wasm";
-
-type TiktokenInitModule = typeof tiktoken & {
-  __wbg_set_wasm: (exports: WebAssembly.Exports) => void;
-};
+import { createO200kBaseEncoding } from "./tiktokenEncoding.ts";
 
 type ViewportEncoding = {
   encode: (text: string) => number[];
   decode: (tokens: number[]) => Uint8Array;
 };
 
-const tiktokenInit = tiktoken as TiktokenInitModule;
-
 const createViewportEncoding = (): ViewportEncoding => {
     try {
-      const wasmModule = new WebAssembly.Module(tiktokenWasmBytes),
-        wasmInstance = new WebAssembly.Instance(wasmModule, {
-          "./tiktoken_bg.js": tiktoken,
-        });
-      tiktokenInit.__wbg_set_wasm(wasmInstance.exports);
-      const encoding = tiktoken.get_encoding("o200k_base");
+      const encoding = createO200kBaseEncoding();
       return {
         encode: (text: string): number[] => Array.from(encoding.encode(text)),
-        decode: (tokens: number[]): Uint8Array => encoding.decode(tokens),
+        decode: (tokens: number[]): Uint8Array =>
+          encoding.decode(Uint32Array.from(tokens)),
       };
     } catch (error) {
       console.error("tiktoken 初始化失败", error);

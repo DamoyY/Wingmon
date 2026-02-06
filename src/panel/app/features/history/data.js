@@ -1,4 +1,4 @@
-import { getHistory } from "../../../services/index.js";
+import { getHistory } from "../../../services/index.ts";
 
 const fetchSortedHistory = async () => {
   const history = await getHistory();

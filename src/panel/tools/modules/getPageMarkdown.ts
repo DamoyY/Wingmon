@@ -1,19 +1,16 @@
-import { isInternalUrl, t } from "../../utils/index.ts";
-import { focusTab, getAllTabs } from "../../services/index.js";
-import { parsePageNumber, validateTabIdArgs } from "../validation/index.js";
+import { isInternalUrl, t, type JsonValue } from "../../utils/index.ts";
+import { type BrowserTab, focusTab, getAllTabs } from "../../services/index.ts";
+import { parsePageNumber } from "../validation/pageNumber.ts";
+import {
+  ensureObjectArgs,
+  validateTabIdArgs,
+} from "../validation/toolArgsValidation.ts";
 import {
   buildPageReadResult,
   fetchPageMarkdownData,
-  type PageMarkdownData,
   shouldFollowMode,
   syncPageHash,
 } from "../pageReadHelpers.ts";
-
-type TabLike = {
-  id?: number;
-  url?: string;
-  title?: string;
-};
 
 type GetPageArgs = {
   tabId: number;
@@ -30,53 +27,8 @@ type PageMarkdownOutputArgs = {
   totalPages?: number;
 };
 
-const getAllTabsSafe: () => Promise<TabLike[]> = getAllTabs as () => Promise<
-    TabLike[]
-  >,
-  focusTabSafe: (tabId: number) => Promise<void> = focusTab as (
-    tabId: number,
-  ) => Promise<void>,
-  isInternalUrlSafe: (url: string) => boolean = isInternalUrl as (
-    url: string,
-  ) => boolean,
-  fetchPageMarkdownDataSafe: (
-    tabId: number,
-    pageNumber?: number,
-  ) => Promise<PageMarkdownData> = fetchPageMarkdownData as (
-    tabId: number,
-    pageNumber?: number,
-  ) => Promise<PageMarkdownData>,
-  syncPageHashSafe: (
-    tabId: number,
-    pageData?: {
-      pageNumber?: number;
-      totalPages?: number;
-      viewportPage?: number;
-      chunkAnchorId?: string;
-    },
-  ) => Promise<void> = syncPageHash as (
-    tabId: number,
-    pageData?: {
-      pageNumber?: number;
-      totalPages?: number;
-      viewportPage?: number;
-      chunkAnchorId?: string;
-    },
-  ) => Promise<void>,
-  shouldFollowModeSafe: () => Promise<boolean> =
-    shouldFollowMode as () => Promise<boolean>,
-  validateTabIdArgsSafe: (args: unknown) => { tabId: number } =
-    validateTabIdArgs as (args: unknown) => { tabId: number },
-  tSafe: (key: string, args?: string[]) => string = t as (
-    key: string,
-    args?: string[],
-  ) => string,
-  parsePageNumberSafe: (value: unknown) => number = parsePageNumber as (
-    value: unknown,
-  ) => number;
-
-const parsePreserveViewport = (value: unknown): boolean => {
-  if (value === undefined || value === null) {
+const parsePreserveViewport = (value: JsonValue): boolean => {
+  if (value === null) {
     return false;
   }
   if (typeof value === "boolean") {
@@ -99,7 +51,7 @@ const parameters = {
       tabId: { type: "number" },
       page_number: {
         type: "number",
-        description: tSafe("toolParamPageNumber"),
+        description: t("toolParamPageNumber"),
       },
     },
     required: ["tabId", "page_number"],
@@ -114,12 +66,12 @@ const parameters = {
     totalPages,
   }: PageMarkdownOutputArgs): string => {
     const headerLines = isInternal
-      ? [`${tSafe("statusTitle")}：`, title, tSafe("statusUrlPlain"), url]
+      ? [`${t("statusTitle")}：`, title, t("statusUrlPlain"), url]
       : [
-          tSafe("statusReadSuccess"),
-          `${tSafe("statusTitle")}：`,
+          t("statusReadSuccess"),
+          `${t("statusTitle")}：`,
           title,
-          tSafe("statusUrlPlain"),
+          t("statusUrlPlain"),
           url,
         ];
     if (!isInternal) {
@@ -129,22 +81,24 @@ const parameters = {
       if (!Number.isInteger(totalPages) || totalPages <= 0) {
         throw new Error("get_page 响应缺少有效总分块数量");
       }
-      headerLines.push(`${tSafe("statusTotalChunks")}：`, String(totalPages));
+      headerLines.push(`${t("statusTotalChunks")}：`, String(totalPages));
     }
     return buildPageReadResult({
       headerLines,
       contentLabel: isInternal
         ? ""
-        : tSafe("statusChunkContent", [String(pageNumber)]),
+        : t("statusChunkContent", [String(pageNumber)]),
       content,
       isInternal,
     });
   },
-  validateArgs = (args: unknown): GetPageArgs => {
-    const argsRecord = args as Record<string, unknown> | null,
-      { tabId } = validateTabIdArgsSafe(args),
-      preserveViewport = parsePreserveViewport(argsRecord?.preserve_viewport);
-    const pageNumber = parsePageNumberSafe(argsRecord?.page_number);
+  validateArgs = (args: JsonValue): GetPageArgs => {
+    const argsRecord = ensureObjectArgs(args),
+      { tabId } = validateTabIdArgs(argsRecord),
+      preserveViewport = parsePreserveViewport(
+        argsRecord.preserve_viewport ?? null,
+      );
+    const pageNumber = parsePageNumber(argsRecord.page_number ?? null);
     return { tabId, pageNumber, preserveViewport };
   },
   execute = async ({
@@ -152,7 +106,7 @@ const parameters = {
     pageNumber,
     preserveViewport = false,
   }: GetPageArgs): Promise<string> => {
-    const tabs = await getAllTabsSafe(),
+    const tabs: BrowserTab[] = await getAllTabs(),
       targetTab = tabs.find((tab) => tab.id === tabId);
     if (!targetTab) {
       throw new Error(`未找到 TabID 为 ${String(tabId)} 的标签页`);
@@ -160,11 +114,11 @@ const parameters = {
     if (typeof targetTab.url !== "string" || !targetTab.url.trim()) {
       throw new Error("标签页缺少 URL");
     }
-    const followMode = await shouldFollowModeSafe();
+    const followMode = await shouldFollowMode();
     if (followMode) {
-      await focusTabSafe(tabId);
+      await focusTab(tabId);
     }
-    const internalUrl = isInternalUrlSafe(targetTab.url);
+    const internalUrl = isInternalUrl(targetTab.url);
     if (internalUrl) {
       const title = targetTab.title || "";
       return buildPageMarkdownOutput({
@@ -173,9 +127,9 @@ const parameters = {
         isInternal: true,
       });
     }
-    const pageData = await fetchPageMarkdownDataSafe(tabId, pageNumber);
+    const pageData = await fetchPageMarkdownData(tabId, pageNumber);
     if (followMode && !preserveViewport) {
-      await syncPageHashSafe(tabId, pageData);
+      await syncPageHash(tabId, pageData);
     }
     return buildPageMarkdownOutput({
       title: pageData.title,
@@ -190,7 +144,7 @@ const parameters = {
 export default {
   key: "getPageMarkdown",
   name: "get_page",
-  description: tSafe("toolGetPage"),
+  description: t("toolGetPage"),
   parameters,
   validateArgs,
   execute,

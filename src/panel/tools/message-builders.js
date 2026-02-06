@@ -2,7 +2,7 @@ import {
   getToolCallArguments,
   getToolCallId,
   getToolCallName,
-} from "./definitions.js";
+} from "./definitions.ts";
 import {
   collectPageReadDedupeSets,
   getToolOutputContent,

@@ -1,4 +1,4 @@
-import { buildEndpoint } from "../services/index.js";
+import { buildEndpoint } from "../services/index.ts";
 import getApiStrategy from "./strategies.js";
 
 const requestModel = async ({

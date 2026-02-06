@@ -1,9 +1,6 @@
-import ToolInputError from "../errors.js";
+import ToolInputError from "../errors.ts";
 import { parseRequiredPositiveInteger } from "./positiveInteger.js";
+import type { JsonValue } from "../../utils/index.ts";
 
-type ToolInputErrorCtor = new (message: string) => Error;
-
-const ToolInputErrorSafe = ToolInputError as ToolInputErrorCtor;
-
-export const parsePageNumber = (value: unknown): number =>
-  parseRequiredPositiveInteger(value, "page_number", ToolInputErrorSafe);
+export const parsePageNumber = (value: JsonValue): number =>
+  parseRequiredPositiveInteger(value, "page_number", ToolInputError);

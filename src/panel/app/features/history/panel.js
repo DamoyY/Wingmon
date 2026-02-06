@@ -4,7 +4,7 @@ import {
   showConfirmDialog,
   showHistoryView,
 } from "../../../ui/index.ts";
-import { state } from "../../../state/index.js";
+import { state } from "../../../state/index.ts";
 import { t } from "../../../utils/index.ts";
 import fetchSortedHistory from "./data.js";
 import {

@@ -1,5 +1,5 @@
 import { EXCLUDED_INPUT_TYPES, TEXT_INPUT_ROLES } from "../shared/index.ts";
-import { buildIdMap, getLabelFromIds, normalizeText } from "./labels.js";
+import { buildIdMap, normalizeText, resolveElementLabel } from "./labels.js";
 
 const getLabelFromAssociatedLabel = (
   root: Element,
@@ -32,36 +32,17 @@ const resolveInputLabel = (
   root: Element,
   idMap: Map<string, Element>,
   input: Element,
-): string => {
-  const labelText = getLabelFromAssociatedLabel(root, input);
-  if (labelText) {
-    return labelText;
-  }
-  const ariaLabel = normalizeText(input.getAttribute("aria-label"));
-  if (ariaLabel) {
-    return ariaLabel;
-  }
-  const ariaLabelledby = normalizeText(input.getAttribute("aria-labelledby"));
-  if (ariaLabelledby) {
-    const ids = ariaLabelledby.split(/\s+/).filter(Boolean);
-    if (!ids.length) {
-      throw new Error("aria-labelledby 为空，无法解析输入框名称");
-    }
-    const labeledText = getLabelFromIds(idMap, ids);
-    if (labeledText) {
-      return labeledText;
-    }
-  }
-  const placeholderText = normalizeText(input.getAttribute("placeholder"));
-  if (placeholderText) {
-    return placeholderText;
-  }
-  const titleText = normalizeText(input.getAttribute("title"));
-  if (titleText) {
-    return titleText;
-  }
-  return "";
-};
+): string =>
+  resolveElementLabel(
+    idMap,
+    input,
+    [() => getLabelFromAssociatedLabel(root, input)],
+    [
+      () => normalizeText(input.getAttribute("placeholder")),
+      () => normalizeText(input.getAttribute("title")),
+    ],
+    "aria-labelledby 为空，无法解析输入框名称",
+  );
 
 const isInputCandidate = (element: Element): boolean => {
   if (element instanceof HTMLInputElement) {

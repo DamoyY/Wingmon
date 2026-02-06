@@ -1,20 +1,6 @@
-type ErrorCtor = new (message: string) => Error;
+import { tryParsePositiveInteger } from "../../../shared/index.ts";
 
-const tryParsePositiveInteger = (value: unknown): number | null => {
-  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-    return value;
-  }
-  if (typeof value === "string") {
-    const trimmedValue = value.trim();
-    if (trimmedValue) {
-      const parsedValue = Number(trimmedValue);
-      if (Number.isInteger(parsedValue) && parsedValue > 0) {
-        return parsedValue;
-      }
-    }
-  }
-  return null;
-};
+type ErrorCtor = new (message: string) => Error;
 
 export const parseOptionalPositiveInteger = (
   value: unknown,

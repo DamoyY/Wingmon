@@ -1,6 +1,6 @@
 import { t } from "../../utils/index.ts";
-import { sendMessageToSandbox } from "../../services/index.js";
-import ToolInputError from "../errors.js";
+import { sendMessageToSandbox } from "../../services/index.ts";
+import ToolInputError from "../errors.ts";
 import { ensureObjectArgs } from "../validation/index.js";
 
 const parameters = {

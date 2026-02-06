@@ -1,19 +1,9 @@
 import { isEditableElement } from "../dom/editableElements.js";
+import { normalizeLlmId } from "../shared/index.ts";
 
 type EnterTextMessage = {
   id?: string | null;
   content?: string | null;
-};
-
-const normalizeInputId = (message: EnterTextMessage | null): string => {
-  const id = typeof message?.id === "string" ? message.id.trim() : "";
-  if (!id) {
-    throw new Error("id 必须是非空字符串");
-  }
-  if (!/^[0-9a-z]+$/i.test(id)) {
-    throw new Error("id 仅支持字母数字");
-  }
-  return id.toLowerCase();
 };
 
 const normalizeInputContent = (message: EnterTextMessage | null): string => {
@@ -109,7 +99,7 @@ const handleEnterText = (
   }) => void,
 ): void => {
   try {
-    const normalizedId = normalizeInputId(message),
+    const normalizedId = normalizeLlmId(message.id ?? null),
       content = normalizeInputContent(message),
       target = findSingleInput(normalizedId);
     if (!target) {

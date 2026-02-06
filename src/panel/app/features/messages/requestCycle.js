@@ -1,4 +1,4 @@
-import { buildSystemPrompt } from "../../../services/index.js";
+import { buildSystemPrompt } from "../../../services/index.ts";
 import {
   apiToolAdapter,
   getToolDefinitions,
@@ -10,9 +10,9 @@ import {
   appendAssistantDelta,
   state,
   updateMessage,
-} from "../../../state/index.js";
+} from "../../../state/index.ts";
 import { createRandomId, t } from "../../../utils/index.ts";
-import { renderMessagesView } from "./presenter.js";
+import { renderMessagesView } from "./presenter.ts";
 
 const createAbortError = () => {
     const error = new Error(t("requestStopped"));
