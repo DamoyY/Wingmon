@@ -11,8 +11,10 @@ import { Tiktoken as JsTiktoken } from "js-tiktoken/lite";
 import o200kBase from "js-tiktoken/ranks/o200k_base";
 import * as tiktoken from "tiktoken/init";
 import tiktokenWasmBytes from "tiktoken/tiktoken_bg.wasm";
-
-type PageNumberInput = number | string | null;
+import {
+  resolvePageNumberInput,
+  type PageNumberInput,
+} from "../shared/index.ts";
 
 type PageContentData = {
   body?: HTMLElement | null;
@@ -241,22 +243,6 @@ const resolveTextFallback = (
   return htmlContent;
 };
 
-const resolveRequestedPageNumber = (value: PageNumberInput): number => {
-  if (value === null) {
-    return 1;
-  }
-  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-    return value;
-  }
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    if (Number.isInteger(parsed) && parsed > 0) {
-      return parsed;
-    }
-  }
-  throw new Error("page_number 必须是正整数");
-};
-
 const clampBoundary = (boundary: number, contentLength: number): number => {
   if (!Number.isInteger(boundary)) {
     throw new Error("分片边界必须为整数");
@@ -414,7 +400,7 @@ const convertPageContentToMarkdown = (
       markerToken,
     ),
     chunked = splitMarkdownByTokens(content),
-    pageNumber = resolveRequestedPageNumber(pageData.pageNumber ?? null);
+    pageNumber = resolvePageNumberInput(pageData.pageNumber ?? null);
   if (pageNumber > chunked.totalPages) {
     throw new Error(
       `page_number 超出范围：${String(pageNumber)}，总页数：${String(chunked.totalPages)}`,

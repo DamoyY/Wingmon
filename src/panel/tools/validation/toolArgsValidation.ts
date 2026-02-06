@@ -1,4 +1,5 @@
 import ToolInputError from "../errors.js";
+import { parseRequiredPositiveInteger } from "./positiveInteger.js";
 
 type ToolInputErrorCtor = new (message: string) => Error;
 
@@ -14,19 +15,7 @@ const ToolInputErrorSafe = ToolInputError as ToolInputErrorCtor,
   ): value is ToolArgObject =>
     typeof value === "object" && value !== null && !Array.isArray(value),
   readObjectField = (record: ToolArgObject, key: string): ToolArgValue =>
-    Object.prototype.hasOwnProperty.call(record, key) ? record[key] : null,
-  parseTabId = (value: ToolArgValue, fieldPath: string): number => {
-    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-      return value;
-    }
-    if (typeof value === "string" && value.trim()) {
-      const parsed = Number(value);
-      if (Number.isInteger(parsed) && parsed > 0) {
-        return parsed;
-      }
-    }
-    throw new ToolInputErrorSafe(`${fieldPath} 必须是正整数`);
-  };
+    Object.prototype.hasOwnProperty.call(record, key) ? record[key] : null;
 
 export const ensureObjectArgs = (
   args: ToolArgValue | ToolArgObject,
@@ -42,7 +31,9 @@ export const validateTabIdArgs = (
 ): { tabId: number } => {
   const record = ensureObjectArgs(args),
     rawTabId = readObjectField(record, "tabId");
-  return { tabId: parseTabId(rawTabId, "tabId") };
+  return {
+    tabId: parseRequiredPositiveInteger(rawTabId, "tabId", ToolInputErrorSafe),
+  };
 };
 
 export const validateTabIdListArgs = (
@@ -54,7 +45,11 @@ export const validateTabIdListArgs = (
     throw new ToolInputErrorSafe("tabIds 必须是非空数组");
   }
   const tabIds = rawTabIds.map((rawTabId, index) =>
-    parseTabId(rawTabId, `tabIds[${String(index)}]`),
+    parseRequiredPositiveInteger(
+      rawTabId,
+      `tabIds[${String(index)}]`,
+      ToolInputErrorSafe,
+    ),
   );
   return { tabIds };
 };

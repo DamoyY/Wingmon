@@ -1,7 +1,6 @@
-import { elements } from "../core/elements.ts";
 import renderMessageContent from "./contentRenderer.js";
 import { animateMessageRowEnter } from "./animations.js";
-import { resolveIndicesKey } from "../../utils/index.ts";
+import { requireElementById, resolveIndicesKey } from "../../utils/index.ts";
 import { applyMessageHeadingTypography } from "../theme/typography.ts";
 import { t } from "../../utils/index.ts";
 import type { DisplayMessage } from "../../app/features/messages/displayMessages.ts";
@@ -42,23 +41,16 @@ const MESSAGE_REANIMATE_WINDOW = 200;
 let pendingAnimateKey: string | null = null;
 let pendingAnimateExpiresAt = 0;
 
-const ensureNewChatButton = (): HTMLElement => {
-    const { newChatButton } = elements as Partial<typeof elements>;
-    if (!newChatButton) {
-      throw new Error("新建对话按钮未找到");
-    }
-    return newChatButton;
-  },
-  ensureEmptyState = (): HTMLElement => {
-    const { emptyState } = elements as Partial<typeof elements>;
-    if (!emptyState) {
-      throw new Error("空状态容器未找到");
-    }
-    return emptyState;
-  },
+const requireMessagesElement = (): HTMLElement =>
+    requireElementById("messages", "messagesEl", "消息容器未找到"),
+  requireNewChatButton = (): HTMLElement =>
+    requireElementById("new-chat", "newChatButton", "新建对话按钮未找到"),
   setEmptyStateVisible = (visible: boolean): void => {
-    const container = ensureEmptyState();
-    container.classList.toggle("is-visible", visible);
+    requireElementById(
+      "empty-state",
+      "emptyState",
+      "空状态容器未找到",
+    ).classList.toggle("is-visible", visible);
   },
   ensureActionHandler = (
     handler: unknown,
@@ -245,10 +237,7 @@ export const renderMessages = (
   if (!handlers || typeof handlers !== "object") {
     throw new Error("消息操作处理器缺失");
   }
-  const { messagesEl } = elements as Partial<typeof elements>;
-  if (!messagesEl) {
-    throw new Error("消息容器未找到");
-  }
+  const messagesEl = requireMessagesElement();
   let hasVisibleMessages = false;
   const now = Date.now();
   const animateKey =
@@ -297,7 +286,7 @@ export const renderMessages = (
   rowsToAnimate.forEach((row) => {
     animateMessageRowEnterSafe(row);
   });
-  const button = ensureNewChatButton();
+  const button = requireNewChatButton();
   button.classList.toggle("hidden", !hasVisibleMessages);
   setEmptyStateVisible(!hasVisibleMessages);
 };
@@ -305,10 +294,7 @@ export const renderMessages = (
 export const updateLastAssistantMessage = (
   message: DisplayMessage | null | undefined,
 ): boolean => {
-  const { messagesEl } = elements as Partial<typeof elements>;
-  if (!messagesEl) {
-    throw new Error("消息容器未找到");
-  }
+  const messagesEl = requireMessagesElement();
   if (!message || message.role !== "assistant") {
     return false;
   }

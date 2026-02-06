@@ -5,6 +5,7 @@ import {
   sendMessageToTab,
   waitForContentScript,
 } from "../services/index.js";
+import { parseOptionalPositiveInteger } from "./validation/index.js";
 
 type PageReadResultArgs = {
   headerLines: string[];
@@ -84,25 +85,7 @@ const pageContentRetryBaseDelayMs = 200,
       setTimeout(resolve, delayMs);
     });
 
-const parsePositiveInteger = (
-    value: unknown,
-    fieldName: string,
-  ): number | undefined => {
-    if (value === undefined || value === null) {
-      return undefined;
-    }
-    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-      return value;
-    }
-    if (typeof value === "string" && value.trim()) {
-      const parsed = Number(value);
-      if (Number.isInteger(parsed) && parsed > 0) {
-        return parsed;
-      }
-    }
-    throw new Error(`${fieldName} 必须是正整数`);
-  },
-  parsePositiveNumber = (
+const parsePositiveNumber = (
     value: unknown,
     fieldName: string,
   ): number | undefined => {
@@ -133,7 +116,7 @@ const parsePositiveInteger = (
     throw new Error(`${fieldName} 必须是非空字符串`);
   },
   resolvePageNumber = (value?: number): number =>
-    parsePositiveInteger(value, "page_number") ?? 1,
+    parseOptionalPositiveInteger(value, "page_number") ?? 1,
   resolvePageMetadata = (
     meta: {
       pageNumber?: unknown;
@@ -144,10 +127,11 @@ const parsePositiveInteger = (
     fallbackPageNumber?: number,
   ): PageReadMetadata => {
     const pageNumber =
-        parsePositiveInteger(meta.pageNumber, "pageNumber") ??
+        parseOptionalPositiveInteger(meta.pageNumber, "pageNumber") ??
         resolvePageNumber(fallbackPageNumber),
       totalPages =
-        parsePositiveInteger(meta.totalPages, "totalPages") ?? pageNumber,
+        parseOptionalPositiveInteger(meta.totalPages, "totalPages") ??
+        pageNumber,
       viewportPage =
         parsePositiveNumber(meta.viewportPage, "viewportPage") ?? pageNumber;
     const chunkAnchorId = parseNonEmptyString(

@@ -1,5 +1,19 @@
-export { default as bindComposerEvents } from "./composer.js";
-export { default as bindHistoryEvents } from "./history.js";
-export { default as bindPanelEvents } from "./panel.js";
-export { default as bindSettingsEvents } from "./settings.ts";
-export { default as bindTabEvents } from "./tabs.js";
+import bindComposerEvents from "./composer.js";
+import bindHistoryEvents from "./history.js";
+import bindSettingsEvents from "./settings.ts";
+import bindTabEvents from "./tabs.js";
+
+const bindPanelEvents = () => {
+  bindComposerEvents();
+  bindHistoryEvents();
+  bindSettingsEvents();
+  bindTabEvents();
+};
+
+export {
+  bindComposerEvents,
+  bindHistoryEvents,
+  bindPanelEvents,
+  bindSettingsEvents,
+  bindTabEvents,
+};

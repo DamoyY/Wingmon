@@ -6,8 +6,10 @@ import {
 } from "../dom/index.js";
 import convertPageContentToMarkdown from "../markdown/converter.js";
 import convertPdfToMarkdown from "../markdown/pdfConverter.js";
-
-type PageNumberInput = number | string | null;
+import {
+  resolveAliasedPageNumberInput,
+  type PageNumberInput,
+} from "../shared/index.ts";
 
 type PageContentResponse = {
   title?: string;
@@ -54,40 +56,15 @@ const sendError = (sendResponse: SendResponse, message: string): void => {
   sendResponse({ error: message });
 };
 
-const resolvePageNumber = (value: PageNumberInput): number => {
-  if (value === null) {
-    return 1;
-  }
-  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-    return value;
-  }
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    if (Number.isInteger(parsed) && parsed > 0) {
-      return parsed;
-    }
-  }
-  throw new Error("page_number 必须是正整数");
-};
-
 const resolveMessagePageNumber = (message: PageContentMessage): number => {
-  const hasCamel = "pageNumber" in message,
-    hasSnake = "page_number" in message;
-  if (hasCamel && hasSnake) {
-    const camelValue = resolvePageNumber(message.pageNumber ?? null),
-      snakeValue = resolvePageNumber(message.page_number ?? null);
-    if (camelValue !== snakeValue) {
-      throw new Error("pageNumber 与 page_number 不一致");
-    }
-    return camelValue;
-  }
-  if (hasCamel) {
-    return resolvePageNumber(message.pageNumber ?? null);
-  }
-  if (hasSnake) {
-    return resolvePageNumber(message.page_number ?? null);
-  }
-  return 1;
+  return resolveAliasedPageNumberInput({
+    camelProvided: "pageNumber" in message,
+    snakeProvided: "page_number" in message,
+    camelValue: message.pageNumber ?? null,
+    snakeValue: message.page_number ?? null,
+    mismatchMessage: "pageNumber 与 page_number 不一致",
+    defaultValue: 1,
+  });
 };
 
 const handleGetPageContent = async (

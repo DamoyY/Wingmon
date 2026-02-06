@@ -1,8 +1,13 @@
 import { assignLlmIds, insertViewportMarker } from "../dom/index.js";
 import { chunkAnchorAttribute } from "../dom/chunkAnchors.js";
 import convertPageContentToMarkdown from "../markdown/converter.js";
+import {
+  resolveAliasedInput,
+  resolveAliasedPageNumberInput,
+  resolvePageNumberInput,
+  type PageNumberInput,
+} from "../shared/index.ts";
 
-type PageNumberInput = number | string | null;
 type ChunkAnchorInput = string | null;
 
 type SetPageHashMessage = {
@@ -48,61 +53,28 @@ type HtmlFallbackScrollMetrics = {
   bodyHeight: number;
 };
 
-const resolvePageNumber = (value: PageNumberInput): number => {
-  if (value === null) {
-    return 1;
-  }
-  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
-    return value;
-  }
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    if (Number.isInteger(parsed) && parsed > 0) {
-      return parsed;
-    }
-  }
-  throw new Error("page_number 必须是正整数");
-};
-
 const resolveMessagePageNumber = (message: SetPageHashMessage): number => {
-  const hasCamel = "pageNumber" in message,
-    hasSnake = "page_number" in message;
-  if (hasCamel && hasSnake) {
-    const camelValue = resolvePageNumber(message.pageNumber ?? null),
-      snakeValue = resolvePageNumber(message.page_number ?? null);
-    if (camelValue !== snakeValue) {
-      throw new Error("pageNumber 与 page_number 不一致");
-    }
-    return camelValue;
-  }
-  if (hasCamel) {
-    return resolvePageNumber(message.pageNumber ?? null);
-  }
-  if (hasSnake) {
-    return resolvePageNumber(message.page_number ?? null);
-  }
-  return 1;
+  return resolveAliasedPageNumberInput({
+    camelProvided: "pageNumber" in message,
+    snakeProvided: "page_number" in message,
+    camelValue: message.pageNumber ?? null,
+    snakeValue: message.page_number ?? null,
+    mismatchMessage: "pageNumber 与 page_number 不一致",
+    defaultValue: 1,
+  });
 };
 
 const resolveMessageTotalPages = (
   message: SetPageHashMessage,
 ): number | null => {
-  const hasCamel = "totalPages" in message,
-    hasSnake = "total_pages" in message;
-  if (!hasCamel && !hasSnake) {
-    return null;
-  }
-  if (hasCamel && hasSnake) {
-    const camelValue = resolvePageNumber(message.totalPages ?? null),
-      snakeValue = resolvePageNumber(message.total_pages ?? null);
-    if (camelValue !== snakeValue) {
-      throw new Error("totalPages 与 total_pages 不一致");
-    }
-    return camelValue;
-  }
-  return resolvePageNumber(
-    hasCamel ? (message.totalPages ?? null) : (message.total_pages ?? null),
-  );
+  return resolveAliasedPageNumberInput({
+    camelProvided: "totalPages" in message,
+    snakeProvided: "total_pages" in message,
+    camelValue: message.totalPages ?? null,
+    snakeValue: message.total_pages ?? null,
+    mismatchMessage: "totalPages 与 total_pages 不一致",
+    defaultValue: null,
+  });
 };
 
 const resolveChunkAnchorId = (value: ChunkAnchorInput): string | null => {
@@ -118,39 +90,32 @@ const resolveChunkAnchorId = (value: ChunkAnchorInput): string | null => {
 const resolveMessageChunkAnchorId = (
   message: SetPageHashMessage,
 ): string | null => {
-  const hasCamel = "chunkAnchorId" in message,
-    hasSnake = "chunk_anchor_id" in message;
-  if (hasCamel && hasSnake) {
-    const camelValue = resolveChunkAnchorId(message.chunkAnchorId ?? null),
-      snakeValue = resolveChunkAnchorId(message.chunk_anchor_id ?? null);
-    if (camelValue !== snakeValue) {
-      throw new Error("chunkAnchorId 与 chunk_anchor_id 不一致");
-    }
-    return camelValue;
-  }
-  if (hasCamel) {
-    return resolveChunkAnchorId(message.chunkAnchorId ?? null);
-  }
-  if (hasSnake) {
-    return resolveChunkAnchorId(message.chunk_anchor_id ?? null);
-  }
-  return null;
+  return resolveAliasedInput<ChunkAnchorInput, string | null>({
+    camelProvided: "chunkAnchorId" in message,
+    snakeProvided: "chunk_anchor_id" in message,
+    camelValue: message.chunkAnchorId ?? null,
+    snakeValue: message.chunk_anchor_id ?? null,
+    mismatchMessage: "chunkAnchorId 与 chunk_anchor_id 不一致",
+    defaultValue: null,
+    resolve: resolveChunkAnchorId,
+  });
 };
 
 const resolveHtmlFallbackScrollMetrics = (
   pageNumber: number,
   totalPages: number,
 ): HtmlFallbackScrollMetrics => {
-  if (pageNumber > totalPages) {
+  const resolvedTotalPages = resolvePageNumberInput(totalPages, "page_number");
+  if (pageNumber > resolvedTotalPages) {
     throw new Error(
-      `page_number 超出范围：${String(pageNumber)}，总页数：${String(totalPages)}`,
+      `page_number 超出范围：${String(pageNumber)}，总页数：${String(resolvedTotalPages)}`,
     );
   }
   const body = document.querySelector("body");
   if (!body) {
     throw new Error("页面没有可用的 body");
   }
-  const ratio = (pageNumber - 0.5) / totalPages,
+  const ratio = (pageNumber - 0.5) / resolvedTotalPages,
     documentHeight = document.documentElement.scrollHeight,
     bodyHeight = body.scrollHeight,
     maxScrollTop = Math.max(documentHeight, bodyHeight) - window.innerHeight,
