@@ -3,6 +3,8 @@ export { default as ToolInputError } from "./errors.ts";
 export { default as apiToolAdapter } from "./api-adapter.js";
 export * from "./message-builders.js";
 export * from "./toolMessageContext.ts";
+export * from "./toolResultFormatters.ts";
+export * from "./toolResultTypes.ts";
 export * from "./toolExecutor.ts";
 export * from "./toolCallNormalization.js";
 export * from "./output.ts";

@@ -19,7 +19,7 @@ import { updateComposerButtonsState } from "../features/chat/index.js";
 import {
   refreshSendWithPageButton,
   renderMessagesView,
-} from "../features/messages/index.js";
+} from "../features/messages/index.ts";
 import { syncSettingsSnapshot } from "../features/settings/index.js";
 import { setLocale, translateDOM } from "../../utils/index.ts";
 import { bindPanelEvents } from "../bindings/index.js";

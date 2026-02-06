@@ -1,24 +1,19 @@
 import { t, type JsonValue } from "../../utils/index.ts";
-import {
-  type BrowserTab,
-  getAllTabs,
-  sendMessageToTab,
-  waitForContentScript,
-} from "../../services/index.ts";
+import type { EnterTextRequest } from "../../../shared/index.ts";
+import type { ToolExecutionContext } from "../definitions.ts";
+import { formatEnterTextResult } from "../toolResultFormatters.ts";
+import type { EnterTextToolResult } from "../toolResultTypes.ts";
 import { ensureObjectArgs } from "../validation/toolArgsValidation.ts";
 import { runTabAction } from "./tabActionRunner.ts";
+
+type BrowserTab = Awaited<
+  ReturnType<ToolExecutionContext["getAllTabs"]>
+>[number];
 
 type EnterTextArgs = {
   id: string;
   content: string;
   invalid?: boolean;
-  errorMessage?: string;
-};
-
-type EnterTextMessage = {
-  type: "enterText";
-  id: string;
-  content: string;
 };
 
 const parameters = {
@@ -32,7 +27,7 @@ const parameters = {
   },
   buildInvalidArgs = (message: string): EnterTextArgs => {
     console.error(message);
-    return { id: "", content: "", invalid: true, errorMessage: message };
+    return { id: "", content: "", invalid: true };
   },
   validateArgs = (args: JsonValue): EnterTextArgs => {
     let record: ReturnType<typeof ensureObjectArgs>;
@@ -65,37 +60,36 @@ const parameters = {
     }
     return tab.id;
   },
-  execute = async ({
-    id,
-    content,
-    invalid,
-  }: EnterTextArgs): Promise<string> => {
+  execute = async (
+    { id, content, invalid }: EnterTextArgs,
+    context: ToolExecutionContext,
+  ): Promise<EnterTextToolResult> => {
     if (invalid) {
-      return "失败";
+      return { ok: false };
     }
     let tabs: BrowserTab[];
     try {
-      tabs = await getAllTabs();
+      tabs = await context.getAllTabs();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "无法查询所有标签页";
       console.error(message);
-      return "失败";
+      return { ok: false };
     }
     if (!tabs.length) {
       console.error("未找到可用标签页");
-      return "失败";
+      return { ok: false };
     }
     const finalState = await runTabAction({
       tabs,
-      waitForContentScript,
+      waitForContentScript: context.waitForContentScript,
       sendMessage: (tabId) => {
-        const message: EnterTextMessage = {
+        const message: EnterTextRequest = {
           type: "enterText",
           id,
           content,
         };
-        return sendMessageToTab(tabId, message);
+        return context.sendMessageToTab(tabId, message);
       },
       invalidResultMessage: "输入返回结果异常",
       buildErrorMessage: (error) =>
@@ -103,7 +97,7 @@ const parameters = {
       resolveTabId,
     });
     if (finalState.done) {
-      return "成功";
+      return { ok: true };
     }
     if (finalState.notFoundCount) {
       console.error(`未在任何标签页找到 id 为 ${id} 的输入框`);
@@ -111,7 +105,7 @@ const parameters = {
     if (finalState.errors.length) {
       console.error(`输入失败：${finalState.errors.join("；")}`);
     }
-    return "失败";
+    return { ok: false };
   };
 
 export default {
@@ -121,4 +115,5 @@ export default {
   parameters,
   validateArgs,
   execute,
+  formatResult: formatEnterTextResult,
 };

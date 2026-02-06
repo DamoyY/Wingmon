@@ -1,30 +1,24 @@
 import { isInternalUrl, t, type JsonValue } from "../../utils/index.ts";
-import { type BrowserTab, focusTab, getAllTabs } from "../../services/index.ts";
+import type { ToolExecutionContext } from "../definitions.ts";
 import { parsePageNumber } from "../validation/pageNumber.ts";
 import {
   ensureObjectArgs,
   validateTabIdArgs,
 } from "../validation/toolArgsValidation.ts";
 import {
-  buildPageReadResult,
-  fetchPageMarkdownData,
-  shouldFollowMode,
-  syncPageHash,
-} from "../pageReadHelpers.ts";
+  buildGetPageMarkdownMessageContext,
+  formatGetPageMarkdownResult,
+} from "../toolResultFormatters.ts";
+import type { GetPageMarkdownToolResult } from "../toolResultTypes.ts";
+
+type BrowserTab = Awaited<
+  ReturnType<ToolExecutionContext["getAllTabs"]>
+>[number];
 
 type GetPageArgs = {
   tabId: number;
   pageNumber: number;
   preserveViewport?: boolean;
-};
-
-type PageMarkdownOutputArgs = {
-  title: string;
-  url: string;
-  content?: string;
-  isInternal: boolean;
-  pageNumber?: number;
-  totalPages?: number;
 };
 
 const parsePreserveViewport = (value: JsonValue): boolean => {
@@ -57,41 +51,6 @@ const parameters = {
     required: ["tabId", "page_number"],
     additionalProperties: false,
   },
-  buildPageMarkdownOutput = ({
-    title,
-    url,
-    content = "",
-    isInternal,
-    pageNumber,
-    totalPages,
-  }: PageMarkdownOutputArgs): string => {
-    const headerLines = isInternal
-      ? [`${t("statusTitle")}：`, title, t("statusUrlPlain"), url]
-      : [
-          t("statusReadSuccess"),
-          `${t("statusTitle")}：`,
-          title,
-          t("statusUrlPlain"),
-          url,
-        ];
-    if (!isInternal) {
-      if (!Number.isInteger(pageNumber) || pageNumber <= 0) {
-        throw new Error("get_page 响应缺少有效分块序号");
-      }
-      if (!Number.isInteger(totalPages) || totalPages <= 0) {
-        throw new Error("get_page 响应缺少有效总分块数量");
-      }
-      headerLines.push(`${t("statusTotalChunks")}：`, String(totalPages));
-    }
-    return buildPageReadResult({
-      headerLines,
-      contentLabel: isInternal
-        ? ""
-        : t("statusChunkContent", [String(pageNumber)]),
-      content,
-      isInternal,
-    });
-  },
   validateArgs = (args: JsonValue): GetPageArgs => {
     const argsRecord = ensureObjectArgs(args),
       { tabId } = validateTabIdArgs(argsRecord),
@@ -101,12 +60,11 @@ const parameters = {
     const pageNumber = parsePageNumber(argsRecord.page_number ?? null);
     return { tabId, pageNumber, preserveViewport };
   },
-  execute = async ({
-    tabId,
-    pageNumber,
-    preserveViewport = false,
-  }: GetPageArgs): Promise<string> => {
-    const tabs: BrowserTab[] = await getAllTabs(),
+  execute = async (
+    { tabId, pageNumber, preserveViewport = false }: GetPageArgs,
+    context: ToolExecutionContext,
+  ): Promise<GetPageMarkdownToolResult> => {
+    const tabs: BrowserTab[] = await context.getAllTabs(),
       targetTab = tabs.find((tab) => tab.id === tabId);
     if (!targetTab) {
       throw new Error(`未找到 TabID 为 ${String(tabId)} 的标签页`);
@@ -114,31 +72,33 @@ const parameters = {
     if (typeof targetTab.url !== "string" || !targetTab.url.trim()) {
       throw new Error("标签页缺少 URL");
     }
-    const followMode = await shouldFollowMode();
+    const followMode = await context.shouldFollowMode();
     if (followMode) {
-      await focusTab(tabId);
+      await context.focusTab(tabId);
     }
     const internalUrl = isInternalUrl(targetTab.url);
     if (internalUrl) {
-      const title = targetTab.title || "";
-      return buildPageMarkdownOutput({
-        title,
+      return {
+        tabId,
+        title: targetTab.title || "",
         url: targetTab.url,
+        content: "",
         isInternal: true,
-      });
+      };
     }
-    const pageData = await fetchPageMarkdownData(tabId, pageNumber);
+    const pageData = await context.fetchPageMarkdownData(tabId, pageNumber);
     if (followMode && !preserveViewport) {
-      await syncPageHash(tabId, pageData);
+      await context.syncPageHash(tabId, pageData);
     }
-    return buildPageMarkdownOutput({
+    return {
+      tabId,
       title: pageData.title,
-      url: pageData.url,
+      url: pageData.url || targetTab.url,
       content: pageData.content,
       isInternal: false,
       pageNumber: pageData.pageNumber,
       totalPages: pageData.totalPages,
-    });
+    };
   };
 
 export default {
@@ -148,4 +108,7 @@ export default {
   parameters,
   validateArgs,
   execute,
+  formatResult: formatGetPageMarkdownResult,
+  buildMessageContext: buildGetPageMarkdownMessageContext,
+  pageReadDedupeAction: "removeToolCall",
 };

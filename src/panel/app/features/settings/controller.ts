@@ -1,18 +1,7 @@
 import {
-  applyTheme,
-  clearSettingsStatus,
-  fillSettingsForm,
-  readSettingsFormValues,
-  setSaveButtonVisible,
-  setSettingsStatus,
-  showChatView,
-  showKeyView,
-  updateSettingsFormValues,
-} from "../../../ui/index.ts";
-import { setLocale, translateDOM } from "../../../utils/index.ts";
-import {
   getSettings,
   updateSettings,
+  type Settings,
 } from "../../../services/settingsStorage.ts";
 import {
   buildThemePayload,
@@ -23,133 +12,266 @@ import {
   validateRequiredSettings,
 } from "./model.ts";
 
-const updateSaveButtonVisibility = () => {
-  const formValues = readSettingsFormValues();
-  setSaveButtonVisible(
+type SettingsControllerFailure = {
+  success: false;
+  message: string;
+};
+
+type SettingsControllerSuccess<TPayload> = {
+  success: true;
+  payload: TPayload;
+};
+
+export type SettingsControllerResult<TPayload> =
+  | SettingsControllerSuccess<TPayload>
+  | SettingsControllerFailure;
+
+type ErrorLike =
+  | Error
+  | {
+      message?: string;
+    }
+  | string
+  | null
+  | undefined;
+
+type SaveButtonStatePayload = {
+  saveButtonVisible: boolean;
+};
+
+type SettingsPayload = {
+  settings: Settings;
+};
+
+type CancelSettingsPayload = {
+  settings: Settings;
+  shouldShowChatView: boolean;
+  locale: string;
+};
+
+type LanguagePayload = {
+  settings: Settings;
+  locale: string;
+};
+
+const resolveErrorMessage = (
+    error: ErrorLike,
+    fallback: string,
+    label: string,
+  ): string => {
+    console.error(label, error);
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    if (typeof error === "string" && error.trim()) {
+      return error;
+    }
+    if (
+      error &&
+      typeof error === "object" &&
+      typeof error.message === "string" &&
+      error.message.trim()
+    ) {
+      return error.message;
+    }
+    return fallback;
+  },
+  resolveSaveButtonVisible = (formValues: SettingsInput): boolean =>
     isSettingsDirty(formValues) && isSettingsComplete(formValues),
-  );
-};
+  createFailureResult = (message: string): SettingsControllerFailure => ({
+    success: false,
+    message,
+  }),
+  createSettingsResult = (
+    settings: Settings,
+  ): SettingsControllerResult<SettingsPayload> => ({
+    success: true,
+    payload: { settings },
+  }),
+  resolveShouldShowChatView = (settings: Settings): boolean =>
+    Boolean(settings.apiKey && settings.baseUrl && settings.model);
 
-type ErrorLike = Error | string | null | undefined;
-
-const getErrorMessage = (error: ErrorLike): string => {
-  console.error("设置操作失败", error);
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (typeof error === "string" && error.trim()) {
-    return error;
-  }
-  return "操作失败，请稍后重试";
-};
-
-export const syncSettingsSnapshot = (settings: SettingsInput) => {
+export const syncSettingsSnapshot = (settings: SettingsInput): void => {
   syncSettingsSnapshotState(settings);
-  updateSaveButtonVisibility();
 };
 
-export const handleSettingsFieldChange = () => {
-  updateSaveButtonVisibility();
-};
+export const handleSettingsFieldChange = (
+  formValues: SettingsInput,
+): SaveButtonStatePayload => ({
+  saveButtonVisible: resolveSaveButtonVisible(formValues),
+});
 
-export const handleFollowModeChange = async (
-  followMode: boolean,
-): Promise<void> => {
+export const handleFollowModeChange = async ({
+  followMode,
+}: {
+  followMode: boolean;
+}): Promise<SettingsControllerResult<SettingsPayload>> => {
   try {
-    await updateSettings({ followMode });
+    return createSettingsResult(await updateSettings({ followMode }));
   } catch (error) {
-    console.error("更新跟随模式失败", error);
+    return createFailureResult(
+      resolveErrorMessage(
+        error as ErrorLike,
+        "更新跟随模式失败",
+        "更新跟随模式失败",
+      ),
+    );
   }
 };
 
-export const handleSaveSettings = async () => {
-  const formValues = readSettingsFormValues(),
-    required = validateRequiredSettings(formValues);
+export const handleSaveSettings = async (
+  formValues: SettingsInput,
+): Promise<SettingsControllerResult<SettingsPayload>> => {
+  const required = validateRequiredSettings(formValues);
   if (!required.valid) {
-    setSettingsStatus(required.message);
-    return;
+    return createFailureResult(required.message);
   }
-  let themePayload: ReturnType<typeof buildThemePayload> | null = null;
+  let themePayload: ReturnType<typeof buildThemePayload>;
   try {
     themePayload = buildThemePayload(formValues);
   } catch (error) {
-    const resolvedError =
-      error instanceof Error || typeof error === "string" ? error : undefined;
-    setSettingsStatus(getErrorMessage(resolvedError));
-    return;
-  }
-  const next = await updateSettings({
-    ...required.payload,
-    ...themePayload,
-  });
-  updateSettingsFormValues({
-    themeColor: next.themeColor,
-    themeVariant: next.themeVariant,
-  });
-  applyTheme(next.theme, next.themeColor, next.themeVariant);
-  syncSettingsSnapshot(next);
-  await showChatView({ animate: true });
-};
-
-export const handleCancelSettings = async () => {
-  const settings = await getSettings();
-  fillSettingsForm(settings);
-  clearSettingsStatus();
-  applyTheme(settings.theme, settings.themeColor, settings.themeVariant);
-  await setLocale(settings.language || "en");
-  translateDOM();
-  syncSettingsSnapshot(settings);
-  if (settings.apiKey && settings.baseUrl && settings.model) {
-    await showChatView({ animate: true });
-  }
-};
-
-export const handleOpenSettings = async () => {
-  const settings = await getSettings();
-  await showKeyView({ isFirstUse: false, animate: true });
-  fillSettingsForm(settings);
-  syncSettingsSnapshot(settings);
-};
-
-const handleThemeUpdate = async () => {
-  clearSettingsStatus();
-  const formValues = readSettingsFormValues();
-  try {
-    const themePayload = buildThemePayload(formValues),
-      theme = applyTheme(
-        themePayload.theme,
-        themePayload.themeColor,
-        themePayload.themeVariant,
+    return createFailureResult(
+      resolveErrorMessage(
+        error as ErrorLike,
+        "操作失败，请稍后重试",
+        "设置操作失败",
       ),
-      next = await updateSettings({
-        theme,
-        themeColor: themePayload.themeColor,
-        themeVariant: themePayload.themeVariant,
-      });
-    updateSettingsFormValues({
-      themeColor: next.themeColor,
-      themeVariant: next.themeVariant,
+    );
+  }
+  try {
+    const settings = await updateSettings({
+      ...required.payload,
+      ...themePayload,
     });
-    syncSettingsSnapshot(next);
+    syncSettingsSnapshot(settings);
+    return createSettingsResult(settings);
   } catch (error) {
-    const resolvedError =
-      error instanceof Error || typeof error === "string" ? error : undefined;
-    setSettingsStatus(getErrorMessage(resolvedError));
-    return;
+    return createFailureResult(
+      resolveErrorMessage(
+        error as ErrorLike,
+        "操作失败，请稍后重试",
+        "设置操作失败",
+      ),
+    );
   }
 };
 
-export const handleThemeChange = async () => handleThemeUpdate();
+export const handleCancelSettings = async (): Promise<
+  SettingsControllerResult<CancelSettingsPayload>
+> => {
+  try {
+    const settings = await getSettings();
+    syncSettingsSnapshot(settings);
+    return {
+      success: true,
+      payload: {
+        settings,
+        shouldShowChatView: resolveShouldShowChatView(settings),
+        locale: settings.language || "en",
+      },
+    };
+  } catch (error) {
+    return createFailureResult(
+      resolveErrorMessage(
+        error as ErrorLike,
+        "设置读取失败，请稍后重试",
+        "读取设置失败",
+      ),
+    );
+  }
+};
 
-export const handleThemeColorChange = async () => handleThemeUpdate();
+export const handleOpenSettings = async (): Promise<
+  SettingsControllerResult<SettingsPayload>
+> => {
+  try {
+    const settings = await getSettings();
+    syncSettingsSnapshot(settings);
+    return createSettingsResult(settings);
+  } catch (error) {
+    return createFailureResult(
+      resolveErrorMessage(
+        error as ErrorLike,
+        "设置读取失败，请稍后重试",
+        "读取设置失败",
+      ),
+    );
+  }
+};
 
-export const handleThemeVariantChange = async () => handleThemeUpdate();
+const handleThemeUpdate = async (
+  formValues: SettingsInput,
+): Promise<SettingsControllerResult<SettingsPayload>> => {
+  let themePayload: ReturnType<typeof buildThemePayload>;
+  try {
+    themePayload = buildThemePayload(formValues);
+  } catch (error) {
+    return createFailureResult(
+      resolveErrorMessage(
+        error as ErrorLike,
+        "操作失败，请稍后重试",
+        "设置操作失败",
+      ),
+    );
+  }
+  try {
+    const settings = await updateSettings({
+      theme: themePayload.theme,
+      themeColor: themePayload.themeColor,
+      themeVariant: themePayload.themeVariant,
+    });
+    syncSettingsSnapshot(settings);
+    return createSettingsResult(settings);
+  } catch (error) {
+    return createFailureResult(
+      resolveErrorMessage(
+        error as ErrorLike,
+        "操作失败，请稍后重试",
+        "设置操作失败",
+      ),
+    );
+  }
+};
 
-export const handleLanguageChange = async () => {
-  clearSettingsStatus();
-  const { language } = readSettingsFormValues();
-  await setLocale(language);
-  translateDOM();
-  const next = await updateSettings({ language });
-  syncSettingsSnapshot(next);
+export const handleThemeChange = async (
+  formValues: SettingsInput,
+): Promise<SettingsControllerResult<SettingsPayload>> =>
+  handleThemeUpdate(formValues);
+
+export const handleThemeColorChange = async (
+  formValues: SettingsInput,
+): Promise<SettingsControllerResult<SettingsPayload>> =>
+  handleThemeUpdate(formValues);
+
+export const handleThemeVariantChange = async (
+  formValues: SettingsInput,
+): Promise<SettingsControllerResult<SettingsPayload>> =>
+  handleThemeUpdate(formValues);
+
+export const handleLanguageChange = async (
+  formValues: SettingsInput,
+): Promise<SettingsControllerResult<LanguagePayload>> => {
+  const { language } = formValues;
+  if (!language) {
+    return createFailureResult("语言不能为空");
+  }
+  try {
+    const settings = await updateSettings({ language });
+    syncSettingsSnapshot(settings);
+    return {
+      success: true,
+      payload: {
+        settings,
+        locale: settings.language || "en",
+      },
+    };
+  } catch (error) {
+    return createFailureResult(
+      resolveErrorMessage(
+        error as ErrorLike,
+        "语言设置失败，请稍后重试",
+        "更新语言失败",
+      ),
+    );
+  }
 };

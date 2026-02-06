@@ -1,9 +1,14 @@
 import { build } from "esbuild";
 import path from "node:path";
-import { outputPublicDir, outputRoot, rootDir } from "./constants.ts";
-import { ensureFlattenTarget, resolveEntryPath } from "./utils.ts";
-import { obfuscateFile, shouldObfuscateBuild } from "./obfuscate.ts";
-import { getToolIndexPlugin } from "./tools.ts";
+import {
+  ensureFlattenTarget,
+  outputPublicDir,
+  outputRoot,
+  resolveEntryPath,
+  rootDir,
+} from "../core/index.ts";
+import { obfuscateFile, shouldObfuscateBuild } from "../transformers/index.ts";
+import { getToolIndexPlugin } from "../plugins/index.ts";
 
 export const buildBundles = async (): Promise<void> => {
   const toolIndexPlugin = await getToolIndexPlugin();

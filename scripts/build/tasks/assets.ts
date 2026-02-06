@@ -1,30 +1,18 @@
-import {
-  copyFile,
-  mkdir,
-  readdir,
-  readFile,
-  writeFile,
-} from "node:fs/promises";
-import path from "node:path"; // Import path directly
+import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import type { Dirent } from "node:fs";
-import { outputPublicDir, outputRoot, rootDir } from "./constants.ts";
 import {
   ensureFlattenTarget,
-  isNodeModulesPath,
+  outputPublicDir,
+  outputRoot,
+  rootDir,
   shouldCopyFile,
-} from "./utils.ts";
-import { obfuscateCode } from "./obfuscate.ts";
-import { minifyHtmlContent } from "./minify.ts";
-
-const rewritePublicHtml = (fileName: string, contents: string): string => {
-  if (fileName === "sandbox.html") {
-    return contents.replaceAll("sandbox/", "");
-  }
-  if (fileName === "panel.html") {
-    return contents.replaceAll("icons/", "");
-  }
-  return contents;
-};
+} from "../core/index.ts";
+import {
+  publicAssetProcessors,
+  resolveFlatCopyAction,
+  type FlatCopyProcessor,
+} from "../transformers/index.ts";
 
 export const copyDir = async (
   source: string,
@@ -56,13 +44,14 @@ export const copyDir = async (
 export const copyDirFlat = async (
   source: string,
   target: string,
+  processors: readonly FlatCopyProcessor[] = [],
 ): Promise<void> => {
   const entries = await readdir(source, { withFileTypes: true });
   await Promise.all(
     entries.map(async (entry: Dirent) => {
       const sourcePath = path.join(source, entry.name);
       if (entry.isDirectory()) {
-        await copyDirFlat(sourcePath, target);
+        await copyDirFlat(sourcePath, target, processors);
         return;
       }
       if (!entry.isFile()) {
@@ -77,23 +66,20 @@ export const copyDirFlat = async (
       }
       const targetPath = path.join(target, entry.name);
       ensureFlattenTarget(targetPath, sourcePath);
-      if (ext === ".html") {
-        const html = await readFile(sourcePath, "utf8");
-        const rewrittenHtml = rewritePublicHtml(entry.name, html);
-        const minifiedHtml = await minifyHtmlContent(rewrittenHtml, entry.name);
-        await writeFile(targetPath, minifiedHtml);
+      const action = await resolveFlatCopyAction(
+        {
+          sourcePath,
+          targetPath,
+          fileName: entry.name,
+          extension: ext,
+        },
+        processors,
+      );
+      if (action.type === "skip") {
         return;
       }
-      if (ext === ".js") {
-        if (isNodeModulesPath(sourcePath)) {
-          if (await shouldCopyFile(sourcePath, targetPath)) {
-            await copyFile(sourcePath, targetPath);
-          }
-          return;
-        }
-        const source = await readFile(sourcePath, "utf8");
-        const obfuscated = obfuscateCode(source);
-        await writeFile(targetPath, obfuscated);
+      if (action.type === "write") {
+        await writeFile(targetPath, action.content);
         return;
       }
       if (await shouldCopyFile(sourcePath, targetPath)) {
@@ -110,7 +96,11 @@ export const copyAssets = async (): Promise<void> => {
     path.join(outputRoot, "_locales"),
   );
   // Public copy
-  await copyDirFlat(path.join(rootDir, "public"), outputPublicDir);
+  await copyDirFlat(
+    path.join(rootDir, "public"),
+    outputPublicDir,
+    publicAssetProcessors,
+  );
 
   // WASM
   const md4wWasmSource = path.join(

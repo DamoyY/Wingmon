@@ -9,7 +9,7 @@ import {
   renderMessages,
   updateLastAssistantMessage,
 } from "../../../ui/index.ts";
-import createMessageActionHandlers from "./actions.js";
+import createMessageActionHandlers from "./actions.ts";
 import {
   buildDisplayMessages,
   type DisplayMessage,

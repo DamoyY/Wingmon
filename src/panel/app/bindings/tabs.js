@@ -1,4 +1,4 @@
-import { refreshSendWithPageButton } from "../features/messages/index.js";
+import { refreshSendWithPageButton } from "../features/messages/index.ts";
 
 const bindTabEvents = () => {
   chrome.tabs.onActivated.addListener(() => {

@@ -7,20 +7,37 @@ import {
   toolNames,
   type JsonValue,
   type ToolCall,
+  type ToolExecutionContext,
+  type ToolMessageContext,
+  type ToolModule,
 } from "./definitions.ts";
+import {
+  closeTab,
+  createTab,
+  focusTab,
+  getAllTabs,
+  saveHtmlPreview,
+  sendMessageToSandbox,
+  sendMessageToTab,
+  waitForContentScript,
+} from "../services/index.ts";
+import {
+  fetchPageMarkdownData,
+  shouldFollowMode,
+  syncPageHash,
+} from "./pageReadHelpers.ts";
 import { buildToolErrorOutput, defaultToolSuccessOutput } from "./output.ts";
 import ToolInputError from "./errors.ts";
 
-type NormalizedToolCall = {
-  id: string;
-  call_id: string;
-  name: string;
-  arguments: string | JsonValue;
-};
+interface ChromeRuntime {
+  getURL: (path: string) => string;
+}
+
+declare const chrome: { runtime: ChromeRuntime };
 
 type ToolOutput = {
   content: string;
-  pageReadTabId?: number;
+  toolContext: ToolMessageContext | null;
 };
 
 type ToolMessage = {
@@ -28,104 +45,166 @@ type ToolMessage = {
   content: string;
   tool_call_id: string;
   name: string;
-  pageReadTabId?: number;
+  toolContext?: ToolMessageContext;
 };
 
-const normalizeToolCall = (
-    toolCall: ToolCall | null,
-  ): NormalizedToolCall | null => {
-    if (!toolCall) {
-      return null;
+const sendMessageToSandboxApi =
+    sendMessageToSandbox as ToolExecutionContext["sendMessageToSandbox"],
+  saveHtmlPreviewApi =
+    saveHtmlPreview as ToolExecutionContext["saveHtmlPreview"];
+
+const sendMessageToSandboxWithType: ToolExecutionContext["sendMessageToSandbox"] =
+    async (payload, timeoutMs) =>
+      await sendMessageToSandboxApi(payload, timeoutMs),
+  saveHtmlPreviewWithType: ToolExecutionContext["saveHtmlPreview"] = async (
+    args,
+  ) => {
+    const previewId = await saveHtmlPreviewApi(args);
+    if (typeof previewId !== "string" || !previewId.trim()) {
+      console.error("HTML 预览保存失败", previewId);
+      throw new Error("HTML 预览保存失败");
     }
-    if (toolCall.function) {
-      const { id } = toolCall,
-        name = toolCall.function.name,
-        args = getToolCallArguments(toolCall);
-      if (!id || !name) {
-        return null;
-      }
-      return {
-        id,
-        call_id: toolCall.call_id || id,
-        name,
-        arguments: args,
-      };
-    }
-    if (toolCall.name) {
-      const callId = toolCall.call_id || toolCall.id;
-      if (!callId) {
-        return null;
-      }
-      return {
-        id: callId,
-        call_id: callId,
-        name: toolCall.name,
-        arguments: toolCall.arguments ?? "",
-      };
-    }
-    return null;
+    return previewId;
   },
-  resolveToolArguments = (rawArgs: string | JsonValue): JsonValue =>
+  getRuntimeUrl: ToolExecutionContext["getRuntimeUrl"] = (path) =>
+    chrome.runtime.getURL(path);
+
+export const defaultToolExecutionContext: ToolExecutionContext = {
+  getAllTabs,
+  waitForContentScript,
+  sendMessageToTab,
+  closeTab,
+  focusTab,
+  createTab,
+  fetchPageMarkdownData,
+  shouldFollowMode,
+  syncPageHash,
+  sendMessageToSandbox: sendMessageToSandboxWithType,
+  saveHtmlPreview: saveHtmlPreviewWithType,
+  getRuntimeUrl,
+};
+
+const resolveToolArguments = (rawArgs: string | JsonValue): JsonValue =>
     typeof rawArgs === "string" ? parseToolArguments(rawArgs || "{}") : rawArgs,
-  isToolOutputRecord = (
-    value: unknown,
-  ): value is { content?: unknown; pageReadTabId?: unknown } =>
-    typeof value === "object" && value !== null && !Array.isArray(value),
   hasMessageField = (value: unknown): value is { message?: unknown } =>
     typeof value === "object" && value !== null && "message" in value,
-  executeTool = (name: string, args: JsonValue): Promise<unknown> => {
-    const tool = getToolModule(name);
-    return Promise.resolve(tool.execute(tool.validateArgs(args)));
-  },
-  executeToolCall = async (toolCall: ToolCall): Promise<unknown> => {
-    const normalized = normalizeToolCall(toolCall);
-    if (!normalized) {
-      throw new ToolInputError("工具调用格式不正确");
+  isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value),
+  serializeToolOutput = (output: unknown, name: string): string => {
+    if (
+      typeof output === "string" ||
+      typeof output === "number" ||
+      typeof output === "boolean"
+    ) {
+      return String(output);
     }
-    const args = resolveToolArguments(normalized.arguments);
-    return executeTool(normalized.name, args);
-  },
-  resolveToolOutput = (output: unknown, name: string): ToolOutput => {
-    if (typeof output === "string") {
-      return { content: output };
-    }
-    if (!isToolOutputRecord(output)) {
-      throw new Error(`工具输出无效：${name}`);
-    }
-    if (typeof output.content !== "string") {
-      throw new Error(`工具输出内容无效：${name}`);
-    }
-    const result: ToolOutput = { content: output.content };
-    if ("pageReadTabId" in output) {
-      const { pageReadTabId } = output;
-      if (!Number.isInteger(pageReadTabId) || pageReadTabId <= 0) {
-        throw new Error(`工具输出 TabID 无效：${name}`);
+    try {
+      const serialized = JSON.stringify(output);
+      if (typeof serialized !== "string") {
+        throw new Error(`工具输出不可序列化：${name}`);
       }
-      result.pageReadTabId = pageReadTabId;
+      return serialized;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "工具输出序列化失败";
+      throw new Error(`工具输出序列化失败：${name}，${message}`);
     }
-    return result;
-  };
+  },
+  resolveToolContent = (
+    tool: ToolModule,
+    output: unknown,
+    name: string,
+  ): string => {
+    if (typeof tool.formatResult === "function") {
+      const formatted = tool.formatResult(output as JsonValue);
+      if (typeof formatted !== "string") {
+        throw new Error(`工具格式化输出无效：${name}`);
+      }
+      return formatted;
+    }
+    if (typeof output === "string") {
+      return output;
+    }
+    if (isRecord(output) && typeof output.content === "string") {
+      return output.content;
+    }
+    return serializeToolOutput(output, name);
+  },
+  resolveToolContext = (
+    tool: ToolModule,
+    args: JsonValue,
+    output: unknown,
+    name: string,
+  ): ToolMessageContext | null => {
+    if (typeof tool.buildMessageContext !== "function") {
+      return null;
+    }
+    const context = tool.buildMessageContext(args, output as JsonValue);
+    if (context === null) {
+      return null;
+    }
+    if (!isRecord(context)) {
+      throw new Error(`工具上下文无效：${name}`);
+    }
+    return context;
+  },
+  executeTool = async (
+    name: string,
+    rawArgs: string | JsonValue,
+    context: ToolExecutionContext,
+  ): Promise<{
+    tool: ToolModule;
+    args: JsonValue;
+    output: unknown;
+  }> => {
+    const tool = getToolModule(name),
+      parsedArgs = resolveToolArguments(rawArgs),
+      validatedArgs = tool.validateArgs(parsedArgs),
+      output = await Promise.resolve(tool.execute(validatedArgs, context));
+    return { tool, args: validatedArgs, output };
+  },
+  resolveToolOutput = ({
+    tool,
+    args,
+    output,
+    name,
+  }: {
+    tool: ToolModule;
+    args: JsonValue;
+    output: unknown;
+    name: string;
+  }): ToolOutput => ({
+    content: resolveToolContent(tool, output, name),
+    toolContext: resolveToolContext(tool, args, output, name),
+  });
+
 export const buildPageMarkdownToolOutput = async (
   tabId: number,
   pageNumber: number,
+  context: ToolExecutionContext = defaultToolExecutionContext,
 ): Promise<string> => {
   const args: { tabId: number; page_number: number } = {
-    tabId,
-    page_number: pageNumber,
-  };
-  const output = await executeTool(toolNames.getPageMarkdown, args);
-  return resolveToolOutput(output, toolNames.getPageMarkdown).content;
+      tabId,
+      page_number: pageNumber,
+    },
+    { tool, output } = await executeTool(
+      toolNames.getPageMarkdown,
+      args,
+      context,
+    );
+  return resolveToolContent(tool, output, toolNames.getPageMarkdown);
 };
+
 const buildToolMessage = ({
     callId,
     name,
     content,
-    pageReadTabId,
+    toolContext,
   }: {
     callId: string;
     name: string;
     content: string;
-    pageReadTabId: number | null;
+    toolContext: ToolMessageContext | null;
   }): ToolMessage => {
     const message: ToolMessage = {
       role: "tool",
@@ -133,8 +212,8 @@ const buildToolMessage = ({
       tool_call_id: callId,
       name,
     };
-    if (pageReadTabId !== null) {
-      message.pageReadTabId = pageReadTabId;
+    if (toolContext !== null) {
+      message.toolContext = toolContext;
     }
     return message;
   },
@@ -159,20 +238,27 @@ const buildToolMessage = ({
     }
     return "未知错误";
   },
-  executeToolCallToMessage = async (call: ToolCall): Promise<ToolMessage> => {
+  executeToolCallToMessage = async (
+    call: ToolCall,
+    context: ToolExecutionContext,
+  ): Promise<ToolMessage> => {
     let callId = "",
       name = "",
       output: string = defaultToolSuccessOutput,
-      pageReadTabId: number | null = null;
+      toolContext: ToolMessageContext | null = null;
     try {
       callId = getToolCallId(call);
       name = getToolCallName(call);
-      const resolved = resolveToolOutput(await executeToolCall(call), name);
+      const rawArgs = getToolCallArguments(call),
+        resolved = resolveToolOutput({
+          ...(await executeTool(name, rawArgs, context)),
+          name,
+        });
       output = resolved.content;
-      pageReadTabId = resolved.pageReadTabId ?? null;
+      toolContext = resolved.toolContext;
     } catch (error) {
-      const isInputError = error instanceof ToolInputError;
-      const errorMessage = resolveErrorMessage(error);
+      const isInputError = error instanceof ToolInputError,
+        errorMessage = resolveErrorMessage(error);
       console.error(`工具执行失败: ${name || "未知工具"}`, errorMessage);
       output = buildToolErrorOutput({
         message: errorMessage,
@@ -187,19 +273,21 @@ const buildToolMessage = ({
       callId,
       name,
       content: output,
-      pageReadTabId,
+      toolContext,
     });
   };
+
 export const handleToolCalls = async (
   toolCalls: ToolCall[],
   signal?: AbortSignal | null,
+  context: ToolExecutionContext = defaultToolExecutionContext,
 ): Promise<ToolMessage[]> => {
   const messages: ToolMessage[] = [];
   for (const call of toolCalls) {
     if (signal?.aborted) {
       break;
     }
-    const message = await executeToolCallToMessage(call);
+    const message = await executeToolCallToMessage(call, context);
     messages.push(message);
   }
   return messages;

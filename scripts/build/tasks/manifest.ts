@@ -3,10 +3,11 @@ import { readFile, writeFile } from "node:fs/promises";
 import {
   ensureString,
   isRecord,
+  outputRoot,
+  rootDir,
   type GuardRecord,
   type GuardValue,
-} from "./utils.ts";
-import { outputRoot, rootDir } from "./constants.ts";
+} from "../core/index.ts";
 
 type Manifest = GuardRecord;
 

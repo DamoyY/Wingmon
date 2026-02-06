@@ -1,12 +1,11 @@
 import { isEditableElement } from "../dom/editableElements.js";
 import { normalizeLlmId } from "../shared/index.ts";
+import type {
+  EnterTextRequest,
+  EnterTextResponse,
+} from "../../shared/index.ts";
 
-type EnterTextMessage = {
-  id?: string | null;
-  content?: string | null;
-};
-
-const normalizeInputContent = (message: EnterTextMessage | null): string => {
+const normalizeInputContent = (message: EnterTextRequest | null): string => {
   if (typeof message?.content !== "string") {
     throw new Error("content 必须是字符串");
   }
@@ -91,12 +90,8 @@ const fillInput = (target: Element, value: string): void => {
 };
 
 const handleEnterText = (
-  message: EnterTextMessage,
-  sendResponse: (response: {
-    ok?: boolean;
-    error?: string;
-    reason?: string;
-  }) => void,
+  message: EnterTextRequest,
+  sendResponse: (response: EnterTextResponse) => void,
 ): void => {
   try {
     const normalizedId = normalizeLlmId(message.id ?? null),

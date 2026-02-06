@@ -1,36 +1,21 @@
 import { isInternalUrl, t, type JsonValue } from "../../utils/index.ts";
-import {
-  type BrowserTab,
-  getAllTabs,
-  sendMessageToTab,
-  waitForContentScript,
-} from "../../services/index.ts";
+import type { ClickButtonRequest } from "../../../shared/index.ts";
+import type { ToolExecutionContext } from "../definitions.ts";
 import ToolInputError from "../errors.ts";
 import { ensureObjectArgs } from "../validation/toolArgsValidation.ts";
 import {
-  buildPageReadResult,
-  fetchPageMarkdownData,
-} from "../pageReadHelpers.ts";
+  buildClickButtonMessageContext,
+  formatClickButtonResult,
+} from "../toolResultFormatters.ts";
+import type { ClickButtonToolResult } from "../toolResultTypes.ts";
 import { runTabAction } from "./tabActionRunner.ts";
+
+type BrowserTab = Awaited<
+  ReturnType<ToolExecutionContext["getAllTabs"]>
+>[number];
 
 type ClickButtonArgs = {
   id: string;
-};
-
-type ClickButtonOutputArgs = {
-  title: string;
-  content?: string;
-  isInternal: boolean;
-};
-
-type ClickButtonMessage = {
-  type: "clickButton";
-  id: string;
-};
-
-type ClickButtonResult = {
-  content: string;
-  pageReadTabId: number;
 };
 
 const clickPageReadDelayMs = 500,
@@ -45,20 +30,6 @@ const parameters = {
     required: ["id"],
     additionalProperties: false,
   },
-  buildClickButtonOutput = ({
-    title,
-    content = "",
-    isInternal,
-  }: ClickButtonOutputArgs): string =>
-    buildPageReadResult({
-      headerLines: [
-        t("statusClickSuccess"),
-        `${t("statusTitle")}："${title}"；`,
-      ],
-      contentLabel: `${t("statusContent")}：`,
-      content,
-      isInternal,
-    }),
   validateArgs = (args: JsonValue): ClickButtonArgs => {
     const record = ensureObjectArgs(args);
     const id = typeof record.id === "string" ? record.id.trim() : "";
@@ -70,42 +41,53 @@ const parameters = {
     }
     return { id };
   },
-  execute = async ({ id }: ClickButtonArgs): Promise<ClickButtonResult> => {
-    const tabs: BrowserTab[] = await getAllTabs();
+  execute = async (
+    { id }: ClickButtonArgs,
+    context: ToolExecutionContext,
+  ): Promise<ClickButtonToolResult> => {
+    const tabs: BrowserTab[] = await context.getAllTabs();
     if (!tabs.length) {
       throw new Error("未找到可用标签页");
     }
     const finalState = await runTabAction({
       tabs,
-      waitForContentScript,
+      waitForContentScript: context.waitForContentScript,
       sendMessage: (tabId) => {
-        const message: ClickButtonMessage = {
+        const message: ClickButtonRequest = {
           type: "clickButton",
           id,
         };
-        return sendMessageToTab(tabId, message);
+        return context.sendMessageToTab(tabId, message);
       },
       invalidResultMessage: "按钮点击返回结果异常",
       buildErrorMessage: (error) =>
         error instanceof Error ? error.message : "点击失败",
       onSuccess: async (tabId) => {
         await waitForDelay(clickPageReadDelayMs);
-        const { title, url, content } = await fetchPageMarkdownData(tabId),
+        const pageData = await context.fetchPageMarkdownData(tabId),
           matchedTab = tabs.find((tab) => tab.id === tabId),
-          internalUrl = url || matchedTab?.url || "";
-        return buildClickButtonOutput({
-          title,
-          content,
-          isInternal: isInternalUrl(internalUrl),
-        });
+          resolvedUrl = pageData.url || matchedTab?.url || "",
+          internal = isInternalUrl(resolvedUrl),
+          result: ClickButtonToolResult = {
+            tabId,
+            title: pageData.title,
+            url: resolvedUrl,
+            content: internal ? "" : pageData.content,
+            isInternal: internal,
+          };
+        if (!internal) {
+          result.pageNumber = pageData.pageNumber;
+          result.totalPages = pageData.totalPages;
+        }
+        return result;
       },
     });
     if (finalState.done) {
-      if (!finalState.result || !finalState.tabId) {
+      if (!finalState.result) {
         console.error("按钮点击结果缺少内容", finalState);
         throw new Error("按钮点击结果无效");
       }
-      return { content: finalState.result, pageReadTabId: finalState.tabId };
+      return finalState.result;
     }
     if (finalState.errors.length) {
       if (finalState.notFoundCount) {
@@ -125,4 +107,7 @@ export default {
   parameters,
   validateArgs,
   execute,
+  formatResult: formatClickButtonResult,
+  buildMessageContext: buildClickButtonMessageContext,
+  pageReadDedupeAction: "trimToolResponse",
 };

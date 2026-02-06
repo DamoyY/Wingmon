@@ -1,5 +1,10 @@
 import { t } from "../utils/index.ts";
-import { tryParsePositiveNumber } from "../../shared/index.ts";
+import {
+  tryParsePositiveNumber,
+  type GetPageContentRequest,
+  type GetPageContentResponse,
+  type SetPageHashRequest,
+} from "../../shared/index.ts";
 import {
   getSettings,
   reloadTab,
@@ -26,36 +31,6 @@ export type PageMarkdownData = PageReadMetadata & {
   title: string;
   url: string;
   content: string;
-};
-
-type PageContentResponse = {
-  title?: string;
-  url?: string;
-  content?: string;
-  pageNumber?: number | string;
-  totalPages?: number | string;
-  viewportPage?: number | string;
-  chunkAnchorId?: string;
-};
-
-type PageContentMessage = {
-  type: "getPageContent";
-  pageNumber?: number;
-};
-
-type PageHashMessage = {
-  type: "setPageHash";
-  pageNumber: number;
-  totalPages: number;
-  viewportPage: number;
-  chunkAnchorId?: string;
-};
-
-type PageHashResponse = {
-  ok?: boolean;
-  skipped?: boolean;
-  reload?: boolean;
-  shouldReload?: boolean;
 };
 
 const pageContentRetryBaseDelayMs = 200,
@@ -150,7 +125,9 @@ export const buildPageReadResult = ({
   return `${header}\n${contentLabel}\n${content}`;
 };
 
-const buildPageContentMessage = (pageNumber?: number): PageContentMessage => {
+const buildPageContentMessage = (
+  pageNumber?: number,
+): GetPageContentRequest => {
   if (pageNumber !== undefined) {
     return {
       type: "getPageContent",
@@ -165,7 +142,7 @@ const buildPageHashMessage = (pageData?: {
   totalPages?: number;
   viewportPage?: number;
   chunkAnchorId?: string;
-}): PageHashMessage => ({
+}): SetPageHashRequest => ({
   type: "setPageHash",
   ...resolvePageMetadata(pageData ?? {}),
 });
@@ -176,7 +153,7 @@ export const fetchPageMarkdownData = async (
 ): Promise<PageMarkdownData> => {
   const isComplete = await waitForContentScript(tabId),
     fetchOnce = async () => {
-      const pageData = await sendMessageToTab<PageContentResponse>(
+      const pageData: GetPageContentResponse = await sendMessageToTab(
         tabId,
         buildPageContentMessage(pageNumber),
       );
@@ -235,7 +212,7 @@ export const syncPageHash = async (
   },
 ): Promise<void> => {
   await waitForContentScript(tabId);
-  const response = await sendMessageToTab<PageHashResponse>(
+  const response = await sendMessageToTab(
     tabId,
     buildPageHashMessage(pageData),
   );

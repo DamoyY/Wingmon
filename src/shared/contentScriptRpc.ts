@@ -1,0 +1,146 @@
+import type {
+  RpcEndpoint,
+  RpcHandlerMap,
+  RpcRequestByType,
+  RpcRequestUnion,
+  RpcResponseByRequest,
+  RpcResponseByType,
+} from "./rpc.ts";
+
+type PageNumberInput = number | string | null;
+type ChunkAnchorInput = string | null;
+
+export type PingRequest = {
+  type: "ping";
+};
+
+export type PingResponse =
+  | {
+      ok: true;
+    }
+  | {
+      error: string;
+    };
+
+export type GetPageContentRequest = {
+  type: "getPageContent";
+  pageNumber?: PageNumberInput;
+  page_number?: PageNumberInput;
+};
+
+export type GetPageContentResponse = {
+  title?: string;
+  url?: string;
+  content?: string;
+  totalPages?: number;
+  pageNumber?: number;
+  viewportPage?: number;
+  chunkAnchorId?: string;
+  totalTokens?: number;
+  error?: string;
+};
+
+export type SetPageHashRequest = {
+  type: "setPageHash";
+  pageNumber?: PageNumberInput;
+  page_number?: PageNumberInput;
+  totalPages?: PageNumberInput;
+  total_pages?: PageNumberInput;
+  viewportPage?: PageNumberInput;
+  viewport_page?: PageNumberInput;
+  chunkAnchorId?: ChunkAnchorInput;
+  chunk_anchor_id?: ChunkAnchorInput;
+};
+
+export type SetPageHashResponse = {
+  ok?: boolean;
+  skipped?: boolean;
+  shouldReload?: boolean;
+  reload?: boolean;
+  pageNumber?: number;
+  totalPages?: number;
+  error?: string;
+};
+
+export type ClickButtonRequest = {
+  type: "clickButton";
+  id?: string | null;
+};
+
+export type ClickButtonResponse = {
+  ok?: boolean;
+  error?: string;
+};
+
+export type EnterTextRequest = {
+  type: "enterText";
+  id?: string | null;
+  content?: string | null;
+};
+
+export type EnterTextResponse = {
+  ok?: boolean;
+  error?: string;
+  reason?: string;
+};
+
+export type ContentScriptRpcSchema = {
+  ping: RpcEndpoint<PingRequest, PingResponse>;
+  getPageContent: RpcEndpoint<GetPageContentRequest, GetPageContentResponse>;
+  setPageHash: RpcEndpoint<SetPageHashRequest, SetPageHashResponse>;
+  clickButton: RpcEndpoint<ClickButtonRequest, ClickButtonResponse>;
+  enterText: RpcEndpoint<EnterTextRequest, EnterTextResponse>;
+};
+
+export type ContentScriptRequestType = keyof ContentScriptRpcSchema;
+
+export type ContentScriptRequest = RpcRequestUnion<ContentScriptRpcSchema>;
+
+export type ContentScriptRequestByType<TType extends ContentScriptRequestType> =
+  RpcRequestByType<ContentScriptRpcSchema, TType>;
+
+export type ContentScriptResponseByType<
+  TType extends ContentScriptRequestType,
+> = RpcResponseByType<ContentScriptRpcSchema, TType>;
+
+export type ContentScriptResponseByRequest<
+  TRequest extends ContentScriptRequest,
+> = RpcResponseByRequest<ContentScriptRpcSchema, TRequest>;
+
+export type ContentScriptRpcHandlerMap = RpcHandlerMap<ContentScriptRpcSchema>;
+
+const contentScriptRequestTypeMap: Record<ContentScriptRequestType, true> = {
+  ping: true,
+  getPageContent: true,
+  setPageHash: true,
+  clickButton: true,
+  enterText: true,
+};
+
+type MessageLike = {
+  type?: string;
+};
+
+type RuntimeValue = object | string | number | boolean | null;
+
+const isMessageLike = (value: RuntimeValue): value is MessageLike => {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+};
+
+export const isContentScriptRequestType = (
+  value: string,
+): value is ContentScriptRequestType => {
+  return value in contentScriptRequestTypeMap;
+};
+
+export const isContentScriptRequest = (
+  value: RuntimeValue,
+): value is ContentScriptRequest => {
+  if (!isMessageLike(value)) {
+    return false;
+  }
+  if (typeof value.type !== "string") {
+    return false;
+  }
+  return isContentScriptRequestType(value.type);
+};

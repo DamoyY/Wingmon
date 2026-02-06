@@ -1,13 +1,8 @@
 import { normalizeLlmId } from "../shared/index.ts";
-
-type ClickButtonMessage = {
-  id?: string | null;
-};
-
-type ClickButtonResponse = {
-  ok?: boolean;
-  error?: string;
-};
+import type {
+  ClickButtonRequest,
+  ClickButtonResponse,
+} from "../../shared/index.ts";
 
 type SendResponse = (response: ClickButtonResponse) => void;
 const findSingleButton = (normalizedId: string): HTMLElement | null => {
@@ -23,7 +18,7 @@ const findSingleButton = (normalizedId: string): HTMLElement | null => {
     return matches[0];
   },
   handleClickButton = (
-    message: ClickButtonMessage,
+    message: ClickButtonRequest,
     sendResponse: SendResponse,
   ): void => {
     const normalizedId = normalizeLlmId(message.id ?? null),

@@ -1,4 +1,8 @@
-import { isInternalUrl, type JsonValue } from "../utils/index.ts";
+import { isInternalUrl } from "../utils/index.ts";
+import type {
+  ContentScriptRequest,
+  ContentScriptResponseByRequest,
+} from "../../shared/index.ts";
 
 export type BrowserTab = {
   id?: number;
@@ -43,10 +47,12 @@ type ChromeTabsApi = {
     updateProperties: { active: boolean },
     callback: () => void,
   ) => void;
-  sendMessage: (
+  sendMessage: <TRequest extends ContentScriptRequest>(
     tabId: number,
-    payload: Record<string, JsonValue>,
-    callback: (response: JsonValue | null | undefined) => void,
+    payload: TRequest,
+    callback: (
+      response: ContentScriptResponseByRequest<TRequest> | null | undefined,
+    ) => void,
   ) => void;
   onUpdated: {
     addListener: (
@@ -73,11 +79,6 @@ type PendingWaiter = {
   resolve: (isComplete: boolean) => void;
   reject: (error: Error) => void;
   timeoutId: number;
-};
-
-type ResponseWithError = {
-  error?: JsonValue;
-  [key: string]: JsonValue;
 };
 
 const pendingWaits: Map<number, Set<PendingWaiter>> = new Map();
@@ -136,8 +137,18 @@ const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
       }
     });
   },
-  isResponseWithError = (value: JsonValue): value is ResponseWithError =>
-    typeof value === "object" && value !== null && !Array.isArray(value);
+  resolveResponseErrorMessage = <TRequest extends ContentScriptRequest>(
+    response: ContentScriptResponseByRequest<TRequest>,
+  ): string | null => {
+    if (
+      "error" in response &&
+      typeof response.error === "string" &&
+      response.error.trim()
+    ) {
+      return response.error;
+    }
+    return null;
+  };
 
 export const initTabListeners = (): void => {
   registerContentScriptListeners();
@@ -244,10 +255,10 @@ export const focusTab = (tabId: number): Promise<void> =>
     });
   });
 
-export const sendMessageToTab = <TResponse extends JsonValue = JsonValue>(
+export const sendMessageToTab = <TRequest extends ContentScriptRequest>(
   tabId: number,
-  payload: Record<string, JsonValue>,
-): Promise<TResponse> =>
+  payload: TRequest,
+): Promise<ContentScriptResponseByRequest<TRequest>> =>
   ensureTabConnectable(tabId).then(
     () =>
       new Promise((resolve, reject) => {
@@ -261,15 +272,12 @@ export const sendMessageToTab = <TResponse extends JsonValue = JsonValue>(
             reject(new Error("页面未返回结果"));
             return;
           }
-          if (
-            isResponseWithError(response) &&
-            typeof response.error === "string" &&
-            response.error.trim()
-          ) {
-            reject(new Error(response.error));
+          const responseErrorMessage = resolveResponseErrorMessage(response);
+          if (responseErrorMessage !== null) {
+            reject(new Error(responseErrorMessage));
             return;
           }
-          resolve(response as TResponse);
+          resolve(response);
         });
       }),
   );

@@ -1,32 +1,17 @@
 import { assignLlmIds, insertViewportMarker } from "../dom/index.js";
 import { chunkAnchorAttribute } from "../dom/chunkAnchors.js";
 import convertPageContentToMarkdown from "../markdown/converter.js";
+import type {
+  SetPageHashRequest,
+  SetPageHashResponse,
+} from "../../shared/index.ts";
 import {
   resolveAliasedInput,
   resolveAliasedPageNumberInput,
   resolvePageNumberInput,
-  type PageNumberInput,
 } from "../shared/index.ts";
 
 type ChunkAnchorInput = string | null;
-
-type SetPageHashMessage = {
-  pageNumber?: PageNumberInput;
-  page_number?: PageNumberInput;
-  totalPages?: PageNumberInput;
-  total_pages?: PageNumberInput;
-  chunkAnchorId?: ChunkAnchorInput;
-  chunk_anchor_id?: ChunkAnchorInput;
-};
-
-type SetPageHashResponse = {
-  ok?: boolean;
-  skipped?: boolean;
-  shouldReload?: boolean;
-  pageNumber?: number;
-  totalPages?: number;
-  error?: string;
-};
 
 type SendResponse = (response: SetPageHashResponse) => void;
 
@@ -53,7 +38,7 @@ type HtmlFallbackScrollMetrics = {
   bodyHeight: number;
 };
 
-const resolveMessagePageNumber = (message: SetPageHashMessage): number => {
+const resolveMessagePageNumber = (message: SetPageHashRequest): number => {
   return resolveAliasedPageNumberInput({
     camelProvided: "pageNumber" in message,
     snakeProvided: "page_number" in message,
@@ -65,7 +50,7 @@ const resolveMessagePageNumber = (message: SetPageHashMessage): number => {
 };
 
 const resolveMessageTotalPages = (
-  message: SetPageHashMessage,
+  message: SetPageHashRequest,
 ): number | null => {
   return resolveAliasedPageNumberInput({
     camelProvided: "totalPages" in message,
@@ -88,7 +73,7 @@ const resolveChunkAnchorId = (value: ChunkAnchorInput): string | null => {
 };
 
 const resolveMessageChunkAnchorId = (
-  message: SetPageHashMessage,
+  message: SetPageHashRequest,
 ): string | null => {
   return resolveAliasedInput<ChunkAnchorInput, string | null>({
     camelProvided: "chunkAnchorId" in message,
@@ -242,7 +227,7 @@ const warnFallbackToPageRatioScroll = ({
 };
 
 const handleSetPageHash = (
-  message: SetPageHashMessage,
+  message: SetPageHashRequest,
   sendResponse: SendResponse,
 ): void => {
   try {

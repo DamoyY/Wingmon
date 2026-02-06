@@ -1,12 +1,13 @@
 import type { JsonValue } from "../../utils/index.ts";
+import type { ToolExecutionContext } from "../definitions.ts";
 import clickButton from "./clickButton.ts";
 import closeBrowserPage from "./closeBrowserPage.ts";
 import enterText from "./enterText.ts";
 import getPageMarkdown from "./getPageMarkdown.ts";
-import listTabs from "./listTabs.js";
+import listTabs from "./listTabs.ts";
 import openBrowserPage from "./openBrowserPage.ts";
-import runConsoleCommand from "./runConsoleCommand.js";
-import showHtml from "./showHtml.js";
+import runConsoleCommand from "./runConsoleCommand.ts";
+import showHtml from "./showHtml.ts";
 
 type ToolParameterSchema = Record<string, JsonValue>;
 
@@ -15,23 +16,28 @@ type ToolModuleEntry = {
   name: string;
   description: string;
   parameters: ToolParameterSchema;
-  execute: (args: JsonValue) => JsonValue | Promise<JsonValue>;
+  execute: (
+    args: JsonValue,
+    context: ToolExecutionContext,
+  ) => JsonValue | Promise<JsonValue>;
   validateArgs: (args: JsonValue) => JsonValue;
+  formatResult?: (result: JsonValue) => string;
+  buildMessageContext?: (
+    args: JsonValue,
+    result: JsonValue,
+  ) => JsonValue | null;
+  pageReadDedupeAction?: "removeToolCall" | "trimToolResponse";
 };
-
-const listTabsModule = listTabs as ToolModuleEntry;
-const runConsoleCommandModule = runConsoleCommand as ToolModuleEntry;
-const showHtmlModule = showHtml as ToolModuleEntry;
 
 const toolModules: ToolModuleEntry[] = [
   clickButton,
   closeBrowserPage,
   enterText,
   getPageMarkdown,
-  listTabsModule,
+  listTabs,
   openBrowserPage,
-  runConsoleCommandModule,
-  showHtmlModule,
+  runConsoleCommand,
+  showHtml,
 ];
 
 export default toolModules;

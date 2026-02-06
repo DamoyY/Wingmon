@@ -1,4 +1,16 @@
-import { elements } from "../../ui/index.ts";
+import {
+  applyTheme,
+  clearSettingsStatus,
+  elements,
+  fillSettingsForm,
+  readSettingsFormValues,
+  setSaveButtonVisible,
+  setSettingsStatus,
+  showChatView,
+  showKeyView,
+  updateSettingsFormValues,
+} from "../../ui/index.ts";
+import { setLocale, translateDOM } from "../../utils/index.ts";
 import {
   handleCancelSettings,
   handleFollowModeChange,
@@ -10,6 +22,130 @@ import {
   handleThemeColorChange,
   handleThemeVariantChange,
 } from "../features/settings/index.ts";
+
+const syncSaveButtonVisibility = (): void => {
+  const result = handleSettingsFieldChange(readSettingsFormValues());
+  setSaveButtonVisible(result.saveButtonVisible);
+};
+
+const applyControllerMessage = (message: string): void => {
+  setSettingsStatus(message);
+};
+
+const handleSaveSettingsClick = async (): Promise<void> => {
+  const result = await handleSaveSettings(readSettingsFormValues());
+  if (!result.success) {
+    applyControllerMessage(result.message);
+    return;
+  }
+  clearSettingsStatus();
+  const { settings } = result.payload;
+  updateSettingsFormValues({
+    themeColor: settings.themeColor,
+    themeVariant: settings.themeVariant,
+  });
+  applyTheme(settings.theme, settings.themeColor, settings.themeVariant);
+  syncSaveButtonVisibility();
+  await showChatView({ animate: true });
+};
+
+const handleCancelSettingsClick = async (): Promise<void> => {
+  const result = await handleCancelSettings();
+  if (!result.success) {
+    applyControllerMessage(result.message);
+    return;
+  }
+  const { settings, locale, shouldShowChatView } = result.payload;
+  fillSettingsForm(settings);
+  clearSettingsStatus();
+  applyTheme(settings.theme, settings.themeColor, settings.themeVariant);
+  await setLocale(locale);
+  translateDOM();
+  syncSaveButtonVisibility();
+  if (shouldShowChatView) {
+    await showChatView({ animate: true });
+  }
+};
+
+const handleOpenSettingsClick = async (): Promise<void> => {
+  const result = await handleOpenSettings();
+  if (!result.success) {
+    applyControllerMessage(result.message);
+    return;
+  }
+  await showKeyView({ isFirstUse: false, animate: true });
+  fillSettingsForm(result.payload.settings);
+  syncSaveButtonVisibility();
+};
+
+const handleThemeChangeClick = async (): Promise<void> => {
+  clearSettingsStatus();
+  const result = await handleThemeChange(readSettingsFormValues());
+  if (!result.success) {
+    applyControllerMessage(result.message);
+    return;
+  }
+  const { settings } = result.payload;
+  applyTheme(settings.theme, settings.themeColor, settings.themeVariant);
+  updateSettingsFormValues({
+    themeColor: settings.themeColor,
+    themeVariant: settings.themeVariant,
+  });
+  syncSaveButtonVisibility();
+};
+
+const handleThemeColorChangeClick = async (): Promise<void> => {
+  clearSettingsStatus();
+  const result = await handleThemeColorChange(readSettingsFormValues());
+  if (!result.success) {
+    applyControllerMessage(result.message);
+    return;
+  }
+  const { settings } = result.payload;
+  applyTheme(settings.theme, settings.themeColor, settings.themeVariant);
+  updateSettingsFormValues({
+    themeColor: settings.themeColor,
+    themeVariant: settings.themeVariant,
+  });
+  syncSaveButtonVisibility();
+};
+
+const handleThemeVariantChangeClick = async (): Promise<void> => {
+  clearSettingsStatus();
+  const result = await handleThemeVariantChange(readSettingsFormValues());
+  if (!result.success) {
+    applyControllerMessage(result.message);
+    return;
+  }
+  const { settings } = result.payload;
+  applyTheme(settings.theme, settings.themeColor, settings.themeVariant);
+  updateSettingsFormValues({
+    themeColor: settings.themeColor,
+    themeVariant: settings.themeVariant,
+  });
+  syncSaveButtonVisibility();
+};
+
+const handleLanguageChangeClick = async (): Promise<void> => {
+  clearSettingsStatus();
+  const result = await handleLanguageChange(readSettingsFormValues());
+  if (!result.success) {
+    applyControllerMessage(result.message);
+    return;
+  }
+  await setLocale(result.payload.locale);
+  translateDOM();
+  syncSaveButtonVisibility();
+};
+
+const handleFollowModeChangeClick = async (
+  followMode: boolean,
+): Promise<void> => {
+  const result = await handleFollowModeChange({ followMode });
+  if (!result.success) {
+    console.error(result.message);
+  }
+};
 
 const bindSettingsEvents = () => {
   const {
@@ -27,33 +163,34 @@ const bindSettingsEvents = () => {
     followModeSwitch,
   } = elements;
   saveKey.addEventListener("click", () => {
-    void handleSaveSettings();
+    void handleSaveSettingsClick();
   });
   cancelSettings.addEventListener("click", () => {
-    void handleCancelSettings();
+    void handleCancelSettingsClick();
   });
   openSettings.addEventListener("click", () => {
-    void handleOpenSettings();
+    void handleOpenSettingsClick();
   });
-  keyInput.addEventListener("input", handleSettingsFieldChange);
-  baseUrlInput.addEventListener("input", handleSettingsFieldChange);
-  modelInput.addEventListener("input", handleSettingsFieldChange);
-  apiTypeSelect.addEventListener("change", handleSettingsFieldChange);
+  keyInput.addEventListener("input", syncSaveButtonVisibility);
+  baseUrlInput.addEventListener("input", syncSaveButtonVisibility);
+  modelInput.addEventListener("input", syncSaveButtonVisibility);
+  apiTypeSelect.addEventListener("change", syncSaveButtonVisibility);
   themeSelect.addEventListener("change", () => {
-    void handleThemeChange();
+    void handleThemeChangeClick();
   });
   themeColorInput.addEventListener("change", () => {
-    void handleThemeColorChange();
+    void handleThemeColorChangeClick();
   });
   themeVariantSelect.addEventListener("change", () => {
-    void handleThemeVariantChange();
+    void handleThemeVariantChangeClick();
   });
   languageSelect.addEventListener("change", () => {
-    void handleLanguageChange();
+    void handleLanguageChangeClick();
   });
   followModeSwitch.addEventListener("change", () => {
-    void handleFollowModeChange(followModeSwitch.selected);
+    void handleFollowModeChangeClick(followModeSwitch.selected);
   });
+  syncSaveButtonVisibility();
 };
 
 export default bindSettingsEvents;

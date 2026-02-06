@@ -1,4 +1,4 @@
-export * from "./history.js";
+export * from "./history.ts";
 export * from "./htmlPreviewStorage.js";
 export { default as normalizePreviewHtml } from "./htmlPreviewNormalizer.js";
 export * from "./reloadTab.ts";

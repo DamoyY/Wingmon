@@ -1,20 +1,14 @@
 import { isPdfUrl } from "../../../shared/index.ts";
 import { isInternalUrl, t, type JsonValue } from "../../utils/index.ts";
-import {
-  type BrowserTab,
-  createTab,
-  focusTab,
-  getAllTabs,
-} from "../../services/index.ts";
+import type { ToolExecutionContext } from "../definitions.ts";
 import ToolInputError from "../errors.ts";
 import { parsePageNumber } from "../validation/pageNumber.ts";
 import { ensureObjectArgs } from "../validation/toolArgsValidation.ts";
 import {
-  buildPageReadResult,
-  fetchPageMarkdownData,
-  shouldFollowMode,
-  syncPageHash,
-} from "../pageReadHelpers.ts";
+  buildOpenBrowserPageMessageContext,
+  formatOpenBrowserPageResult,
+} from "../toolResultFormatters.ts";
+import type { OpenBrowserPageToolResult } from "../toolResultTypes.ts";
 
 type OpenPageArgs = {
   url: string;
@@ -22,14 +16,9 @@ type OpenPageArgs = {
   pageNumber: number;
 };
 
-type OpenPageReadOutputArgs = {
-  title: string;
-  tabId: number;
-  content?: string;
-  isInternal: boolean;
-  pageNumber?: number;
-  totalPages?: number;
-};
+type BrowserTab = Awaited<
+  ReturnType<ToolExecutionContext["getAllTabs"]>
+>[number];
 
 type NormalizedTab = BrowserTab & {
   normalizedUrl: string;
@@ -48,47 +37,6 @@ const parameters = {
     required: ["url", "focus", "page_number"],
     additionalProperties: false,
   },
-  buildOpenPageReadOutput = ({
-    title,
-    tabId,
-    content = "",
-    isInternal,
-    pageNumber,
-    totalPages,
-  }: OpenPageReadOutputArgs): string =>
-    (() => {
-      const headerLines = [
-        t("statusOpenSuccess"),
-        `${t("statusTitle")}: `,
-        title,
-        `${t("statusTabId")}: `,
-        String(tabId),
-      ];
-      if (isInternal) {
-        return buildPageReadResult({
-          headerLines,
-          contentLabel: "",
-          content,
-          isInternal: true,
-        });
-      }
-      if (!Number.isInteger(pageNumber) || pageNumber <= 0) {
-        throw new Error("open_page 响应缺少有效分块序号");
-      }
-      if (!Number.isInteger(totalPages) || totalPages <= 0) {
-        throw new Error("open_page 响应缺少有效总分块数量");
-      }
-      return buildPageReadResult({
-        headerLines: [
-          ...headerLines,
-          `${t("statusTotalChunks")}：`,
-          String(totalPages),
-        ],
-        contentLabel: t("statusChunkContent", [String(pageNumber)]),
-        content,
-        isInternal: false,
-      });
-    })(),
   normalizeTab = (tab: BrowserTab): NormalizedTab | null => {
     if (typeof tab.url !== "string" || !tab.url.trim()) {
       console.error("标签页缺少 URL", tab);
@@ -122,14 +70,13 @@ const parameters = {
     const pageNumber = parsePageNumber(rawArgs.page_number);
     return { url: parsedUrl.toString(), focus: rawArgs.focus, pageNumber };
   },
-  execute = async ({
-    url,
-    focus,
-    pageNumber,
-  }: OpenPageArgs): Promise<string> => {
-    const followMode = await shouldFollowMode(),
+  execute = async (
+    { url, focus, pageNumber }: OpenPageArgs,
+    context: ToolExecutionContext,
+  ): Promise<OpenBrowserPageToolResult> => {
+    const followMode = await context.shouldFollowMode(),
       shouldFocus = followMode || focus,
-      tabs: BrowserTab[] = await getAllTabs(),
+      tabs: BrowserTab[] = await context.getAllTabs(),
       normalizedTabs = tabs
         .map(normalizeTab)
         .filter((tab): tab is NormalizedTab => Boolean(tab)),
@@ -139,62 +86,66 @@ const parameters = {
         throw new Error("标签页缺少 TabID");
       }
       if (shouldFocus) {
-        await focusTab(matchedTab.id);
+        await context.focusTab(matchedTab.id);
       }
       const matchedUrl = matchedTab.url || url,
         isInternal = isInternalUrl(matchedUrl),
         isPdfDocument = isPdfUrl(matchedUrl);
       if (isInternal) {
-        const title = matchedTab.title || "";
-        return buildOpenPageReadOutput({
-          title,
+        return {
           tabId: matchedTab.id,
+          title: matchedTab.title || "",
+          url: matchedUrl,
+          content: "",
           isInternal: true,
-        });
+        };
       }
       const readPageNumber = isPdfDocument ? pageNumber : 1;
-      const pageData = await fetchPageMarkdownData(
+      const pageData = await context.fetchPageMarkdownData(
         matchedTab.id,
         readPageNumber,
       );
       if (followMode) {
-        await syncPageHash(matchedTab.id, pageData);
+        await context.syncPageHash(matchedTab.id, pageData);
       }
-      return buildOpenPageReadOutput({
+      return {
         title: pageData.title,
         tabId: matchedTab.id,
+        url: pageData.url || matchedUrl,
         content: pageData.content,
         isInternal: isInternalUrl(pageData.url || matchedUrl),
         pageNumber: pageData.pageNumber,
         totalPages: pageData.totalPages,
-      });
+      };
     }
-    const tab = await createTab(url, shouldFocus);
+    const tab = await context.createTab(url, shouldFocus);
     if (shouldFocus) {
-      await focusTab(tab.id);
+      await context.focusTab(tab.id);
     }
     const initialInternal = isInternalUrl(url);
     if (initialInternal) {
-      const title = tab.title || "";
-      return buildOpenPageReadOutput({
-        title,
+      return {
         tabId: tab.id,
+        title: tab.title || "",
+        url,
+        content: "",
         isInternal: true,
-      });
+      };
     }
     const readPageNumber = isPdfUrl(url) ? pageNumber : 1,
-      pageData = await fetchPageMarkdownData(tab.id, readPageNumber);
+      pageData = await context.fetchPageMarkdownData(tab.id, readPageNumber);
     if (followMode) {
-      await syncPageHash(tab.id, pageData);
+      await context.syncPageHash(tab.id, pageData);
     }
-    return buildOpenPageReadOutput({
+    return {
       title: pageData.title,
       tabId: tab.id,
+      url: pageData.url || url,
       content: pageData.content,
       isInternal: isInternalUrl(pageData.url || url),
       pageNumber: pageData.pageNumber,
       totalPages: pageData.totalPages,
-    });
+    };
   };
 
 export default {
@@ -204,4 +155,7 @@ export default {
   parameters,
   validateArgs,
   execute,
+  formatResult: formatOpenBrowserPageResult,
+  buildMessageContext: buildOpenBrowserPageMessageContext,
+  pageReadDedupeAction: "trimToolResponse",
 };

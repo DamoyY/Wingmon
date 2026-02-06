@@ -1,6 +1,7 @@
-export { default as createMessageActionHandlers } from "./actions.js";
+export { default as createMessageActionHandlers } from "./actions.ts";
+export { ConversationManager } from "./conversationManager.ts";
 export { renderMessagesView } from "./presenter.ts";
-export { sendMessage, sendMessageWithPage, stopSending } from "./sendFlow.js";
+export { sendMessage, sendMessageWithPage, stopSending } from "./sendFlow.ts";
 export {
   requestSettingsCompletion,
   reportSendStatus,

@@ -1,5 +1,11 @@
+import type { BrowserTab, CreatedBrowserTab } from "../services/index.ts";
 import { parseJson, type JsonValue } from "../utils/index.ts";
+import type {
+  ContentScriptRequest,
+  ContentScriptResponseByRequest,
+} from "../../shared/index.ts";
 import toolModules from "./modules/index.ts";
+import type { PageMarkdownData } from "./pageReadHelpers.ts";
 import ToolInputError from "./errors.ts";
 
 const TOOL_STRICT = true;
@@ -21,13 +27,65 @@ export type ToolNameMap = Record<ToolNameKey, string>;
 
 type ToolParameters = Record<string, JsonValue>;
 
+export type ToolPageReadDedupeAction = "removeToolCall" | "trimToolResponse";
+
+export type ToolPageReadEvent = {
+  tabId: number;
+  pageNumber?: number;
+  url?: string;
+};
+
+export type ToolMessageContext = {
+  pageReadEvent?: ToolPageReadEvent;
+};
+
+export type ToolPageHashData = {
+  pageNumber?: number;
+  totalPages?: number;
+  viewportPage?: number;
+  chunkAnchorId?: string;
+};
+
+export type ToolExecutionContext = {
+  getAllTabs: () => Promise<BrowserTab[]>;
+  waitForContentScript: (tabId: number) => Promise<boolean>;
+  sendMessageToTab: <TRequest extends ContentScriptRequest>(
+    tabId: number,
+    payload: TRequest,
+  ) => Promise<ContentScriptResponseByRequest<TRequest>>;
+  closeTab: (tabId: number) => Promise<void>;
+  focusTab: (tabId: number) => Promise<void>;
+  createTab: (url: string, active: boolean) => Promise<CreatedBrowserTab>;
+  fetchPageMarkdownData: (
+    tabId: number,
+    pageNumber?: number,
+  ) => Promise<PageMarkdownData>;
+  shouldFollowMode: () => Promise<boolean>;
+  syncPageHash: (tabId: number, pageData?: ToolPageHashData) => Promise<void>;
+  sendMessageToSandbox: (
+    payload: Record<string, JsonValue>,
+    timeoutMs?: number,
+  ) => Promise<JsonValue>;
+  saveHtmlPreview: (args: { code: string }) => Promise<string>;
+  getRuntimeUrl: (path: string) => string;
+};
+
 type RawToolModule = {
   key?: string;
   name?: string;
   description?: string;
   parameters?: ToolParameters;
-  execute?: (args: JsonValue) => JsonValue | Promise<JsonValue>;
+  execute?: (
+    args: JsonValue,
+    context: ToolExecutionContext,
+  ) => JsonValue | Promise<JsonValue>;
   validateArgs?: (args: JsonValue) => JsonValue;
+  formatResult?: (result: JsonValue) => string;
+  buildMessageContext?: (
+    args: JsonValue,
+    result: JsonValue,
+  ) => ToolMessageContext | null;
+  pageReadDedupeAction?: ToolPageReadDedupeAction;
 };
 
 type ToolCallFunction = {
@@ -52,8 +110,17 @@ export type ToolModule<TArgs = JsonValue, TResult = JsonValue> = {
   name: string;
   description: string;
   parameters: ToolParameters;
-  execute: (args: TArgs) => TResult | Promise<TResult>;
+  execute: (
+    args: TArgs,
+    context: ToolExecutionContext,
+  ) => TResult | Promise<TResult>;
   validateArgs: (args: JsonValue) => TArgs;
+  formatResult?: (result: TResult) => string;
+  buildMessageContext?: (
+    args: TArgs,
+    result: TResult,
+  ) => ToolMessageContext | null;
+  pageReadDedupeAction?: ToolPageReadDedupeAction;
 };
 
 export type ToolValidator<TArgs = JsonValue> = (args: JsonValue) => TArgs;
@@ -81,6 +148,10 @@ type ResponsesToolDefinition = {
 export type ToolDefinition = ChatToolDefinition | ResponsesToolDefinition;
 
 const toolNameKeySet = new Set<string>(toolNameKeys),
+  pageReadDedupeActionSet = new Set<ToolPageReadDedupeAction>([
+    "removeToolCall",
+    "trimToolResponse",
+  ]),
   isRecord = (
     value: JsonValue | RawToolModule | null,
   ): value is ToolParameters =>
@@ -147,6 +218,24 @@ rawToolModules.forEach((tool) => {
   if (typeof tool.validateArgs !== "function") {
     throw new Error(`工具 ${name} 缺少 validateArgs`);
   }
+  if (
+    tool.formatResult !== undefined &&
+    typeof tool.formatResult !== "function"
+  ) {
+    throw new Error(`工具 ${name} formatResult 无效`);
+  }
+  if (
+    tool.buildMessageContext !== undefined &&
+    typeof tool.buildMessageContext !== "function"
+  ) {
+    throw new Error(`工具 ${name} buildMessageContext 无效`);
+  }
+  if (
+    tool.pageReadDedupeAction !== undefined &&
+    !pageReadDedupeActionSet.has(tool.pageReadDedupeAction)
+  ) {
+    throw new Error(`工具 ${name} pageReadDedupeAction 无效`);
+  }
   let key: ToolNameKey | undefined;
   if (tool.key !== undefined) {
     if (typeof tool.key !== "string" || !tool.key.trim()) {
@@ -169,6 +258,9 @@ rawToolModules.forEach((tool) => {
     parameters: tool.parameters,
     execute: tool.execute,
     validateArgs: tool.validateArgs,
+    formatResult: tool.formatResult,
+    buildMessageContext: tool.buildMessageContext,
+    pageReadDedupeAction: tool.pageReadDedupeAction,
   };
   toolModuleByName.set(name, normalized);
   validatedTools.push(normalized);

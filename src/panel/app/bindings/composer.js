@@ -8,7 +8,7 @@ import {
   sendMessage,
   sendMessageWithPage,
   stopSending,
-} from "../features/messages/index.js";
+} from "../features/messages/index.ts";
 
 const bindComposerEvents = () => {
   const {

@@ -1,9 +1,12 @@
 import * as sass from "sass";
 import path from "node:path";
 import { writeFile } from "node:fs/promises";
-import { outputPublicDir, rootDir } from "./constants.ts";
-import { minifyCss } from "./minify.ts";
-import { ensureFlattenTarget } from "./utils.ts";
+import {
+  ensureFlattenTarget,
+  outputPublicDir,
+  rootDir,
+} from "../core/index.ts";
+import { minifyCss } from "../transformers/index.ts";
 
 export const buildStyles = async (): Promise<void> => {
   const sassResult = sass.compile(

@@ -1,4 +1,8 @@
-import { isPdfUrl } from "../../shared/index.ts";
+import {
+  isPdfUrl,
+  type GetPageContentRequest,
+  type GetPageContentResponse,
+} from "../../shared/index.ts";
 import {
   assignChunkAnchors,
   assignLlmIds,
@@ -6,29 +10,9 @@ import {
 } from "../dom/index.js";
 import convertPageContentToMarkdown from "../markdown/converter.js";
 import convertPdfToMarkdown from "../markdown/pdfConverter.js";
-import {
-  resolveAliasedPageNumberInput,
-  type PageNumberInput,
-} from "../shared/index.ts";
+import { resolveAliasedPageNumberInput } from "../shared/index.ts";
 
-type PageContentResponse = {
-  title?: string;
-  url?: string;
-  content?: string;
-  totalPages?: number;
-  pageNumber?: number;
-  viewportPage?: number;
-  chunkAnchorId?: string;
-  totalTokens?: number;
-  error?: string;
-};
-
-type SendResponse = (response: PageContentResponse) => void;
-
-type PageContentMessage = {
-  pageNumber?: PageNumberInput;
-  page_number?: PageNumberInput;
-};
+type SendResponse = (response: GetPageContentResponse) => void;
 
 const isPdfContentType = (): boolean => {
   return document.contentType.toLowerCase().includes("pdf");
@@ -56,7 +40,7 @@ const sendError = (sendResponse: SendResponse, message: string): void => {
   sendResponse({ error: message });
 };
 
-const resolveMessagePageNumber = (message: PageContentMessage): number => {
+const resolveMessagePageNumber = (message: GetPageContentRequest): number => {
   return resolveAliasedPageNumberInput({
     camelProvided: "pageNumber" in message,
     snakeProvided: "page_number" in message,
@@ -68,7 +52,7 @@ const resolveMessagePageNumber = (message: PageContentMessage): number => {
 };
 
 const handleGetPageContent = async (
-  message: PageContentMessage,
+  message: GetPageContentRequest,
   sendResponse: SendResponse,
 ): Promise<void> => {
   try {
