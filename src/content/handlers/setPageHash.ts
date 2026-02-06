@@ -119,6 +119,19 @@ const isHtmlDocument = (): boolean => {
   return contentType.toLowerCase().includes("html");
 };
 
+const resolveScrollBehavior = (): ScrollBehavior => {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ? "auto"
+    : "smooth";
+};
+
+const scrollWindowTo = (top: number): void => {
+  window.scrollTo({
+    top,
+    behavior: resolveScrollBehavior(),
+  });
+};
+
 const sendError = (sendResponse: SendResponse, message: string): void => {
   console.error(message);
   sendResponse({ error: message });
@@ -152,10 +165,7 @@ const scrollHtmlByPage = (
   totalPages: number,
 ): HtmlFallbackScrollMetrics => {
   const metrics = resolveHtmlFallbackScrollMetrics(pageNumber, totalPages);
-  window.scrollTo({
-    top: metrics.targetTop,
-    behavior: "auto",
-  });
+  scrollWindowTo(metrics.targetTop);
   return metrics;
 };
 
@@ -180,10 +190,7 @@ const scrollHtmlByChunkAnchor = (anchorId: string): ChunkAnchorScrollResult => {
       anchorSelector,
     };
   }
-  window.scrollTo({
-    top: targetTop,
-    behavior: "auto",
-  });
+  scrollWindowTo(targetTop);
   return {
     ok: true,
     anchorSelector,
@@ -236,10 +243,7 @@ const handleSetPageHash = (
     if (isHtmlDocument()) {
       const providedTotalPages = resolveMessageTotalPages(message);
       if (pageNumber === 1) {
-        window.scrollTo({
-          top: 0,
-          behavior: "auto",
-        });
+        scrollWindowTo(0);
         sendResponse({
           ok: true,
           shouldReload: false,
