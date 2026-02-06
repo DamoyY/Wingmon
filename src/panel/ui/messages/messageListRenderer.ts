@@ -138,9 +138,11 @@ const ensureNewChatButton = (): HTMLElement => {
     actions.append(copyButton, deleteButton);
     return actions;
   },
-  createMessageContent = (content: string): HTMLDivElement => {
+  resolveMessageContentTypescaleClass = (role: string): string =>
+    role === "user" ? "md-typescale-body-large" : "md-typescale-body-medium",
+  createMessageContent = (content: string, role: string): HTMLDivElement => {
     const body = document.createElement("div");
-    body.className = "message-content md-typescale-body-medium";
+    body.className = `message-content ${resolveMessageContentTypescaleClass(role)}`;
     const { html, text } = renderMessageContentSafe(content, {
       decorateContainer: applyMessageHeadingTypography,
     });
@@ -274,7 +276,7 @@ export const renderMessages = (
     row.dataset.indices = resolveIndicesKeySafe(msg.indices);
     const node = document.createElement("div");
     node.className = `message ${msg.role}`;
-    node.appendChild(createMessageContent(msg.content));
+    node.appendChild(createMessageContent(msg.content, msg.role));
     const status = createMessageStatusLine(msg.status || "");
     if (status) {
       node.appendChild(status);

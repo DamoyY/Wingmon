@@ -79,6 +79,7 @@ const ToolInputErrorSafe = ToolInputError as ToolInputErrorCtor,
       pageNumber?: number;
       totalPages?: number;
       viewportPage?: number;
+      chunkAnchorId?: string;
     },
   ) => Promise<void> = syncPageHash as (
     tabId: number,
@@ -86,6 +87,7 @@ const ToolInputErrorSafe = ToolInputError as ToolInputErrorCtor,
       pageNumber?: number;
       totalPages?: number;
       viewportPage?: number;
+      chunkAnchorId?: string;
     },
   ) => Promise<void>,
   shouldFollowModeSafe: () => Promise<boolean> =

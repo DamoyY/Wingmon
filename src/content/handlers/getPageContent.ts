@@ -1,7 +1,13 @@
 import { isPdfUrl } from "../../shared/index.ts";
-import { assignLlmIds, insertViewportMarker } from "../dom/index.js";
+import {
+  assignChunkAnchors,
+  assignLlmIds,
+  insertViewportMarker,
+} from "../dom/index.js";
 import convertPageContentToMarkdown from "../markdown/converter.js";
 import convertPdfToMarkdown from "../markdown/pdfConverter.js";
+
+type PageNumberInput = number | string | null;
 
 type PageContentResponse = {
   title?: string;
@@ -10,6 +16,7 @@ type PageContentResponse = {
   totalPages?: number;
   pageNumber?: number;
   viewportPage?: number;
+  chunkAnchorId?: string;
   totalTokens?: number;
   error?: string;
 };
@@ -17,8 +24,8 @@ type PageContentResponse = {
 type SendResponse = (response: PageContentResponse) => void;
 
 type PageContentMessage = {
-  pageNumber?: unknown;
-  page_number?: unknown;
+  pageNumber?: PageNumberInput;
+  page_number?: PageNumberInput;
 };
 
 const isPdfContentType = (): boolean => {
@@ -42,14 +49,13 @@ const isPdfDocument = (): boolean => {
   return isPdfContentType() || hasPdfEmbed() || (url ? isPdfUrl(url) : false);
 };
 
-const sendError = (sendResponse: SendResponse, error: unknown): void => {
-  const message = error instanceof Error ? error.message : "页面内容读取失败";
+const sendError = (sendResponse: SendResponse, message: string): void => {
   console.error(message);
   sendResponse({ error: message });
 };
 
-const resolvePageNumber = (value: unknown): number => {
-  if (value === undefined || value === null) {
+const resolvePageNumber = (value: PageNumberInput): number => {
+  if (value === null) {
     return 1;
   }
   if (typeof value === "number" && Number.isInteger(value) && value > 0) {
@@ -65,21 +71,21 @@ const resolvePageNumber = (value: unknown): number => {
 };
 
 const resolveMessagePageNumber = (message: PageContentMessage): number => {
-  const hasCamel = message.pageNumber !== undefined,
-    hasSnake = message.page_number !== undefined;
+  const hasCamel = "pageNumber" in message,
+    hasSnake = "page_number" in message;
   if (hasCamel && hasSnake) {
-    const camelValue = resolvePageNumber(message.pageNumber),
-      snakeValue = resolvePageNumber(message.page_number);
+    const camelValue = resolvePageNumber(message.pageNumber ?? null),
+      snakeValue = resolvePageNumber(message.page_number ?? null);
     if (camelValue !== snakeValue) {
       throw new Error("pageNumber 与 page_number 不一致");
     }
     return camelValue;
   }
   if (hasCamel) {
-    return resolvePageNumber(message.pageNumber);
+    return resolvePageNumber(message.pageNumber ?? null);
   }
   if (hasSnake) {
-    return resolvePageNumber(message.page_number);
+    return resolvePageNumber(message.page_number ?? null);
   }
   return 1;
 };
@@ -105,6 +111,7 @@ const handleGetPageContent = async (
     let marker: HTMLSpanElement | null = null;
     try {
       marker = insertViewportMarker(body);
+      assignChunkAnchors(body);
       assignLlmIds(body);
       const markdown = convertPageContentToMarkdown({
         body,
@@ -119,7 +126,10 @@ const handleGetPageContent = async (
       }
     }
   } catch (error) {
-    sendError(sendResponse, error);
+    sendError(
+      sendResponse,
+      error instanceof Error ? error.message : "页面内容读取失败",
+    );
   }
 };
 

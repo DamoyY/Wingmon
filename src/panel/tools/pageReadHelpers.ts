@@ -17,6 +17,7 @@ export type PageReadMetadata = {
   pageNumber: number;
   totalPages: number;
   viewportPage: number;
+  chunkAnchorId?: string;
 };
 
 export type PageMarkdownData = PageReadMetadata & {
@@ -32,6 +33,7 @@ type PageContentResponse = {
   pageNumber?: number | string;
   totalPages?: number | string;
   viewportPage?: number | string;
+  chunkAnchorId?: string;
 };
 
 type PageContentMessage = {
@@ -44,6 +46,7 @@ type PageHashMessage = {
   pageNumber: number;
   totalPages: number;
   viewportPage: number;
+  chunkAnchorId?: string;
 };
 
 type PageHashResponse = {
@@ -117,6 +120,18 @@ const parsePositiveInteger = (
     }
     throw new Error(`${fieldName} 必须是正数`);
   },
+  parseNonEmptyString = (
+    value: unknown,
+    fieldName: string,
+  ): string | undefined => {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+    throw new Error(`${fieldName} 必须是非空字符串`);
+  },
   resolvePageNumber = (value?: number): number =>
     parsePositiveInteger(value, "page_number") ?? 1,
   resolvePageMetadata = (
@@ -124,6 +139,7 @@ const parsePositiveInteger = (
       pageNumber?: unknown;
       totalPages?: unknown;
       viewportPage?: unknown;
+      chunkAnchorId?: unknown;
     },
     fallbackPageNumber?: number,
   ): PageReadMetadata => {
@@ -134,6 +150,10 @@ const parsePositiveInteger = (
         parsePositiveInteger(meta.totalPages, "totalPages") ?? pageNumber,
       viewportPage =
         parsePositiveNumber(meta.viewportPage, "viewportPage") ?? pageNumber;
+    const chunkAnchorId = parseNonEmptyString(
+      meta.chunkAnchorId,
+      "chunkAnchorId",
+    );
     if (pageNumber > totalPages) {
       throw new Error(
         `pageNumber 超出范围：${String(pageNumber)} > ${String(totalPages)}`,
@@ -148,6 +168,7 @@ const parsePositiveInteger = (
       pageNumber,
       totalPages,
       viewportPage,
+      chunkAnchorId,
     };
   };
 
@@ -178,6 +199,7 @@ const buildPageHashMessage = (pageData?: {
   pageNumber?: number;
   totalPages?: number;
   viewportPage?: number;
+  chunkAnchorId?: string;
 }): PageHashMessage => ({
   type: "setPageHash",
   ...resolvePageMetadata(pageData ?? {}),
@@ -244,6 +266,7 @@ export const syncPageHash = async (
     pageNumber?: number;
     totalPages?: number;
     viewportPage?: number;
+    chunkAnchorId?: string;
   },
 ): Promise<void> => {
   await waitForContentScriptSafe(tabId);

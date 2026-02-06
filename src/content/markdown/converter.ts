@@ -2,16 +2,23 @@ import replaceButtons from "./buttons.js";
 import replaceInputs from "./inputs.js";
 import { cloneBodyWithShadowDom, resolveRenderedText } from "./shadowDom.ts";
 import createTurndownService from "./turndownService.js";
+import {
+  buildChunkAnchorMarker,
+  chunkAnchorAttribute,
+  chunkAnchorMarkerPattern,
+} from "../dom/chunkAnchors.js";
 import { Tiktoken as JsTiktoken } from "js-tiktoken/lite";
 import o200kBase from "js-tiktoken/ranks/o200k_base";
 import * as tiktoken from "tiktoken/init";
 import tiktokenWasmBytes from "tiktoken/tiktoken_bg.wasm";
 
+type PageNumberInput = number | string | null;
+
 type PageContentData = {
   body?: HTMLElement | null;
   title?: string;
   url?: string;
-  pageNumber?: unknown;
+  pageNumber?: PageNumberInput;
 };
 
 type MarkdownPageContent = {
@@ -21,6 +28,7 @@ type MarkdownPageContent = {
   totalPages: number;
   pageNumber: number;
   viewportPage: number;
+  chunkAnchorId?: string;
   totalTokens: number;
 };
 
@@ -41,6 +49,15 @@ type ChunkResult = {
   boundaries: number[];
   totalTokens: number;
   totalPages: number;
+};
+type ChunkAnchorPoint = {
+  id: string;
+  index: number;
+};
+type ControlMarkerExtraction = {
+  content: string;
+  viewportIndex: number;
+  anchors: ChunkAnchorPoint[];
 };
 
 const TOKENS_PER_PAGE = 5000;
@@ -82,6 +99,114 @@ const markViewportCenter = (root: HTMLElement): string => {
   return viewportMarkerToken;
 };
 
+const insertChunkAnchorMarkers = (root: HTMLElement): void => {
+  root.querySelectorAll(`[${chunkAnchorAttribute}]`).forEach((element) => {
+    const anchorId = element.getAttribute(chunkAnchorAttribute);
+    if (!anchorId) {
+      return;
+    }
+    const marker = root.ownerDocument.createTextNode(
+      buildChunkAnchorMarker(anchorId),
+    );
+    element.insertBefore(marker, element.firstChild);
+  });
+};
+
+const extractControlMarkers = (
+  contentWithMarkers: string,
+  markerToken: string,
+): ControlMarkerExtraction => {
+  const anchors: ChunkAnchorPoint[] = [];
+  const cleanSegments: string[] = [];
+  let cursor = 0;
+  let cleanLength = 0;
+  let viewportIndex: number | null = null;
+  const anchorPattern = new RegExp(chunkAnchorMarkerPattern.source, "g");
+  while (cursor < contentWithMarkers.length) {
+    anchorPattern.lastIndex = cursor;
+    const anchorMatch = anchorPattern.exec(contentWithMarkers);
+    const anchorStart = anchorMatch ? anchorMatch.index : -1;
+    const viewportStart = contentWithMarkers.indexOf(markerToken, cursor);
+    let markerStart = contentWithMarkers.length;
+    let markerType: "anchor" | "viewport" | null = null;
+    if (anchorStart >= 0 && anchorStart < markerStart) {
+      markerStart = anchorStart;
+      markerType = "anchor";
+    }
+    if (viewportStart >= 0 && viewportStart < markerStart) {
+      markerStart = viewportStart;
+      markerType = "viewport";
+    }
+    const segment = contentWithMarkers.slice(cursor, markerStart);
+    if (segment) {
+      cleanSegments.push(segment);
+      cleanLength += segment.length;
+    }
+    if (!markerType) {
+      break;
+    }
+    if (markerType === "viewport") {
+      if (viewportIndex !== null) {
+        throw new Error("视口中心标记重复，无法计算分片");
+      }
+      viewportIndex = cleanLength;
+      cursor = markerStart + markerToken.length;
+      continue;
+    }
+    const anchorId = anchorMatch?.[1];
+    if (!anchorId) {
+      throw new Error("页面分块锚点标记无效");
+    }
+    anchors.push({
+      id: anchorId,
+      index: cleanLength,
+    });
+    cursor = markerStart + anchorMatch[0].length;
+  }
+  if (viewportIndex === null) {
+    throw new Error("视口中心标记丢失，无法计算分片");
+  }
+  return {
+    content: cleanSegments.join(""),
+    viewportIndex,
+    anchors,
+  };
+};
+
+const resolveChunkAnchorId = (
+  anchors: ChunkAnchorPoint[],
+  boundaries: number[],
+  pageNumber: number,
+): string | null => {
+  if (!anchors.length) {
+    return null;
+  }
+  const chunkStart = boundaries.at(pageNumber - 1),
+    chunkEnd = boundaries.at(pageNumber);
+  if (chunkStart === undefined || chunkEnd === undefined) {
+    throw new Error("分片边界缺失");
+  }
+  if (!Number.isInteger(chunkStart) || !Number.isInteger(chunkEnd)) {
+    throw new Error("分片边界无效");
+  }
+  const chunkCenter = (chunkStart + chunkEnd) / 2;
+  const anchorsInChunk = anchors.filter(
+    (anchor) => anchor.index >= chunkStart && anchor.index <= chunkEnd,
+  );
+  const candidates = anchorsInChunk.length ? anchorsInChunk : anchors;
+  let nearest = candidates[0];
+  let minDistance = Math.abs(nearest.index - chunkCenter);
+  for (let i = 1; i < candidates.length; i += 1) {
+    const candidate = candidates[i],
+      distance = Math.abs(candidate.index - chunkCenter);
+    if (distance < minDistance) {
+      nearest = candidate;
+      minDistance = distance;
+    }
+  }
+  return nearest.id;
+};
+
 const resolveTextFallback = (
   body: HTMLElement,
   htmlContent: string,
@@ -117,8 +242,8 @@ const resolveTextFallback = (
   return htmlContent;
 };
 
-const resolveRequestedPageNumber = (value: unknown): number => {
-  if (value === undefined || value === null) {
+const resolveRequestedPageNumber = (value: PageNumberInput): number => {
+  if (value === null) {
     return 1;
   }
   if (typeof value === "number" && Number.isInteger(value) && value > 0) {
@@ -266,7 +391,7 @@ const splitMarkdownByTokens = (content: string): ChunkResult => {
 };
 
 const convertPageContentToMarkdown = (
-  pageData?: PageContentData | null,
+  pageData: PageContentData | null = null,
 ): MarkdownPageContent => {
   if (!pageData?.body) {
     throw new Error("页面内容为空");
@@ -274,40 +399,50 @@ const convertPageContentToMarkdown = (
   const bodyClone = cloneBodyWithShadowDom(pageData.body);
   replaceButtons(bodyClone);
   replaceInputs(bodyClone);
+  insertChunkAnchorMarkers(bodyClone);
   const markerToken = markViewportCenter(bodyClone),
-    markdownWithMarker = turndown.turndown(bodyClone.innerHTML),
-    resolvedContentWithMarker = resolveTextFallback(
+    markdownWithMarkers = turndown.turndown(bodyClone.innerHTML),
+    resolvedContentWithMarkers = resolveTextFallback(
       pageData.body,
-      markdownWithMarker,
+      markdownWithMarkers,
+      markerToken,
+    );
+  const { content, viewportIndex, anchors } = extractControlMarkers(
+      resolvedContentWithMarkers,
       markerToken,
     ),
-    markerIndex = resolvedContentWithMarker.indexOf(markerToken);
-  if (markerIndex < 0) {
-    throw new Error("视口中心标记丢失，无法计算分片");
-  }
-  const content = `${resolvedContentWithMarker.slice(0, markerIndex)}${resolvedContentWithMarker.slice(markerIndex + markerToken.length)}`,
     chunked = splitMarkdownByTokens(content),
-    pageNumber = resolveRequestedPageNumber(pageData.pageNumber);
+    pageNumber = resolveRequestedPageNumber(pageData.pageNumber ?? null);
   if (pageNumber > chunked.totalPages) {
     throw new Error(
       `page_number 超出范围：${String(pageNumber)}，总页数：${String(chunked.totalPages)}`,
     );
   }
   const markerTokenCount = markdownEncoding.encode(
-      content.slice(0, markerIndex),
+      content.slice(0, viewportIndex),
     ).length,
     viewportPageRaw =
       chunked.totalTokens > 0
         ? (markerTokenCount / chunked.totalTokens) * chunked.totalPages
         : 1,
-    viewportPage = Math.min(chunked.totalPages, Math.max(1, viewportPageRaw));
+    viewportPage = Math.min(chunked.totalPages, Math.max(1, viewportPageRaw)),
+    chunkAnchorId = resolveChunkAnchorId(
+      anchors,
+      chunked.boundaries,
+      pageNumber,
+    );
+  const pageChunk = chunked.chunks.at(pageNumber - 1);
+  if (pageChunk === undefined) {
+    throw new Error("分片内容缺失");
+  }
   return {
     title: pageData.title ?? "",
     url: pageData.url ?? "",
-    content: chunked.chunks[pageNumber - 1] ?? "",
+    content: pageChunk,
     totalPages: chunked.totalPages,
     pageNumber,
     viewportPage,
+    ...(chunkAnchorId === null ? {} : { chunkAnchorId }),
     totalTokens: chunked.totalTokens,
   };
 };

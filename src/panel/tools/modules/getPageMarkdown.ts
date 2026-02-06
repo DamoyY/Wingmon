@@ -52,6 +52,7 @@ const getAllTabsSafe: () => Promise<TabLike[]> = getAllTabs as () => Promise<
       pageNumber?: number;
       totalPages?: number;
       viewportPage?: number;
+      chunkAnchorId?: string;
     },
   ) => Promise<void> = syncPageHash as (
     tabId: number,
@@ -59,6 +60,7 @@ const getAllTabsSafe: () => Promise<TabLike[]> = getAllTabs as () => Promise<
       pageNumber?: number;
       totalPages?: number;
       viewportPage?: number;
+      chunkAnchorId?: string;
     },
   ) => Promise<void>,
   shouldFollowModeSafe: () => Promise<boolean> =
