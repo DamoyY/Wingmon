@@ -13,10 +13,10 @@ const registerMessageListener = (): void => {
         const body = document.querySelector("body");
         if (!body) {
           sendResponse({ error: "页面没有可用的 body" });
-          return undefined;
+          return;
         }
         sendResponse({ ok: true });
-        return undefined;
+        return;
       }
       if (message?.type === "getPageContent") {
         void handleGetPageContent(message, sendResponse);
@@ -28,18 +28,18 @@ const registerMessageListener = (): void => {
       }
       if (message?.type === "clickButton") {
         handleClickButton(message, sendResponse);
-        return undefined;
+        return;
       }
       if (message?.type === "enterText") {
         handleEnterText(message, sendResponse);
-        return undefined;
+        return;
       }
     } catch (error) {
       const messageText = error instanceof Error ? error.message : "未知错误";
       console.error(messageText);
       sendResponse({ error: messageText });
     }
-    return undefined;
+    return;
   });
 };
 

@@ -22,7 +22,7 @@ const hasMatchingPrefix = (url: string, prefixes: string[]): boolean =>
 
 export { normalizeUrl };
 
-export const isInternalUrl = (url: string | null | undefined): boolean => {
+export const isInternalUrl = (url: string | null): boolean => {
   const normalized = normalizeUrl(url);
   if (!normalized) {
     return false;

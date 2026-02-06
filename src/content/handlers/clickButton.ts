@@ -1,5 +1,5 @@
 type ClickButtonMessage = {
-  id?: unknown;
+  id?: string | null;
 };
 
 type ClickButtonResponse = {
@@ -9,9 +9,7 @@ type ClickButtonResponse = {
 
 type SendResponse = (response: ClickButtonResponse) => void;
 
-const normalizeButtonId = (
-    message: ClickButtonMessage | null | undefined,
-  ): string => {
+const normalizeButtonId = (message: ClickButtonMessage | null): string => {
     const id = typeof message?.id === "string" ? message.id.trim() : "";
     if (!id) {
       throw new Error("id 必须是非空字符串");

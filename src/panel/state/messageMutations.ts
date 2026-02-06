@@ -16,8 +16,7 @@ const addMessageSafe = addMessage as (message: MessageRecord) => MessageRecord,
   updateMessageSafe = updateMessage as (
     index: number,
     patch: Partial<MessageRecord>,
-  ) => MessageRecord,
-  createRandomIdSafe = createRandomId as (prefix: string) => string;
+  ) => MessageRecord;
 
 const resolveMessageContent = (message?: MessageRecord): string => {
   if (!message || message.content === undefined) {
@@ -55,7 +54,7 @@ export const appendAssistantDelta = (delta: unknown): void => {
       addMessageSafe({
         role: "assistant",
         content: delta,
-        groupId: createRandomIdSafe("assistant"),
+        groupId: createRandomId("assistant"),
       });
       return;
     }

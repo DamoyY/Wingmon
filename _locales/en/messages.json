@@ -89,6 +89,12 @@
   "statusFailed": {
     "message": "Failed"
   },
+  "statusCloseTabSuccess": {
+    "message": "Successfully closed the tab with TabID $1;"
+  },
+  "statusCloseTabFailed": {
+    "message": "Failed to close the tab with TabID $1;"
+  },
   "statusNoTitle": {
     "message": "No Title"
   },
@@ -127,6 +133,9 @@
   },
   "toolParamPageNumber": {
     "message": "When page is HTML, it represents chunk number (one chunk is approximately 5000 tokens). When page is PDF, it represents page number"
+  },
+  "toolParamTabIdList": {
+    "message": "List of TabIDs to close"
   },
   "toolParamId": {
     "message": "The ID of the button to click"

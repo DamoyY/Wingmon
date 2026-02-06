@@ -1,6 +1,9 @@
 interface ChromeI18n {
   getUILanguage: () => string;
-  getMessage: (key: string, substitutions?: string | string[]) => string;
+  getMessage: (
+    key: string,
+    substitutions?: string | readonly string[],
+  ) => string;
 }
 
 interface ChromeRuntime {
@@ -9,7 +12,23 @@ interface ChromeRuntime {
 
 declare const chrome: { i18n: ChromeI18n; runtime: ChromeRuntime };
 
-let currentLocaleMessages: Record<string, { message: string }> | null = null;
+type LocaleMessage = { message: string };
+type LocaleMessages = Record<string, LocaleMessage>;
+type RawLocaleMessages = Record<string, { message: string | null }>;
+
+let currentLocaleMessages: LocaleMessages | null = null;
+
+const normalizeLocaleMessages = (
+  rawMessages: RawLocaleMessages,
+): LocaleMessages => {
+  const normalizedEntries = Object.entries(rawMessages).map(([key, value]) => {
+    if (typeof value.message !== "string") {
+      throw new Error(`Locale message 无效：${key}`);
+    }
+    return [key, { message: value.message }] as const;
+  });
+  return Object.fromEntries(normalizedEntries);
+};
 
 const loadLocaleMessages = async (locale: string): Promise<void> => {
   try {
@@ -18,11 +37,8 @@ const loadLocaleMessages = async (locale: string): Promise<void> => {
     if (!response.ok) {
       throw new Error(`Failed to load messages for locale: ${locale}`);
     }
-    const messages = (await response.json()) as Record<
-      string,
-      { message: string }
-    >;
-    currentLocaleMessages = messages;
+    const rawMessages = (await response.json()) as RawLocaleMessages;
+    currentLocaleMessages = normalizeLocaleMessages(rawMessages);
   } catch (error) {
     currentLocaleMessages = null;
     const detail = error instanceof Error ? error.message : String(error);
@@ -38,23 +54,32 @@ export async function setLocale(locale: string): Promise<void> {
   await loadLocaleMessages(locale);
 }
 
-export function t(key: string, substitutions?: string | string[]): string {
+export function t(
+  key: string,
+  substitutions: string | readonly string[] | null = null,
+): string {
   if (currentLocaleMessages && key in currentLocaleMessages) {
     let { message } = currentLocaleMessages[key];
-    if (substitutions) {
-      const subs = Array.isArray(substitutions)
-        ? substitutions
-        : [substitutions];
-      subs.forEach((sub, index) => {
-        message = message.replace(
-          new RegExp(`\\$${String(index + 1)}`, "g"),
-          sub,
-        );
-      });
-    }
+    const replacementValues =
+      substitutions === null
+        ? []
+        : typeof substitutions === "string"
+          ? [substitutions]
+          : substitutions.slice();
+    replacementValues.forEach((sub, index) => {
+      message = message.replace(
+        new RegExp(`\\$${String(index + 1)}`, "g"),
+        sub,
+      );
+    });
     return message;
   }
-  return chrome.i18n.getMessage(key, substitutions) || key;
+  if (substitutions === null) {
+    return chrome.i18n.getMessage(key) || key;
+  }
+  const replacements =
+    typeof substitutions === "string" ? substitutions : substitutions.slice();
+  return chrome.i18n.getMessage(key, replacements) || key;
 }
 
 export function translateDOM(): void {

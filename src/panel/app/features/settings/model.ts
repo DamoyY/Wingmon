@@ -64,7 +64,7 @@ const isSettingsInput = (value: unknown): value is SettingsInput =>
     model: trimString(settings.model),
     apiType: settings.apiType === "responses" ? "responses" : "chat",
     theme: normalizeTheme(settings.theme ?? "auto"),
-    themeColor: normalizeThemeColorSafe(settings.themeColor),
+    themeColor: normalizeThemeColorSafe(settings.themeColor ?? null),
     themeVariant: normalizeThemeVariant(settings.themeVariant ?? "neutral"),
   });
 
@@ -122,7 +122,7 @@ export const validateRequiredSettings = (
 };
 
 export const buildThemePayload = (formValues: SettingsInput) => ({
-  theme: normalizeTheme(formValues.theme),
-  themeColor: normalizeThemeColor(trimString(formValues.themeColor)),
-  themeVariant: normalizeThemeVariant(formValues.themeVariant),
+  theme: normalizeTheme(formValues.theme ?? null),
+  themeColor: normalizeThemeColor(trimString(formValues.themeColor) || null),
+  themeVariant: normalizeThemeVariant(formValues.themeVariant ?? null),
 });

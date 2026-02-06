@@ -1,20 +1,19 @@
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
+type PrimitiveValue = boolean | number | string | null;
+export type GuardValue = PrimitiveValue | object;
+export type GuardRecord = Record<string, GuardValue>;
 
-export const isErrnoException = (
-  error: unknown,
-): error is NodeJS.ErrnoException =>
-  typeof error === "object" && error !== null && "code" in error;
+export const isRecord = (value: GuardValue): value is GuardRecord =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 export const nodeModulesPattern = /(^|[\\/])node_modules([\\/]|$)/;
 
 export const isNodeModulesPath = (filePath: string): boolean =>
   nodeModulesPattern.test(path.normalize(filePath));
 
-export const ensureString = (value: unknown, context: string): string => {
+export const ensureString = (value: GuardValue, context: string): string => {
   if (typeof value !== "string") {
     throw new Error(`${context} 必须是字符串`);
   }
@@ -35,7 +34,12 @@ export const shouldCopyFile = async (
       sourceStat.mtimeMs > targetStat.mtimeMs
     );
   } catch (error) {
-    if (isErrnoException(error) && error.code === "ENOENT") {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      Reflect.get(error, "code") === "ENOENT"
+    ) {
       return true;
     }
     throw error;
@@ -66,7 +70,12 @@ export const resolveEntryPath = async (basePath: string): Promise<string> => {
       await stat(candidate);
       return candidate;
     } catch (error) {
-      if (!isErrnoException(error) || error.code !== "ENOENT") {
+      if (
+        typeof error !== "object" ||
+        error === null ||
+        !("code" in error) ||
+        Reflect.get(error, "code") !== "ENOENT"
+      ) {
         throw error;
       }
     }

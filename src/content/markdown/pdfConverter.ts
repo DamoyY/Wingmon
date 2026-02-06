@@ -5,9 +5,9 @@ import {
 } from "@opendocsg/pdf2md/lib/util/transformations";
 
 type PageContentData = {
-  title?: string;
-  url?: string;
-  pageNumber?: number;
+  title?: string | null;
+  url?: string | null;
+  pageNumber?: number | null;
 };
 
 type MarkdownPageContent = {
@@ -24,20 +24,28 @@ type PdfDocument = {
   destroy?: () => Promise<void> | void;
 };
 
-type PdfParseResult = {
-  fonts: { map: Map<string, unknown> };
-  pages: Array<{ items: unknown[] }>;
-  pdfDocument?: PdfDocument;
+type PdfPage = {
+  items: string[];
 };
 
-const resolveTitle = (pageData?: PageContentData | null): string => {
+type PdfParseResult = {
+  fonts: { map: Map<string, object> };
+  pages: PdfPage[];
+  pdfDocument?: PdfDocument | null;
+};
+
+type TransformedPdfResult = {
+  pages: Array<{ items: Array<string | object> } | null>;
+};
+
+const resolveTitle = (pageData: PageContentData | null = null): string => {
   if (typeof pageData?.title === "string") {
     return pageData.title;
   }
   return document.title || "";
 };
 
-const resolveUrl = (pageData?: PageContentData | null): string => {
+const resolveUrl = (pageData: PageContentData | null = null): string => {
   if (typeof pageData?.url === "string" && pageData.url.trim()) {
     return pageData.url;
   }
@@ -48,9 +56,9 @@ const resolveUrl = (pageData?: PageContentData | null): string => {
   return current;
 };
 
-const resolvePageNumber = (pageData?: PageContentData | null): number => {
+const resolvePageNumber = (pageData: PageContentData | null = null): number => {
   const value = pageData?.pageNumber;
-  if (value === undefined) {
+  if (value === null || typeof value !== "number") {
     return 1;
   }
   if (Number.isInteger(value) && value > 0) {
@@ -74,7 +82,7 @@ const fetchPdfBytes = async (url: string): Promise<Uint8Array> => {
 };
 
 const cleanupPdfDocument = async (
-  pdfDocument: PdfDocument | undefined,
+  pdfDocument: PdfDocument | null,
 ): Promise<void> => {
   if (!pdfDocument) {
     return;
@@ -107,8 +115,11 @@ const buildMarkdownContent = (
     throw new Error(`PDF 页码超出范围：${String(pageNumber)}`);
   }
   const transformations = makeTransformations(parsed.fonts.map);
-  const parseResult = transform(parsed.pages, transformations);
-  const targetPage = parseResult.pages.at(pageIndex);
+  const parseResult = transform(
+    parsed.pages,
+    transformations,
+  ) as TransformedPdfResult;
+  const targetPage = parseResult.pages[pageIndex];
   if (!targetPage || !Array.isArray(targetPage.items)) {
     throw new Error("PDF 转换结果无效");
   }
@@ -125,16 +136,16 @@ const buildMarkdownContent = (
 };
 
 const convertPdfToMarkdown = async (
-  pageData?: PageContentData | null,
+  pageData: PageContentData | null = null,
 ): Promise<MarkdownPageContent> => {
   const url = resolveUrl(pageData),
     title = resolveTitle(pageData),
     pageNumber = resolvePageNumber(pageData),
     pdfBytes = await fetchPdfBytes(url);
-  let pdfDocument: PdfDocument | undefined;
+  let pdfDocument: PdfDocument | null = null;
   try {
     const parsed = (await parse(pdfBytes)) as PdfParseResult;
-    pdfDocument = parsed.pdfDocument;
+    pdfDocument = parsed.pdfDocument ?? null;
     const { content, totalPages } = buildMarkdownContent(parsed, pageNumber);
     return {
       title,

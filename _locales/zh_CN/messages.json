@@ -89,6 +89,12 @@
   "statusFailed": {
     "message": "失败"
   },
+  "statusCloseTabSuccess": {
+    "message": "已成功将 TabID 为 $1 的标签页关闭；"
+  },
+  "statusCloseTabFailed": {
+    "message": "关闭 TabID 为 $1 的标签页失败；"
+  },
   "statusNoTitle": {
     "message": "无标题"
   },
@@ -127,6 +133,9 @@
   },
   "toolParamPageNumber": {
     "message": "页面为 HTML 时代表分片序号（一个分片约为 5000 Tokens），页面为 PDF 时代表页码"
+  },
+  "toolParamTabIdList": {
+    "message": "要关闭的标签页 TabID 列表"
   },
   "toolParamId": {
     "message": "要点击的 button 的 ID"

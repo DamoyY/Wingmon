@@ -15,9 +15,6 @@ const renderMessageContentSafe = renderMessageContent as (
 const animateMessageRowEnterSafe = animateMessageRowEnter as (
   row: HTMLElement,
 ) => void;
-const resolveIndicesKeySafe = resolveIndicesKey as (
-  indices: number[],
-) => string;
 
 type MessageActionHandler = (indices: number[]) => Promise<void> | void;
 
@@ -256,7 +253,7 @@ export const renderMessages = (
   const now = Date.now();
   const animateKey =
       options.animateIndices !== undefined
-        ? resolveIndicesKeySafe(options.animateIndices)
+        ? resolveIndicesKey(options.animateIndices)
         : null,
     carryoverKey = resolvePendingAnimateKey(now),
     shouldRefreshCarryover = Boolean(carryoverKey) && !animateKey,
@@ -273,7 +270,7 @@ export const renderMessages = (
     hasVisibleMessages = true;
     const row = document.createElement("div");
     row.className = `message-row ${msg.role}`;
-    row.dataset.indices = resolveIndicesKeySafe(msg.indices);
+    row.dataset.indices = resolveIndicesKey(msg.indices);
     const node = document.createElement("div");
     node.className = `message ${msg.role}`;
     node.appendChild(createMessageContent(msg.content, msg.role));

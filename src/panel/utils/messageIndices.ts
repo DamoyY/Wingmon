@@ -1,5 +1,7 @@
-const normalizeIndices = (indices: unknown): number[] => {
-  if (Number.isInteger(indices)) {
+type IndicesInput = number | readonly number[];
+
+const normalizeIndices = (indices: IndicesInput): number[] => {
+  if (typeof indices === "number" && Number.isInteger(indices)) {
     return [indices];
   }
   if (!Array.isArray(indices) || indices.length === 0) {
@@ -14,7 +16,7 @@ const normalizeIndices = (indices: unknown): number[] => {
   return normalized;
 };
 
-export const resolveIndicesKey = (indices: unknown): string =>
+export const resolveIndicesKey = (indices: IndicesInput): string =>
   normalizeIndices(indices).join(",");
 
 export default normalizeIndices;

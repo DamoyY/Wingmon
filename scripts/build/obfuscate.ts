@@ -32,12 +32,7 @@ export const obfuscatorOptions: ObfuscatorOptions = {
   unicodeEscapeSequence: true,
 };
 
-export const shouldObfuscateBuild = (
-  metafile: Metafile | undefined,
-): boolean => {
-  if (!metafile) {
-    throw new Error("构建结果缺少 metafile");
-  }
+export const shouldObfuscateBuild = (metafile: Metafile): boolean => {
   return !Object.keys(metafile.inputs).some((input) =>
     isNodeModulesPath(input),
   );

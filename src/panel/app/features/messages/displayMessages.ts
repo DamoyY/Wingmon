@@ -26,10 +26,6 @@ type AssistantGroup = {
   groupId: string;
 };
 
-const combineMessageContentsSafe = combineMessageContents as (
-  segments: string[],
-) => string;
-
 const resolveMessageRole = (role: unknown): string => {
   if (role === null || role === undefined) {
     return "";
@@ -85,7 +81,7 @@ export const buildDisplayMessages = (
       if (!assistantGroup) {
         return;
       }
-      const content = combineMessageContentsSafe(assistantGroup.contents);
+      const content = combineMessageContents(assistantGroup.contents);
       if (content || assistantGroup.hasPending) {
         entries.push({
           role: "assistant",

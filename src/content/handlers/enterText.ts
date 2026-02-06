@@ -1,13 +1,11 @@
 import { isEditableElement } from "../dom/editableElements.js";
 
 type EnterTextMessage = {
-  id?: unknown;
-  content?: unknown;
+  id?: string | null;
+  content?: string | null;
 };
 
-const normalizeInputId = (
-  message: EnterTextMessage | null | undefined,
-): string => {
+const normalizeInputId = (message: EnterTextMessage | null): string => {
   const id = typeof message?.id === "string" ? message.id.trim() : "";
   if (!id) {
     throw new Error("id 必须是非空字符串");
@@ -18,9 +16,7 @@ const normalizeInputId = (
   return id.toLowerCase();
 };
 
-const normalizeInputContent = (
-  message: EnterTextMessage | null | undefined,
-): string => {
+const normalizeInputContent = (message: EnterTextMessage | null): string => {
   if (typeof message?.content !== "string") {
     throw new Error("content 必须是字符串");
   }
@@ -98,7 +94,10 @@ const fillInput = (target: Element, value: string): void => {
     setSelectValue(target, value);
     return;
   }
-  setEditableText(target as HTMLElement, value);
+  if (!(target instanceof HTMLElement)) {
+    throw new Error("输入目标节点无效");
+  }
+  setEditableText(target, value);
 };
 
 const handleEnterText = (

@@ -10,6 +10,7 @@ export type ThemeVariant =
   | "fruit_salad";
 
 export const DEFAULT_THEME_VARIANT: ThemeVariant = "neutral";
+type ThemeVariantInput = string | null;
 
 const allowedVariants = new Set<ThemeVariant>([
   "monochrome",
@@ -23,12 +24,8 @@ const allowedVariants = new Set<ThemeVariant>([
   "fruit_salad",
 ]);
 
-const normalizeThemeVariant = (value: unknown): ThemeVariant => {
-  if (value === null || value === undefined) {
-    return DEFAULT_THEME_VARIANT;
-  }
-  if (typeof value !== "string") {
-    console.error("主题风格必须是字符串", value);
+const normalizeThemeVariant = (value: ThemeVariantInput): ThemeVariant => {
+  if (value == null) {
     return DEFAULT_THEME_VARIANT;
   }
   const normalized = value.trim().toLowerCase() as ThemeVariant;

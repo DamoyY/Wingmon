@@ -1,66 +1,102 @@
 const REQUEST_TYPE = "runConsoleCommand",
   RESPONSE_TYPE = "runConsoleResult";
 
-type ConsoleReplyPayload = { ok?: boolean; output?: string; error?: string };
+type ConsoleRequestId = string | number;
 
-type RunConsoleMessage = {
-  type?: string;
-  command?: string;
-  requestId?: string | number;
+type ConsoleSuccessPayload = {
+  ok: true;
+  output: string;
 };
+
+type ConsoleErrorPayload = {
+  error: string;
+};
+
+type ConsoleReplyPayload = ConsoleSuccessPayload | ConsoleErrorPayload;
+
+type IncomingConsoleMessage = {
+  type: string | null;
+  command: string | null;
+  requestId: ConsoleRequestId | null;
+};
+
+type ConsoleCommandResult =
+  | string
+  | number
+  | boolean
+  | bigint
+  | symbol
+  | ((...args: never[]) => void)
+  | object
+  | null
+  | undefined;
 
 type ConsoleReply = (payload: ConsoleReplyPayload) => void;
 
-const serializeConsoleResult = (result: unknown): string => {
+const parseIncomingConsoleMessage = (
+    data: MessageEvent["data"],
+  ): IncomingConsoleMessage => {
+    if (typeof data !== "object" || data === null) {
+      return { type: null, command: null, requestId: null };
+    }
+    const candidate = data as Record<string, string | number | null>,
+      type = typeof candidate.type === "string" ? candidate.type : null,
+      command =
+        typeof candidate.command === "string" ? candidate.command : null,
+      requestId =
+        typeof candidate.requestId === "string" ||
+        typeof candidate.requestId === "number"
+          ? candidate.requestId
+          : null;
+    return { type, command, requestId };
+  },
+  hasValidRequestId = (
+    requestId: ConsoleRequestId | null,
+  ): requestId is ConsoleRequestId =>
+    (typeof requestId === "string" && requestId.length > 0) ||
+    typeof requestId === "number",
+  serializeConsoleResult = (result: ConsoleCommandResult): string => {
     if (typeof result === "string") {
       return result;
     }
-    if (typeof result === "undefined") {
-      return "undefined";
+    if (result == null) {
+      return String(result);
     }
-    if (result === null) {
-      return "null";
-    }
-    const serialized = JSON.stringify(result);
-    if (typeof serialized !== "string") {
+    if (typeof result === "symbol" || typeof result === "function") {
       throw new Error("结果不可序列化");
     }
-    return serialized;
+    return JSON.stringify(result);
   },
-  runConsoleCommand = (command: string): unknown =>
-    window.eval(command) as unknown,
-  isPromiseLike = (value: unknown): value is Promise<unknown> =>
-    typeof value === "object" &&
-    value !== null &&
-    "then" in value &&
-    typeof (value as { then?: unknown }).then === "function",
-  handleRunConsoleCommand = async (
-    message: RunConsoleMessage,
-    reply: ConsoleReply,
-  ) => {
-    const command =
-      typeof message.command === "string" ? message.command.trim() : "";
-    if (!command) {
+  runConsoleCommand = (
+    command: string,
+  ): ConsoleCommandResult | Promise<ConsoleCommandResult> =>
+    window.eval(command) as
+      | ConsoleCommandResult
+      | Promise<ConsoleCommandResult>,
+  handleRunConsoleCommand = async (command: string, reply: ConsoleReply) => {
+    const normalizedCommand = command.trim();
+    if (!normalizedCommand) {
       window.console.error("command 必须是非空字符串");
       reply({ error: "command 必须是非空字符串" });
       return;
     }
     try {
-      let result = runConsoleCommand(command);
-      if (isPromiseLike(result)) {
-        result = await result;
-      }
-      const output = serializeConsoleResult(result);
+      const result = runConsoleCommand(normalizedCommand),
+        resolvedResult = result instanceof Promise ? await result : result,
+        output = serializeConsoleResult(resolvedResult);
       reply({ ok: true, output });
     } catch (error) {
       window.console.error(error);
-      const messageText = error instanceof Error ? error.message : undefined;
-      reply({ error: messageText || "命令执行失败" });
+      if (error instanceof Error) {
+        reply({ error: error.message || "命令执行失败" });
+        return;
+      }
+      reply({ error: "命令执行失败" });
     }
   },
   registerRunConsoleCommandListener = () => {
     window.addEventListener("message", (event: MessageEvent) => {
-      const data = (event.data ?? {}) as RunConsoleMessage;
+      const data = parseIncomingConsoleMessage(event.data);
       if (data.type !== REQUEST_TYPE) {
         return;
       }
@@ -73,18 +109,23 @@ const serializeConsoleResult = (result: unknown): string => {
           }
           event.source.postMessage(message, "*");
         };
-      if (requestId === undefined || requestId === "") {
+      if (!hasValidRequestId(requestId)) {
         window.console.error("requestId 缺失");
         reply({ error: "requestId 缺失" });
         return;
       }
-      void handleRunConsoleCommand(data, reply);
+      if (data.command === null) {
+        window.console.error("command 必须是非空字符串");
+        reply({ error: "command 必须是非空字符串" });
+        return;
+      }
+      void handleRunConsoleCommand(data.command, reply);
     });
   };
 
 declare global {
   interface Window {
-    registerRunConsoleCommandListener?: () => void;
+    registerRunConsoleCommandListener: () => void;
   }
 }
 

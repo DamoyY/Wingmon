@@ -1,7 +1,7 @@
 import replaceButtons from "./buttons.js";
 import replaceInputs from "./inputs.js";
 import { cloneBodyWithShadowDom, resolveRenderedText } from "./shadowDom.ts";
-import createTurndownService from "./turndownService.js";
+import createTurndownService from "./turndownService.ts";
 import {
   buildChunkAnchorMarker,
   chunkAnchorAttribute,
@@ -181,14 +181,13 @@ const resolveChunkAnchorId = (
   if (!anchors.length) {
     return null;
   }
-  const chunkStart = boundaries.at(pageNumber - 1),
-    chunkEnd = boundaries.at(pageNumber);
-  if (chunkStart === undefined || chunkEnd === undefined) {
-    throw new Error("分片边界缺失");
-  }
-  if (!Number.isInteger(chunkStart) || !Number.isInteger(chunkEnd)) {
+  const chunkStartRaw = boundaries[pageNumber - 1],
+    chunkEndRaw = boundaries[pageNumber];
+  if (!Number.isInteger(chunkStartRaw) || !Number.isInteger(chunkEndRaw)) {
     throw new Error("分片边界无效");
   }
+  const chunkStart = chunkStartRaw,
+    chunkEnd = chunkEndRaw;
   const chunkCenter = (chunkStart + chunkEnd) / 2;
   const anchorsInChunk = anchors.filter(
     (anchor) => anchor.index >= chunkStart && anchor.index <= chunkEnd,
@@ -308,8 +307,11 @@ const buildPrefixTokenCounter = (
   const tokenCountCache = new Map<number, number>([[0, 0]]);
   return (boundary: number): number => {
     const normalizedBoundary = clampBoundary(boundary, content.length);
-    const cached = tokenCountCache.get(normalizedBoundary);
-    if (cached !== undefined) {
+    if (tokenCountCache.has(normalizedBoundary)) {
+      const cached = tokenCountCache.get(normalizedBoundary);
+      if (typeof cached !== "number") {
+        throw new Error("缓存分片 token 计数无效");
+      }
       return cached;
     }
     const count = markdownEncoding.encode(
@@ -431,8 +433,8 @@ const convertPageContentToMarkdown = (
       chunked.boundaries,
       pageNumber,
     );
-  const pageChunk = chunked.chunks.at(pageNumber - 1);
-  if (pageChunk === undefined) {
+  const pageChunk = chunked.chunks[pageNumber - 1];
+  if (typeof pageChunk !== "string") {
     throw new Error("分片内容缺失");
   }
   return {

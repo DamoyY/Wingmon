@@ -40,6 +40,9 @@ export const buildBundles = async (): Promise<void> => {
     loader,
     plugins: [toolIndexPlugin],
   });
+  if (!panelBuildResult.metafile) {
+    throw new Error("panel 构建结果缺少 metafile");
+  }
   if (shouldObfuscateBuild(panelBuildResult.metafile)) {
     await obfuscateFile(panelBundlePath);
   }
@@ -59,6 +62,9 @@ export const buildBundles = async (): Promise<void> => {
     loader,
     plugins: [toolIndexPlugin],
   });
+  if (!showHtmlBuildResult.metafile) {
+    throw new Error("show-html 构建结果缺少 metafile");
+  }
   if (shouldObfuscateBuild(showHtmlBuildResult.metafile)) {
     await obfuscateFile(showHtmlBundlePath);
   }
@@ -78,6 +84,9 @@ export const buildBundles = async (): Promise<void> => {
     loader,
     plugins: [toolIndexPlugin],
   });
+  if (!contentBuildResult.metafile) {
+    throw new Error("content 构建结果缺少 metafile");
+  }
   if (shouldObfuscateBuild(contentBuildResult.metafile)) {
     await obfuscateFile(contentBundlePath);
   }
@@ -96,6 +105,9 @@ export const buildBundles = async (): Promise<void> => {
     metafile: true,
     loader,
   });
+  if (!sandboxBuildResult.metafile) {
+    throw new Error("sandbox 构建结果缺少 metafile");
+  }
   if (shouldObfuscateBuild(sandboxBuildResult.metafile)) {
     await obfuscateFile(sandboxBundlePath);
   }
@@ -113,6 +125,9 @@ export const buildBundles = async (): Promise<void> => {
     metafile: true,
     loader,
   });
+  if (!backgroundBuildResult.metafile) {
+    throw new Error("background 构建结果缺少 metafile");
+  }
   if (shouldObfuscateBuild(backgroundBuildResult.metafile)) {
     await obfuscateFile(backgroundBundlePath);
   }

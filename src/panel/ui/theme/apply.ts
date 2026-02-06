@@ -8,17 +8,19 @@ import {
 } from "@material/material-color-utilities";
 import {
   DEFAULT_THEME_COLOR,
+  DEFAULT_THEME_VARIANT,
   normalizeTheme,
   normalizeThemeColor,
   normalizeThemeVariant,
-  DEFAULT_THEME_VARIANT,
+  type ThemeMode,
+  type ThemeVariant,
 } from "../../utils/index.ts";
 import { prefersReducedMotion } from "../core/index.ts";
 
-type ThemeMode = "light" | "dark" | "auto";
 type ApplyCallback = () => void;
-type ThemeColorInput = string | null | undefined;
-type ThemeVariantInput = string | null | undefined;
+type ThemeInput = string | null;
+type ThemeColorInput = string | null;
+type ThemeVariantInput = string | null;
 type DocumentWithViewTransition = Document & {
   startViewTransition?: (callback: () => void) => void;
 };
@@ -36,21 +38,11 @@ const variantMap = {
   fruit_salad: Variant.FRUIT_SALAD,
 } as const;
 
-const normalizeThemeSafe = normalizeTheme as (
-  value: ThemeColorInput,
-) => ThemeMode;
-const normalizeThemeColorSafe = normalizeThemeColor as (
-  value: ThemeColorInput,
-) => string;
-const normalizeThemeVariantSafe = normalizeThemeVariant as (
-  value: ThemeVariantInput,
-) => keyof typeof variantMap;
-const defaultThemeColor = DEFAULT_THEME_COLOR as string;
-const defaultThemeVariant = DEFAULT_THEME_VARIANT as string;
+const defaultThemeColor = DEFAULT_THEME_COLOR;
+const defaultThemeVariant = DEFAULT_THEME_VARIANT;
 
 let currentThemeColor: string = defaultThemeColor;
-let currentThemeVariant: keyof typeof variantMap =
-  defaultThemeVariant as keyof typeof variantMap;
+let currentThemeVariant: ThemeVariant = defaultThemeVariant;
 let hasAppliedTheme = false;
 const THEME_TRANSITION_CLASS = "theme-transition";
 const THEME_TRANSITION_DURATION = 240;
@@ -161,13 +153,13 @@ const stopAutoThemeSync = (): void => {
     autoThemeListener = applySystemTheme;
   },
   applyTheme = (
-    theme: ThemeColorInput,
+    theme: ThemeInput,
     themeColor: ThemeColorInput = currentThemeColor,
     themeVariant: ThemeVariantInput = currentThemeVariant,
   ): ThemeMode => {
-    const normalized = normalizeThemeSafe(theme);
-    currentThemeColor = normalizeThemeColorSafe(themeColor);
-    currentThemeVariant = normalizeThemeVariantSafe(themeVariant);
+    const normalized = normalizeTheme(theme);
+    currentThemeColor = normalizeThemeColor(themeColor);
+    currentThemeVariant = normalizeThemeVariant(themeVariant);
     stopAutoThemeSync();
     if (normalized === "auto") {
       startAutoThemeSync();

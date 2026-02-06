@@ -1,32 +1,33 @@
-import TurndownService from "turndown";
+import TurndownService, { type TurndownRule } from "turndown";
 import { tables } from "turndown-plugin-gfm";
 import { isDataUrl, isSvgUrl } from "./url.ts";
 
-const ensureTurndownService = () => {
+const ensureTurndownService = (): void => {
     if (typeof TurndownService !== "function") {
       throw new Error("TurndownService 未加载，无法转换页面内容");
     }
   },
-  buildImageRule = (service) => ({
+  buildImageRule = (service: TurndownService): TurndownRule => ({
     filter: "img",
     replacement: (_content, node) => {
-      if (!node || node.nodeName !== "IMG") {
+      if (!(node instanceof Element) || node.nodeName !== "IMG") {
         return "";
       }
-      const src = node.getAttribute("src") || "",
-        alt = node.getAttribute("alt") || "";
+      const imageNode = node as HTMLImageElement,
+        src = imageNode.getAttribute("src") || "",
+        alt = imageNode.getAttribute("alt") || "";
       if (!src || isDataUrl(src)) {
         return service.escape(alt);
       }
       if (isSvgUrl(src)) {
         return `![${service.escape(alt)}]()`;
       }
-      const title = node.getAttribute("title"),
+      const title = imageNode.getAttribute("title"),
         titlePart = title ? ` "${service.escape(title)}"` : "";
       return `![${service.escape(alt)}](${src}${titlePart})`;
     },
   }),
-  createTurndownService = () => {
+  createTurndownService = (): TurndownService => {
     ensureTurndownService();
     const service = new TurndownService({ codeBlockStyle: "fenced" });
     service.use(tables);

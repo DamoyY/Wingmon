@@ -1,19 +1,17 @@
 import { argbFromHex, hexFromArgb } from "@material/material-color-utilities";
 
 export const DEFAULT_THEME_COLOR = "#1c7ff8";
-
+type ThemeColorInput = string | null;
 type ThemeColorParseResult =
   | { status: "missing" }
-  | { status: "invalid" }
   | { status: "empty" }
   | { status: "value"; value: string };
 
-const parseThemeColorInput = (value: unknown): ThemeColorParseResult => {
-  if (value === null || value === undefined) {
+const parseThemeColorInput = (
+  value: ThemeColorInput,
+): ThemeColorParseResult => {
+  if (value == null) {
     return { status: "missing" };
-  }
-  if (typeof value !== "string") {
-    return { status: "invalid" };
   }
   const trimmed = value.trim();
   if (!trimmed) {
@@ -31,13 +29,10 @@ const normalizeThemeColorValue = (value: string): string => {
   }
 };
 
-const normalizeThemeColor = (value: unknown): string => {
+const normalizeThemeColor = (value: ThemeColorInput): string => {
   const parsed = parseThemeColorInput(value);
   if (parsed.status === "missing") {
     return DEFAULT_THEME_COLOR;
-  }
-  if (parsed.status === "invalid") {
-    throw new Error("主题色必须是字符串");
   }
   if (parsed.status === "empty") {
     throw new Error("主题色不能为空");
@@ -45,7 +40,7 @@ const normalizeThemeColor = (value: unknown): string => {
   return normalizeThemeColorValue(parsed.value);
 };
 
-export const normalizeThemeColorSafe = (value: unknown): string => {
+export const normalizeThemeColorSafe = (value: ThemeColorInput): string => {
   const parsed = parseThemeColorInput(value);
   if (parsed.status !== "value") {
     return "";

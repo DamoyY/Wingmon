@@ -57,13 +57,21 @@ const settingsKeys = {
         ? (data[settingsKeys.model] as string)
         : "",
     apiType: data[settingsKeys.apiType] === "responses" ? "responses" : "chat",
-    theme: normalizeTheme(data[settingsKeys.theme]),
+    theme: normalizeTheme(
+      typeof data[settingsKeys.theme] === "string"
+        ? (data[settingsKeys.theme] as string)
+        : null,
+    ),
     themeColor: normalizeThemeColor(
       typeof data[settingsKeys.themeColor] === "string"
         ? (data[settingsKeys.themeColor] as string)
-        : undefined,
+        : null,
     ),
-    themeVariant: normalizeThemeVariant(data[settingsKeys.themeVariant]),
+    themeVariant: normalizeThemeVariant(
+      typeof data[settingsKeys.themeVariant] === "string"
+        ? (data[settingsKeys.themeVariant] as string)
+        : null,
+    ),
     followMode:
       data[settingsKeys.followMode] === undefined
         ? true

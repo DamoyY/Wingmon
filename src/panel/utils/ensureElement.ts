@@ -1,18 +1,8 @@
 export function ensureElement<T extends Element>(
-  element: T | null | undefined,
-  label: string,
-  message?: string,
-): T;
-export function ensureElement(
-  element: unknown,
-  label: string,
-  message?: string,
-): Element;
-export function ensureElement(
-  element: unknown,
+  element: T | null,
   label: string,
   message = `${label}无效`,
-): Element {
+): T {
   if (!(element instanceof Element)) {
     throw new Error(message);
   }
