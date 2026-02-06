@@ -39,13 +39,13 @@
     "message": "Responding..."
   },
   "statusOpenSuccess": {
-    "message": "**Open Success**"
+    "message": "**Opened successfully**"
   },
   "statusReadSuccess": {
-    "message": "**Read Success**"
+    "message": "**Readed successfully**"
   },
   "statusClickSuccess": {
-    "message": "**Click Success**"
+    "message": "**Clicked successfully**"
   },
   "statusInternalToolError": {
     "message": "**Internal Tool Error**"
@@ -90,10 +90,10 @@
     "message": "Failed"
   },
   "statusCloseTabSuccess": {
-    "message": "Successfully closed the tab with TabID $1;"
+    "message": "Successfully closed the tab with TabID \"$1\";"
   },
   "statusCloseTabFailed": {
-    "message": "Failed to close the tab with TabID $1;"
+    "message": "Failed to close the tab with TabID \"$1\";"
   },
   "statusNoTitle": {
     "message": "No Title"
@@ -114,25 +114,25 @@
     "message": "Enter text in the specified input field."
   },
   "toolGetPage": {
-    "message": "Read the content of a page"
+    "message": "Read content of page"
   },
   "toolClosePage": {
-    "message": "Close a tab"
+    "message": "Close tab"
   },
   "toolRunConsole": {
-    "message": "Execute a console command in the Sandbox Page and get the results"
+    "message": "Execute console command in Sandbox Page and get results"
   },
   "toolListTabs": {
     "message": "List the titles, URLs, and TabIDs of all tabs"
   },
   "toolShowHtml": {
-    "message": "The HTML provided to this tool will be opened in the user's browser"
+    "message": "This tool will open the input HTML in user's browser while providing download options"
   },
   "toolParamFocus": {
     "message": "Whether to switch browser focus to this page"
   },
   "toolParamPageNumber": {
-    "message": "When page is HTML, it represents chunk number (one chunk is approximately 5000 tokens). When page is PDF, it represents page number"
+    "message": "When page is HTML, it represents chunk number (one chunk is approximately 5000 tokens); When page is PDF, it represents page number"
   },
   "toolParamTabIdList": {
     "message": "List of TabIDs to close"

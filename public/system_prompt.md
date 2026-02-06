@@ -40,7 +40,7 @@ URL 来源：
   - 浏览器中已打开的页面：
     * Each page contains many links. You can determine whether a page is valuable based on the text surrounding those links;
   - Google Search:
-    * 你可以访问 `https://www.google.com/search?q=%s`（Replace `%s` with what you want to search for），搜索结果中每一项都会包含URL；
+    * 你可以访问 `https://www.google.com/search?as_q=%s`（Replace `%s` with what you want to search for），搜索结果中每一项都会包含URL；
       - 必须使用英文搜索词；
       - Conduct multiple searches using different search terms to review the most relevant and valuable results for each;
     * 错误行为：

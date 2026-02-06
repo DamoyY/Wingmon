@@ -35,13 +35,25 @@ const toChatToolCallForRequest = (entry) => ({
   },
   hasTextContent = (message) =>
     typeof message?.content === "string" && Boolean(message.content.trim()),
-  findLastUserMessageIndex = (messages) => {
-    for (let i = messages.length - 1; i >= 0; i -= 1) {
+  collectUserMessageIndices = (messages) => {
+    const indices = [];
+    for (let i = 0; i < messages.length; i += 1) {
       if (messages[i]?.role === "user") {
-        return i;
+        indices.push(i);
       }
     }
-    return -1;
+    return indices;
+  },
+  resolveBoundaryUserMessageIndex = (messages) => {
+    const userIndices = collectUserMessageIndices(messages),
+      count = userIndices.length;
+    if (!count) {
+      return -1;
+    }
+    if (count === 1) {
+      return userIndices[0];
+    }
+    return userIndices[count - 2];
   },
   stripToolCalls = (message) => {
     if (!message || !Array.isArray(message.tool_calls)) {
@@ -71,12 +83,12 @@ const toChatToolCallForRequest = (entry) => ({
     return plan;
   },
   buildContextPlan = (messages) => {
-    const lastUserIndex = findLastUserMessageIndex(messages);
-    if (lastUserIndex < 0) {
+    const boundaryUserIndex = resolveBoundaryUserMessageIndex(messages);
+    if (boundaryUserIndex < 0) {
       return [];
     }
-    const plan = buildHistoryPlan(messages, lastUserIndex);
-    for (let i = lastUserIndex; i < messages.length; i += 1) {
+    const plan = buildHistoryPlan(messages, boundaryUserIndex);
+    for (let i = boundaryUserIndex; i < messages.length; i += 1) {
       plan.push({ index: i, includeToolCalls: true });
     }
     return plan;
