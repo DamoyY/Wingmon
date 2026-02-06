@@ -95,6 +95,27 @@ const ensureNotAborted = (signal: AbortSignal): void => {
       throw error;
     }
   },
+  resolvePendingAssistantIndex = (
+    assistantIndex: number | null,
+  ): number | null => {
+    if (
+      assistantIndex !== null &&
+      Number.isInteger(assistantIndex) &&
+      assistantIndex >= 0
+    ) {
+      const message = state.messages.at(assistantIndex);
+      if (message?.role === "assistant" && message.pending === true) {
+        return assistantIndex;
+      }
+    }
+    for (let i = state.messages.length - 1; i >= 0; i -= 1) {
+      const message = state.messages.at(i);
+      if (message?.role === "assistant" && message.pending === true) {
+        return i;
+      }
+    }
+    return null;
+  },
   isAbortError = (error: ErrorLike): boolean => {
     if (!error) {
       return false;
@@ -108,10 +129,10 @@ const ensureNotAborted = (signal: AbortSignal): void => {
     return false;
   },
   clearPendingAssistant = (assistantIndex: number | null): void => {
-    if (assistantIndex === null || !Number.isInteger(assistantIndex)) {
+    const resolvedAssistantIndex = resolvePendingAssistantIndex(assistantIndex);
+    if (resolvedAssistantIndex === null) {
       return;
     }
-    const resolvedAssistantIndex = assistantIndex;
     const message = state.messages.at(resolvedAssistantIndex);
     if (!message || message.role !== "assistant" || message.pending !== true) {
       return;
@@ -183,15 +204,15 @@ export class ConversationManager {
     this.#emit({ type: "status-change", status });
   }
 
-  async stopSending(): Promise<void> {
+  stopSending(): Promise<void> {
     this.#emit({ type: "sending-change", sending: false });
     const abortController = this.#activeAbortController;
     if (!abortController) {
-      return;
+      return Promise.resolve();
     }
     abortController.abort();
     this.#emitStatus("");
-    await saveCurrentConversation();
+    return Promise.resolve();
   }
 
   async sendMessage({
@@ -243,6 +264,12 @@ export class ConversationManager {
       let response = await responseStream.next();
       while (!response.done) {
         const value = response.value;
+        if (
+          value.assistantIndex !== null &&
+          Number.isInteger(value.assistantIndex)
+        ) {
+          pendingAssistantIndex = value.assistantIndex;
+        }
         if (value.streamed) {
           applyStreamedResponseSafe(value.toolCalls, value.assistantIndex);
         } else {
@@ -261,11 +288,21 @@ export class ConversationManager {
       if (isAbortError(resolvedError)) {
         clearPendingAssistant(pendingAssistantIndex);
         this.#emitStatus("");
+        try {
+          await saveCurrentConversation();
+        } catch (saveError) {
+          console.error("保存会话失败", saveError);
+        }
         return;
       }
       console.error(resolvedError?.message || "请求失败");
       clearPendingAssistant(pendingAssistantIndex);
       this.#emitStatus("");
+      try {
+        await saveCurrentConversation();
+      } catch (saveError) {
+        console.error("保存会话失败", saveError);
+      }
     } finally {
       setStateValue("sending", false);
       if (this.#activeAbortController === abortController) {
