@@ -1,33 +1,5 @@
 import { refreshSendWithPageButton } from "../../features/chat/messages/index.ts";
 
-type ChromeTab = {
-  active?: boolean;
-};
-
-type ChromeTabChangeInfo = {
-  status?: string;
-  url?: string;
-};
-
-type ChromeTabsApi = {
-  onActivated: {
-    addListener: (callback: () => void) => void;
-  };
-  onUpdated: {
-    addListener: (
-      callback: (
-        tabId: number,
-        changeInfo: ChromeTabChangeInfo,
-        tab: ChromeTab,
-      ) => void,
-    ) => void;
-  };
-};
-
-declare const chrome: {
-  tabs: ChromeTabsApi;
-};
-
 const bindTabEvents = (): void => {
   chrome.tabs.onActivated.addListener(() => {
     void refreshSendWithPageButton();

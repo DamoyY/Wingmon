@@ -4,88 +4,10 @@ import type {
   ContentScriptResponseByRequest,
 } from "../../../shared/index.ts";
 
-export type BrowserTab = {
-  id?: number;
-  status?: string;
-  title?: string;
-  url?: string;
-  windowId?: number;
-};
+export type BrowserTab = chrome.tabs.Tab;
 
 export type CreatedBrowserTab = BrowserTab & {
   id: number;
-};
-
-type ChromeTabChangeInfo = {
-  status?: string;
-};
-
-type ChromeTabsApi = {
-  get(tabId: number): Promise<BrowserTab | undefined>;
-  get(
-    tabId: number,
-    callback: (currentTab: BrowserTab | undefined) => void,
-  ): void;
-  query(queryInfo: {
-    active?: boolean;
-    currentWindow?: boolean;
-  }): Promise<BrowserTab[]>;
-  query(
-    queryInfo: { active?: boolean; currentWindow?: boolean },
-    callback: (tabs: BrowserTab[]) => void,
-  ): void;
-  create(createProperties: {
-    url: string;
-    active: boolean;
-  }): Promise<BrowserTab | undefined>;
-  create(
-    createProperties: { url: string; active: boolean },
-    callback: (tab: BrowserTab | undefined) => void,
-  ): void;
-  remove(tabId: number): Promise<void>;
-  remove(tabId: number, callback: () => void): void;
-  update(
-    tabId: number,
-    updateProperties: { active: boolean },
-  ): Promise<BrowserTab | undefined>;
-  update(
-    tabId: number,
-    updateProperties: { active: boolean },
-    callback: () => void,
-  ): void;
-  sendMessage<TRequest extends ContentScriptRequest>(
-    tabId: number,
-    payload: TRequest,
-  ): Promise<ContentScriptResponseByRequest<TRequest> | null | undefined>;
-  sendMessage<TRequest extends ContentScriptRequest>(
-    tabId: number,
-    payload: TRequest,
-    callback: (
-      response: ContentScriptResponseByRequest<TRequest> | null | undefined,
-    ) => void,
-  ): void;
-  onUpdated: {
-    addListener: (
-      callback: (tabId: number, changeInfo: ChromeTabChangeInfo) => void,
-    ) => void;
-  };
-};
-
-type ChromeWindowsApi = {
-  update(
-    windowId: number,
-    updateProperties: { focused: boolean },
-  ): Promise<void>;
-  update(
-    windowId: number,
-    updateProperties: { focused: boolean },
-    callback: () => void,
-  ): void;
-};
-
-declare const chrome: {
-  tabs: ChromeTabsApi;
-  windows: ChromeWindowsApi;
 };
 
 type PendingWaiter = {
@@ -125,11 +47,7 @@ const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
   },
   getTabSnapshot = async (tabId: number): Promise<BrowserTab> => {
     try {
-      const currentTab = await chrome.tabs.get(tabId);
-      if (!currentTab) {
-        throw new Error("未找到标签页");
-      }
-      return currentTab;
+      return await chrome.tabs.get(tabId);
     } catch (error) {
       throw logAndNormalizeError(error, "无法获取标签页状态");
     }
@@ -197,9 +115,6 @@ export const createTab = async (
 ): Promise<CreatedBrowserTab> => {
   try {
     const tab = await chrome.tabs.create({ url, active });
-    if (!tab) {
-      throw new Error("创建标签页失败");
-    }
     if (typeof tab.id !== "number") {
       throw new Error("创建标签页失败：缺少 Tab ID");
     }
@@ -223,16 +138,11 @@ export const focusTab = async (tabId: number): Promise<void> => {
     console.error(error.message);
     throw error;
   }
-  let tab: BrowserTab | undefined;
+  let tab: BrowserTab;
   try {
     tab = await chrome.tabs.get(tabId);
   } catch (error) {
     throw logAndNormalizeError(error, "无法获取标签页");
-  }
-  if (!tab) {
-    const error = new Error("未找到标签页");
-    console.error(error.message);
-    throw error;
   }
   if (typeof tab.windowId !== "number") {
     const error = new Error("标签页缺少窗口 ID");
@@ -257,7 +167,10 @@ export const sendMessageToTab = async <TRequest extends ContentScriptRequest>(
 ): Promise<ContentScriptResponseByRequest<TRequest>> => {
   await ensureTabConnectable(tabId);
   try {
-    const response = await chrome.tabs.sendMessage(tabId, payload);
+    const response = await chrome.tabs.sendMessage<
+      TRequest,
+      ContentScriptResponseByRequest<TRequest> | null | undefined
+    >(tabId, payload);
     if (response === null || response === undefined) {
       throw new Error("页面未返回结果");
     }

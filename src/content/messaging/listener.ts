@@ -14,6 +14,7 @@ import {
   type ContentScriptResponseByRequest,
   type ContentScriptResponseByType,
 } from "../../shared/index.ts";
+
 const contentScriptHandlers: ContentScriptRpcHandlerMap = {
   ping: (_message, sendResponse): void => {
     const body = document.querySelector("body");
@@ -57,19 +58,35 @@ const dispatchMessage = <TType extends ContentScriptRequestType>(
   return;
 };
 
+const toRuntimeMessageValue = (
+  value: unknown,
+): object | string | number | boolean | null => {
+  if (
+    value === null ||
+    typeof value === "object" ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+  return null;
+};
+
 const registerMessageListener = (): void => {
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     void _sender;
-    if (!isContentScriptRequest(message)) {
+    const messageValue = toRuntimeMessageValue(message);
+    if (!isContentScriptRequest(messageValue)) {
       return;
     }
     const sendTypedResponse = (
-      response: ContentScriptResponseByRequest<typeof message>,
+      response: ContentScriptResponseByRequest<typeof messageValue>,
     ): void => {
       sendResponse(response);
     };
     try {
-      return dispatchMessage(message, sendTypedResponse);
+      return dispatchMessage(messageValue, sendTypedResponse);
     } catch (error: unknown) {
       const messageText = extractErrorMessage(error);
       console.error(messageText);

@@ -1,17 +1,3 @@
-interface ChromeI18n {
-  getUILanguage: () => string;
-  getMessage: (
-    key: string,
-    substitutions?: string | readonly string[],
-  ) => string;
-}
-
-interface ChromeRuntime {
-  getURL: (path: string) => string;
-}
-
-declare const chrome: { i18n: ChromeI18n; runtime: ChromeRuntime };
-
 type LocaleMessage = { message: string };
 type LocaleMessages = Record<string, LocaleMessage>;
 type RawLocaleMessages = Record<string, { message: string | null }>;

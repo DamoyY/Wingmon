@@ -2,16 +2,6 @@ import { setStateValue, state } from "../store/index.ts";
 import { resolveSystemPromptContent } from "./systemPromptContent.ts";
 import { getActiveTab } from "./browserTabs.ts";
 
-type ChromeI18n = {
-  getUILanguage: () => string;
-};
-
-type ChromeApi = {
-  i18n: ChromeI18n;
-};
-
-declare const chrome: ChromeApi;
-
 const loadSystemPrompt = (language: string): string => {
     const content = resolveSystemPromptContent(language) || "";
     if (state.systemPrompt === content) {

@@ -38,36 +38,6 @@
           >
             首次使用需要输入 API Key、Base URL 和模型，仅保存在本地。
           </p>
-          <md-filled-text-field
-            id="api-key-input"
-            label="API Key"
-            autocomplete="off"
-          ></md-filled-text-field>
-          <md-filled-text-field
-            id="base-url-input"
-            label="Base URL"
-            placeholder="https://api.openai.com/v1"
-            autocomplete="off"
-          ></md-filled-text-field>
-          <md-filled-text-field
-            id="model-input"
-            data-i18n-label="model"
-            label="模型"
-            placeholder="gpt-5"
-            autocomplete="off"
-          ></md-filled-text-field>
-          <md-filled-select
-            id="api-type-select"
-            data-i18n-label="apiType"
-            label="API 类型"
-          >
-            <md-select-option value="chat">
-              <div slot="headline">Chat Completion</div>
-            </md-select-option>
-            <md-select-option value="responses">
-              <div slot="headline">Response</div>
-            </md-select-option>
-          </md-filled-select>
           <md-filled-select
             id="language-select"
             data-i18n-label="language"
@@ -80,6 +50,36 @@
               <div slot="headline">English</div>
             </md-select-option>
           </md-filled-select>
+          <md-filled-select
+            id="api-type-select"
+            data-i18n-label="apiType"
+            label="API 类型"
+          >
+            <md-select-option value="chat">
+              <div slot="headline">Chat Completion</div>
+            </md-select-option>
+            <md-select-option value="responses">
+              <div slot="headline">Response</div>
+            </md-select-option>
+          </md-filled-select>
+          <md-filled-text-field
+            id="base-url-input"
+            label="Base URL"
+            placeholder="https://api.openai.com/v1"
+            autocomplete="off"
+          ></md-filled-text-field>
+          <md-filled-text-field
+            id="api-key-input"
+            label="API Key"
+            autocomplete="off"
+          ></md-filled-text-field>
+          <md-filled-text-field
+            id="model-input"
+            data-i18n-label="model"
+            label="Model"
+            placeholder="gpt-5"
+            autocomplete="off"
+          ></md-filled-text-field>
           <md-filled-select
             id="theme-select"
             data-i18n-label="theme"

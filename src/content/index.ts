@@ -1,23 +1,8 @@
 import registerMessageListener from "./messaging/listener.ts";
 
-type ContentRuntime = {
-  sendMessage: (message: { type: string }, callback: () => void) => void;
-  lastError?: { message?: string } | null;
-};
-
-const runtime = chrome.runtime as ContentRuntime;
-
-const reportReady = (): Promise<void> =>
-    new Promise((resolve, reject) => {
-      runtime.sendMessage({ type: "contentScriptReady" }, () => {
-        const errorMessage = runtime.lastError?.message;
-        if (typeof errorMessage === "string" && errorMessage) {
-          reject(new Error(errorMessage));
-          return;
-        }
-        resolve();
-      });
-    }),
+const reportReady = async (): Promise<void> => {
+    await chrome.runtime.sendMessage({ type: "contentScriptReady" });
+  },
   loadListener = async (): Promise<void> => {
     if (typeof registerMessageListener !== "function") {
       throw new Error("内容脚本缺少消息监听注册函数");

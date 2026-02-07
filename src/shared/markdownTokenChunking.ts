@@ -12,7 +12,7 @@ type MarkdownChunkingOptions = {
   controlMarkerPrefixes: readonly string[];
 };
 
-const MARKDOWN_CHUNK_TOKENS = 5000;
+const MARKDOWN_CHUNK_TOKENS = 3000;
 
 const assertNonNegativeInteger = (value: number, label: string): void => {
   if (!Number.isInteger(value) || value < 0) {

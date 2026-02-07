@@ -1,11 +1,3 @@
-type ChromeRuntime = {
-  getURL: (path: string) => string;
-};
-
-declare const chrome: {
-  runtime: ChromeRuntime;
-};
-
 const SANDBOX_FRAME_ID = "llm-sandbox-frame";
 const SANDBOX_LOAD_TIMEOUT = 3000;
 

@@ -8,13 +8,6 @@ export type ConversationRecord = {
 
 type HistoryStoragePayload = Record<string, ConversationRecord[] | undefined>;
 
-interface ChromeStorageLocal {
-  get: (key: string) => Promise<HistoryStoragePayload>;
-  set: (items: HistoryStoragePayload) => Promise<void>;
-}
-
-declare const chrome: { storage: { local: ChromeStorageLocal } };
-
 const MAX_HISTORY = 50;
 const STORAGE_KEY = "chat_history";
 
@@ -29,7 +22,8 @@ const resolveStoredHistory = (
 };
 
 export const getHistory = async (): Promise<ConversationRecord[]> => {
-  const result = await chrome.storage.local.get(STORAGE_KEY);
+  const result =
+    await chrome.storage.local.get<HistoryStoragePayload>(STORAGE_KEY);
   return resolveStoredHistory(result);
 };
 
@@ -52,7 +46,9 @@ export const saveConversation = async (
   if (history.length > MAX_HISTORY) {
     history.length = MAX_HISTORY;
   }
-  await chrome.storage.local.set({ [STORAGE_KEY]: history });
+  await chrome.storage.local.set<HistoryStoragePayload>({
+    [STORAGE_KEY]: history,
+  });
 };
 
 export const loadConversation = async (
@@ -69,7 +65,9 @@ export const loadConversation = async (
 export const deleteConversation = async (id: string): Promise<void> => {
   const history = await getHistory();
   const filtered = history.filter((item) => item.id !== id);
-  await chrome.storage.local.set({ [STORAGE_KEY]: filtered });
+  await chrome.storage.local.set<HistoryStoragePayload>({
+    [STORAGE_KEY]: filtered,
+  });
 };
 
 export const persistConversation = async (

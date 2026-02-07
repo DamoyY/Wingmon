@@ -7,18 +7,6 @@ import {
 type StoredSettingValue = string | boolean | undefined;
 type StoredSettings = Record<string, StoredSettingValue>;
 
-interface ChromeStorage {
-  local: {
-    get: (
-      keys: string[] | Record<string, StoredSettingValue> | null,
-      callback: (result: StoredSettings) => void,
-    ) => void;
-    set: (items: StoredSettings, callback?: () => void) => void;
-  };
-}
-
-declare const chrome: { storage: ChromeStorage };
-
 export type ApiType = "chat" | "responses";
 
 export type Settings = {
@@ -85,32 +73,26 @@ const settingsKeys = {
         : "en",
   });
 
-export const getSettings = (): Promise<Settings> =>
-  new Promise((resolve) => {
-    chrome.storage.local.get(Object.values(settingsKeys), (result) => {
-      resolve(toSettings(result));
-    });
-  });
+export const getSettings = async (): Promise<Settings> => {
+  const result = await chrome.storage.local.get<StoredSettings>(
+    Object.values(settingsKeys),
+  );
+  return toSettings(result);
+};
 
-const setSettings = (settings: Settings): Promise<void> =>
-  new Promise((resolve) => {
-    chrome.storage.local.set(
-      {
-        [settingsKeys.apiKey]: settings.apiKey,
-        [settingsKeys.baseUrl]: settings.baseUrl,
-        [settingsKeys.model]: settings.model,
-        [settingsKeys.apiType]: settings.apiType,
-        [settingsKeys.theme]: normalizeTheme(settings.theme),
-        [settingsKeys.themeColor]: normalizeThemeColor(settings.themeColor),
-        [settingsKeys.themeVariant]: normalizeThemeVariant(
-          settings.themeVariant,
-        ),
-        [settingsKeys.followMode]: settings.followMode,
-        [settingsKeys.language]: settings.language,
-      },
-      resolve,
-    );
+const setSettings = async (settings: Settings): Promise<void> => {
+  await chrome.storage.local.set<StoredSettings>({
+    [settingsKeys.apiKey]: settings.apiKey,
+    [settingsKeys.baseUrl]: settings.baseUrl,
+    [settingsKeys.model]: settings.model,
+    [settingsKeys.apiType]: settings.apiType,
+    [settingsKeys.theme]: normalizeTheme(settings.theme),
+    [settingsKeys.themeColor]: normalizeThemeColor(settings.themeColor),
+    [settingsKeys.themeVariant]: normalizeThemeVariant(settings.themeVariant),
+    [settingsKeys.followMode]: settings.followMode,
+    [settingsKeys.language]: settings.language,
   });
+};
 
 export const updateSettings = async (
   patch: SettingsPatch,

@@ -6,6 +6,7 @@
   },
   "type": "module",
   "dependencies": {
+    "@anthropic-ai/sdk": "latest",
     "@babel/parser": "latest",
     "@material/material-color-utilities": "latest",
     "@material/web": "latest",
@@ -24,6 +25,7 @@
     "@eslint/js": "latest",
     "@types/clean-css": "latest",
     "@types/html-minifier-terser": "latest",
+    "@types/chrome": "latest",
     "@types/node": "latest",
     "clean-css": "latest",
     "esbuild": "latest",

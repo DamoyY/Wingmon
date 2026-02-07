@@ -30,12 +30,6 @@ import { buildToolErrorOutput, defaultToolSuccessOutput } from "./output.ts";
 import ToolInputError from "./errors.ts";
 import { extractErrorMessage } from "../../../shared/index.ts";
 
-interface ChromeRuntime {
-  getURL: (path: string) => string;
-}
-
-declare const chrome: { runtime: ChromeRuntime };
-
 type ToolOutput = {
   content: string;
   toolContext: ToolMessageContext | null;

@@ -17,17 +17,6 @@ type HtmlPreviewStoragePayload = Record<
   HtmlPreviewEntriesInput | undefined
 >;
 
-interface ChromeStorageLocal {
-  get: (key: string) => Promise<HtmlPreviewStoragePayload>;
-  set: (items: HtmlPreviewStoragePayload) => Promise<void>;
-}
-
-declare const chrome: {
-  storage: {
-    local: ChromeStorageLocal;
-  };
-};
-
 const STORAGE_KEY = "html_previews";
 const MAX_PREVIEWS = 20;
 
@@ -59,7 +48,8 @@ const sanitizeEntries = (
 };
 
 const loadEntries = async (): Promise<HtmlPreviewEntries> => {
-  const result = await chrome.storage.local.get(STORAGE_KEY);
+  const result =
+    await chrome.storage.local.get<HtmlPreviewStoragePayload>(STORAGE_KEY);
   const entries = result[STORAGE_KEY];
   if (!entries) {
     return {};
@@ -99,7 +89,9 @@ export const saveHtmlPreview = async ({
   const id = createRandomId("html");
   entries[id] = { code, createdAt: Date.now() };
   const nextEntries = pruneEntries(entries);
-  await chrome.storage.local.set({ [STORAGE_KEY]: nextEntries });
+  await chrome.storage.local.set<HtmlPreviewStoragePayload>({
+    [STORAGE_KEY]: nextEntries,
+  });
   return id;
 };
 
