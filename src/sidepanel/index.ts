@@ -1,4 +1,4 @@
-import "./ui/core/materialWebComponents.js";
-import { initPanel } from "./app/core/index.js";
+import "./ui/core/setupMaterial.ts";
+import { initPanel } from "./app/core/index.ts";
 
 void initPanel();

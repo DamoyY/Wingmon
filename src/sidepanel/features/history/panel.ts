@@ -7,41 +7,23 @@ import {
 import { state } from "../../core/store/index.ts";
 import { t } from "../../lib/utils/index.ts";
 import { fetchSortedHistory } from "./data.ts";
+import type { HistoryActionHandler } from "./ui/listView.js";
 import {
   deleteConversationById,
   loadConversationIntoState,
 } from "./conversation.ts";
 
-type HistoryActionHandler = (id: string) => Promise<void> | void;
 type RefreshHistoryListOptions = {
   onSelect?: HistoryActionHandler;
   onDeleteRequest?: HistoryActionHandler;
 };
-type RenderHistoryListPayload = {
-  history: Array<{ id: string; updatedAt: number }>;
-  activeId: string;
-  onSelect?: HistoryActionHandler;
-  onDeleteRequest?: HistoryActionHandler;
-  emptyText: string;
-  deleteLabel: string;
-};
-type ViewTransition = (options: { animate: boolean }) => Promise<void> | void;
-
-const renderHistoryListViewSafe = renderHistoryListView as (
-    payload: RenderHistoryListPayload,
-  ) => void,
-  showChatViewSafe = showChatView as ViewTransition,
-  showHistoryViewSafe = showHistoryView as ViewTransition,
-  showConfirmDialogSafe = showConfirmDialog as (
-    message: string,
-  ) => Promise<boolean>;
 
 const refreshHistoryList = async ({
     onSelect,
     onDeleteRequest,
   }: RefreshHistoryListOptions = {}): Promise<void> => {
     const history = await fetchSortedHistory();
-    renderHistoryListViewSafe({
+    renderHistoryListView({
       history,
       activeId: state.conversationId,
       onSelect,
@@ -57,10 +39,10 @@ const refreshHistoryList = async ({
     if (id !== state.conversationId) {
       await loadConversationIntoState(id);
     }
-    await showChatViewSafe({ animate: true });
+    await showChatView({ animate: true });
   },
   handleDeleteRequest = async (id: string): Promise<void> => {
-    const confirmed = await showConfirmDialogSafe(t("historyDeleteConfirm"));
+    const confirmed = await showConfirmDialog(t("historyDeleteConfirm"));
     if (!confirmed) {
       return;
     }
@@ -76,9 +58,9 @@ export const handleOpenHistory = async (): Promise<void> => {
     onSelect: handleSelectConversation,
     onDeleteRequest: handleDeleteRequest,
   });
-  await showHistoryViewSafe({ animate: true });
+  await showHistoryView({ animate: true });
 };
 
 export const handleCloseHistory = async (): Promise<void> => {
-  await showChatViewSafe({ animate: true });
+  await showChatView({ animate: true });
 };

@@ -1,18 +1,22 @@
 import { elements } from "../core/elements.ts";
 
-const showConfirmDialog = (message) =>
-  new Promise((resolve) => {
+const showConfirmDialog = (message: string): Promise<boolean> =>
+  new Promise<boolean>((resolve, reject) => {
     const { confirmDialog, confirmMessage } = elements;
-    if (!confirmDialog || !confirmMessage) {
-      throw new Error("确认弹窗元素未初始化");
-    }
     confirmMessage.textContent = message;
-    confirmDialog.show();
     const handleClose = () => {
       confirmDialog.removeEventListener("close", handleClose);
       resolve(confirmDialog.returnValue === "confirm");
     };
     confirmDialog.addEventListener("close", handleClose);
+    void confirmDialog.show().catch((error: unknown) => {
+      confirmDialog.removeEventListener("close", handleClose);
+      reject(
+        error instanceof Error
+          ? error
+          : new Error(`确认弹窗显示失败：${String(error)}`),
+      );
+    });
   });
 
 export default showConfirmDialog;
