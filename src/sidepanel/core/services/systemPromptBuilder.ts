@@ -1,5 +1,5 @@
 import { setStateValue, state } from "../store/index.ts";
-import { systemPromptContent } from "./systemPromptContent.ts";
+import { resolveSystemPromptContent } from "./systemPromptContent.ts";
 import { getActiveTab } from "./tabs.ts";
 
 type ChromeI18n = {
@@ -12,11 +12,11 @@ type ChromeApi = {
 
 declare const chrome: ChromeApi;
 
-const loadSystemPrompt = (): string => {
-    if (state.systemPrompt !== null) {
-      return state.systemPrompt;
+const loadSystemPrompt = (language: string): string => {
+    const content = resolveSystemPromptContent(language) || "";
+    if (state.systemPrompt === content) {
+      return content;
     }
-    const content = systemPromptContent || "";
     setStateValue("systemPrompt", content);
     return content;
   },
@@ -64,8 +64,8 @@ const loadSystemPrompt = (): string => {
     }
     return output;
   },
-  buildSystemPrompt = async (): Promise<string> => {
-    const raw = loadSystemPrompt();
+  buildSystemPrompt = async (language: string): Promise<string> => {
+    const raw = loadSystemPrompt(language);
     if (!raw) {
       return "";
     }

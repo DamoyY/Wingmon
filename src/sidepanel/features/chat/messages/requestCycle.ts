@@ -417,7 +417,7 @@ const createAbortError = (): Error => {
         initializedGroupId = currentGroupId;
         statusTracker.setInitial();
       }
-      const systemPrompt = await buildSystemPrompt(),
+      const systemPrompt = await buildSystemPrompt(settings.language),
         tools = getToolDefinitions(settings.apiType),
         requestResult = normalizeRequestModelResult(
           await requestModel({
