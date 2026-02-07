@@ -11,6 +11,7 @@ type SelectElement = HTMLElement & {
   value: string;
   select: (value: string) => void;
 };
+type FormElement = TextInputElement | SelectElement;
 
 type SettingsFormValues = {
   apiKey: string;
@@ -23,168 +24,144 @@ type SettingsFormValues = {
   themeVariant: string;
 };
 
-const selectValue = (selectEl: SelectElement, value: string) => {
-    selectEl.select(value);
-  },
-  ensureString = (value: unknown, label: string) => {
+type SettingsFormField = keyof SettingsFormValues;
+
+type FieldDescriptor = {
+  field: SettingsFormField;
+  label: string;
+  elementLabel: string;
+  getElement: () => FormElement;
+  resolveFillValue: (settings: SettingsFormValues) => string;
+};
+
+type ResolvedFieldDescriptor = FieldDescriptor & { element: FormElement };
+
+const ensureString = (value: string | undefined, label: string): string => {
     if (typeof value !== "string") {
       throw new Error(`${label}必须是字符串`);
     }
     return value;
   },
-  readInputValue = (input: TextInputElement | null, label: string): string => {
-    if (!input) {
-      throw new Error(`${label}输入框不存在`);
+  isSelectElement = (element: FormElement): element is SelectElement =>
+    typeof (element as SelectElement).select === "function",
+  applyElementValue = (element: FormElement, value: string): void => {
+    if (isSelectElement(element)) {
+      element.select(value);
+      return;
     }
-    return ensureString(input.value, label);
+    element.value = value;
   },
-  readSelectValue = (select: SelectElement | null, label: string): string => {
-    if (!select) {
-      throw new Error(`${label}选择框不存在`);
-    }
-    return ensureString(select.value, label);
-  };
+  settingsFormFieldDescriptors: readonly FieldDescriptor[] = [
+    {
+      field: "apiKey",
+      label: "API Key",
+      elementLabel: "API Key 输入框",
+      getElement: () => elements.keyInput as TextInputElement,
+      resolveFillValue: (settings) => settings.apiKey || "",
+    },
+    {
+      field: "baseUrl",
+      label: "Base URL",
+      elementLabel: "Base URL 输入框",
+      getElement: () => elements.baseUrlInput as TextInputElement,
+      resolveFillValue: (settings) => settings.baseUrl || "",
+    },
+    {
+      field: "model",
+      label: "模型",
+      elementLabel: "模型输入框",
+      getElement: () => elements.modelInput as TextInputElement,
+      resolveFillValue: (settings) => settings.model || "",
+    },
+    {
+      field: "apiType",
+      label: "API 类型",
+      elementLabel: "API 类型选择框",
+      getElement: () => elements.apiTypeSelect as SelectElement,
+      resolveFillValue: (settings) => settings.apiType || "chat",
+    },
+    {
+      field: "language",
+      label: "语言",
+      elementLabel: "语言选择框",
+      getElement: () => elements.languageSelect as SelectElement,
+      resolveFillValue: (settings) => settings.language || "en",
+    },
+    {
+      field: "theme",
+      label: "主题",
+      elementLabel: "主题选择框",
+      getElement: () => elements.themeSelect as SelectElement,
+      resolveFillValue: (settings) => normalizeTheme(settings.theme),
+    },
+    {
+      field: "themeColor",
+      label: "主题色",
+      elementLabel: "主题色输入框",
+      getElement: () => elements.themeColorInput as TextInputElement,
+      resolveFillValue: (settings) => normalizeThemeColor(settings.themeColor),
+    },
+    {
+      field: "themeVariant",
+      label: "Variant",
+      elementLabel: "Variant 选择框",
+      getElement: () => elements.themeVariantSelect as SelectElement,
+      resolveFillValue: (settings) =>
+        normalizeThemeVariant(settings.themeVariant),
+    },
+  ],
+  resolveFieldDescriptors = (): ResolvedFieldDescriptor[] =>
+    settingsFormFieldDescriptors.map((descriptor) => ({
+      ...descriptor,
+      element: ensureElement(
+        descriptor.getElement(),
+        descriptor.elementLabel,
+        `${descriptor.elementLabel}未找到`,
+      ),
+    })),
+  createEmptySettingsFormValues = (): SettingsFormValues => ({
+    apiKey: "",
+    baseUrl: "",
+    model: "",
+    apiType: "",
+    language: "",
+    theme: "",
+    themeColor: "",
+    themeVariant: "",
+  });
 
-export const readSettingsFormValues = (): SettingsFormValues => ({
-  apiKey: readInputValue(elements.keyInput as TextInputElement, "API Key"),
-  baseUrl: readInputValue(
-    elements.baseUrlInput as TextInputElement,
-    "Base URL",
-  ),
-  model: readInputValue(elements.modelInput as TextInputElement, "模型"),
-  apiType: readSelectValue(elements.apiTypeSelect as SelectElement, "API 类型"),
-  language: readSelectValue(elements.languageSelect as SelectElement, "语言"),
-  theme: readSelectValue(elements.themeSelect as SelectElement, "主题"),
-  themeColor: readInputValue(
-    elements.themeColorInput as TextInputElement,
-    "主题色",
-  ),
-  themeVariant: readSelectValue(
-    elements.themeVariantSelect as SelectElement,
-    "Variant",
-  ),
-});
+export const readSettingsFormValues = (): SettingsFormValues => {
+  const values = createEmptySettingsFormValues();
+  for (const descriptor of resolveFieldDescriptors()) {
+    values[descriptor.field] = ensureString(
+      descriptor.element.value,
+      descriptor.label,
+    );
+  }
+  return values;
+};
 
 export const updateSettingsFormValues = (
   values: Partial<SettingsFormValues>,
-) => {
-  const keyInput = ensureElement(
-      elements.keyInput as TextInputElement,
-      "API Key 输入框",
-      "API Key 输入框未找到",
-    ),
-    baseUrlInput = ensureElement(
-      elements.baseUrlInput as TextInputElement,
-      "Base URL 输入框",
-      "Base URL 输入框未找到",
-    ),
-    modelInput = ensureElement(
-      elements.modelInput as TextInputElement,
-      "模型输入框",
-      "模型输入框未找到",
-    ),
-    apiTypeSelect = ensureElement(
-      elements.apiTypeSelect as SelectElement,
-      "API 类型选择框",
-      "API 类型选择框未找到",
-    ),
-    languageSelect = ensureElement(
-      elements.languageSelect as SelectElement,
-      "语言选择框",
-      "语言选择框未找到",
-    ),
-    themeSelect = ensureElement(
-      elements.themeSelect as SelectElement,
-      "主题选择框",
-      "主题选择框未找到",
-    ),
-    themeColorInput = ensureElement(
-      elements.themeColorInput as TextInputElement,
-      "主题色输入框",
-      "主题色输入框未找到",
-    ),
-    themeVariantSelect = ensureElement(
-      elements.themeVariantSelect as SelectElement,
-      "Variant 选择框",
-      "Variant 选择框未找到",
-    );
-  if (Object.hasOwn(values, "apiKey")) {
-    keyInput.value = ensureString(values.apiKey, "API Key");
-  }
-  if (Object.hasOwn(values, "baseUrl")) {
-    baseUrlInput.value = ensureString(values.baseUrl, "Base URL");
-  }
-  if (Object.hasOwn(values, "model")) {
-    modelInput.value = ensureString(values.model, "模型");
-  }
-  if (Object.hasOwn(values, "apiType")) {
-    selectValue(apiTypeSelect, ensureString(values.apiType, "API 类型"));
-  }
-  if (Object.hasOwn(values, "language")) {
-    selectValue(languageSelect, ensureString(values.language, "语言"));
-  }
-  if (Object.hasOwn(values, "theme")) {
-    selectValue(themeSelect, ensureString(values.theme, "主题"));
-  }
-  if (Object.hasOwn(values, "themeColor")) {
-    themeColorInput.value = ensureString(values.themeColor, "主题色");
-  }
-  if (Object.hasOwn(values, "themeVariant")) {
-    selectValue(
-      themeVariantSelect,
-      ensureString(values.themeVariant, "Variant"),
+): void => {
+  for (const descriptor of resolveFieldDescriptors()) {
+    if (!Object.hasOwn(values, descriptor.field)) {
+      continue;
+    }
+    applyElementValue(
+      descriptor.element,
+      ensureString(values[descriptor.field], descriptor.label),
     );
   }
 };
 
-const fillSettingsForm = (settings: SettingsFormValues) => {
-  const keyInput = ensureElement(
-      elements.keyInput as TextInputElement,
-      "API Key 输入框",
-      "API Key 输入框未找到",
-    ),
-    baseUrlInput = ensureElement(
-      elements.baseUrlInput as TextInputElement,
-      "Base URL 输入框",
-      "Base URL 输入框未找到",
-    ),
-    modelInput = ensureElement(
-      elements.modelInput as TextInputElement,
-      "模型输入框",
-      "模型输入框未找到",
-    ),
-    apiTypeSelect = ensureElement(
-      elements.apiTypeSelect as SelectElement,
-      "API 类型选择框",
-      "API 类型选择框未找到",
-    ),
-    languageSelect = ensureElement(
-      elements.languageSelect as SelectElement,
-      "语言选择框",
-      "语言选择框未找到",
-    ),
-    themeSelect = ensureElement(
-      elements.themeSelect as SelectElement,
-      "主题选择框",
-      "主题选择框未找到",
-    ),
-    themeColorInput = ensureElement(
-      elements.themeColorInput as TextInputElement,
-      "主题色输入框",
-      "主题色输入框未找到",
-    ),
-    themeVariantSelect = ensureElement(
-      elements.themeVariantSelect as SelectElement,
-      "Variant 选择框",
-      "Variant 选择框未找到",
+const fillSettingsForm = (settings: SettingsFormValues): void => {
+  for (const descriptor of resolveFieldDescriptors()) {
+    applyElementValue(
+      descriptor.element,
+      descriptor.resolveFillValue(settings),
     );
-  keyInput.value = settings.apiKey || "";
-  baseUrlInput.value = settings.baseUrl || "";
-  modelInput.value = settings.model || "";
-  selectValue(apiTypeSelect, settings.apiType || "chat");
-  selectValue(languageSelect, settings.language || "en");
-  selectValue(themeSelect, normalizeTheme(settings.theme));
-  themeColorInput.value = normalizeThemeColor(settings.themeColor);
-  selectValue(themeVariantSelect, normalizeThemeVariant(settings.themeVariant));
+  }
 };
+
 export default fillSettingsForm;

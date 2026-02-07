@@ -25,7 +25,7 @@ const ensurePreviewFrame = (): HTMLIFrameElement => {
   handleRenderHtml = (message: RenderHtmlMessage): void => {
     const { html } = message;
     if (typeof html !== "string") {
-      window.console.error("html 必须是字符串");
+      window.console.error("HTML 必须是字符串");
       return;
     }
     try {

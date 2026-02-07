@@ -28,6 +28,7 @@ import {
 } from "./pageReadHelpers.ts";
 import { buildToolErrorOutput, defaultToolSuccessOutput } from "./output.ts";
 import ToolInputError from "./errors.ts";
+import { extractErrorMessage } from "../../../shared/index.ts";
 
 interface ChromeRuntime {
   getURL: (path: string) => string;
@@ -81,8 +82,6 @@ export const defaultToolExecutionContext: ToolExecutionContext = {
 
 const resolveToolArguments = (rawArgs: string | JsonValue): JsonValue =>
     typeof rawArgs === "string" ? parseToolArguments(rawArgs || "{}") : rawArgs,
-  hasMessageField = (value: unknown): value is { message?: unknown } =>
-    typeof value === "object" && value !== null && "message" in value,
   isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value),
   serializeToolOutput = (output: unknown, name: string): string => {
@@ -212,27 +211,6 @@ const buildToolMessage = ({
     }
     return message;
   },
-  resolveErrorMessage = (error: unknown): string => {
-    if (error === null || error === undefined) {
-      return "未知错误";
-    }
-    if (error instanceof Error) {
-      return error.message || "未知错误";
-    }
-    if (typeof error === "string") {
-      return error.trim() ? error : "未知错误";
-    }
-    if (typeof error === "number" || typeof error === "boolean") {
-      return String(error);
-    }
-    if (hasMessageField(error)) {
-      const { message } = error;
-      if (typeof message === "string" && message.trim()) {
-        return message;
-      }
-    }
-    return "未知错误";
-  },
   executeToolCallToMessage = async (
     call: ToolCall,
     context: ToolExecutionContext,
@@ -253,7 +231,9 @@ const buildToolMessage = ({
       toolContext = resolved.toolContext;
     } catch (error) {
       const isInputError = error instanceof ToolInputError,
-        errorMessage = resolveErrorMessage(error);
+        errorMessage = extractErrorMessage(error, {
+          includeNonStringPrimitives: true,
+        });
       console.error(`工具执行失败: ${name || "未知工具"}`, errorMessage);
       output = buildToolErrorOutput({
         message: errorMessage,

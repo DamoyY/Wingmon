@@ -9,8 +9,7 @@ import convertPdfToMarkdown, {
 
 export { default as replaceButtons } from "./buttons.js";
 export { default as createTurndownService } from "./turndownService.ts";
-export { normalizeUrl, isDataUrl, isSvgUrl } from "./url.ts";
-export { markViewportCenter, sliceContentAroundMarker } from "./viewport.ts";
+export { normalizeUrl, isDataUrl, isSvgUrl } from "../../shared/index.ts";
 export { convertPageContentToMarkdown };
 export { convertPdfToMarkdown };
 export {

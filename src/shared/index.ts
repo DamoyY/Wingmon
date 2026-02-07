@@ -1,4 +1,14 @@
-export { isPdfUrl, normalizeUrl } from "./url.ts";
+export {
+  isDataUrl,
+  isInternalUrl,
+  isPdfUrl,
+  isSvgUrl,
+  normalizeUrl,
+} from "./url.ts";
+export {
+  extractErrorMessage,
+  type ErrorMessageOptions,
+} from "./errorMessage.ts";
 export {
   tryParsePositiveInteger,
   tryParsePositiveNumber,

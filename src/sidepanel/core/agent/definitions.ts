@@ -1,9 +1,10 @@
 import type { BrowserTab, CreatedBrowserTab } from "../services/index.ts";
 import { parseJson, type JsonValue } from "../../lib/utils/index.ts";
-import type {
-  ChunkAnchorWeight,
-  ContentScriptRequest,
-  ContentScriptResponseByRequest,
+import {
+  extractErrorMessage,
+  type ChunkAnchorWeight,
+  type ContentScriptRequest,
+  type ContentScriptResponseByRequest,
 } from "../../../shared/index.ts";
 import toolModules from "./modules/index.ts";
 import type { PageMarkdownData } from "./pageReadHelpers.ts";
@@ -11,19 +12,16 @@ import ToolInputError from "./errors.ts";
 
 const TOOL_STRICT = true;
 
-const toolNameKeys = [
-  "clickButton",
-  "closeBrowserPage",
-  "enterText",
-  "find",
-  "getPageMarkdown",
-  "listTabs",
-  "openBrowserPage",
-  "runConsoleCommand",
-  "showHtml",
-] as const;
-
-export type ToolNameKey = (typeof toolNameKeys)[number];
+export type ToolNameKey =
+  | "clickButton"
+  | "closeBrowserPage"
+  | "enterText"
+  | "find"
+  | "getPageMarkdown"
+  | "listTabs"
+  | "openBrowserPage"
+  | "runConsoleCommand"
+  | "showHtml";
 
 export type ToolNameMap = Record<ToolNameKey, string>;
 
@@ -70,24 +68,6 @@ export type ToolExecutionContext = {
   ) => Promise<JsonValue>;
   saveHtmlPreview: (args: { code: string }) => Promise<string>;
   getRuntimeUrl: (path: string) => string;
-};
-
-type RawToolModule = {
-  key?: string;
-  name?: string;
-  description?: string;
-  parameters?: ToolParameters;
-  execute?: (
-    args: JsonValue,
-    context: ToolExecutionContext,
-  ) => JsonValue | Promise<JsonValue>;
-  validateArgs?: (args: JsonValue) => JsonValue;
-  formatResult?: (result: JsonValue) => string;
-  buildMessageContext?: (
-    args: JsonValue,
-    result: JsonValue,
-  ) => ToolMessageContext | null;
-  pageReadDedupeAction?: ToolPageReadDedupeAction;
 };
 
 type ToolCallFunction = {
@@ -149,24 +129,10 @@ type ResponsesToolDefinition = {
 
 export type ToolDefinition = ChatToolDefinition | ResponsesToolDefinition;
 
-const toolNameKeySet = new Set<string>(toolNameKeys),
-  pageReadDedupeActionSet = new Set<ToolPageReadDedupeAction>([
-    "removeToolCall",
-    "trimToolResponse",
-  ]),
-  isRecord = (
-    value: JsonValue | RawToolModule | null,
-  ): value is ToolParameters =>
-    typeof value === "object" && value !== null && !Array.isArray(value),
-  isToolNameKey = (value: string): value is ToolNameKey =>
-    toolNameKeySet.has(value),
-  ensureRawToolModules = (value: RawToolModule[]): RawToolModule[] => {
-    if (!Array.isArray(value)) {
-      throw new Error("工具模块列表无效");
-    }
-    return value;
-  },
-  ensureToolName = (value: string | undefined, key: ToolNameKey): string => {
+const ensureToolName = (
+    value: string | undefined,
+    key: ToolNameKey,
+  ): string => {
     if (!value) {
       throw new Error(`工具 key 缺失：${key}`);
     }
@@ -188,76 +154,35 @@ const toolNameKeySet = new Set<string>(toolNameKeys),
       "runConsoleCommand",
     ),
     showHtml: ensureToolName(names.showHtml, "showHtml"),
-  }),
-  resolveErrorMessage = (error: Error | null | undefined): string => {
-    if (error && error.message.trim()) {
-      return error.message;
-    }
-    return "工具参数解析失败";
-  };
+  });
 
 const validatedTools: ToolModule[] = [],
   toolModuleByName = new Map<string, ToolModule>(),
-  resolvedToolNames: Partial<ToolNameMap> = {},
-  rawToolModules = ensureRawToolModules(toolModules);
+  resolvedToolNames: Partial<ToolNameMap> = {};
 
-rawToolModules.forEach((tool) => {
-  if (typeof tool.name !== "string" || !tool.name.trim()) {
+toolModules.forEach((tool) => {
+  const name = tool.name.trim();
+  if (!name) {
     throw new Error("工具缺少 name");
   }
-  const name = tool.name.trim();
   if (toolModuleByName.has(name)) {
     throw new Error(`重复的工具 name：${name}`);
   }
-  if (typeof tool.description !== "string" || !tool.description.trim()) {
+  const description = tool.description.trim();
+  if (!description) {
     throw new Error(`工具 ${name} 缺少 description`);
   }
-  if (!isRecord(tool.parameters)) {
-    throw new Error(`工具 ${name} 缺少 parameters`);
-  }
-  if (typeof tool.execute !== "function") {
-    throw new Error(`工具 ${name} 缺少 execute`);
-  }
-  if (typeof tool.validateArgs !== "function") {
-    throw new Error(`工具 ${name} 缺少 validateArgs`);
-  }
-  if (
-    tool.formatResult !== undefined &&
-    typeof tool.formatResult !== "function"
-  ) {
-    throw new Error(`工具 ${name} formatResult 无效`);
-  }
-  if (
-    tool.buildMessageContext !== undefined &&
-    typeof tool.buildMessageContext !== "function"
-  ) {
-    throw new Error(`工具 ${name} buildMessageContext 无效`);
-  }
-  if (
-    tool.pageReadDedupeAction !== undefined &&
-    !pageReadDedupeActionSet.has(tool.pageReadDedupeAction)
-  ) {
-    throw new Error(`工具 ${name} pageReadDedupeAction 无效`);
-  }
-  let key: ToolNameKey | undefined;
-  if (tool.key !== undefined) {
-    if (typeof tool.key !== "string" || !tool.key.trim()) {
-      throw new Error(`工具 ${name} key 无效`);
+  const key = tool.key;
+  if (key !== undefined) {
+    if (resolvedToolNames[key]) {
+      throw new Error(`重复的工具 key：${key}`);
     }
-    const normalizedKey = tool.key.trim();
-    if (!isToolNameKey(normalizedKey)) {
-      throw new Error(`工具 ${name} key 未注册：${normalizedKey}`);
-    }
-    if (resolvedToolNames[normalizedKey]) {
-      throw new Error(`重复的工具 key：${normalizedKey}`);
-    }
-    resolvedToolNames[normalizedKey] = name;
-    key = normalizedKey;
+    resolvedToolNames[key] = name;
   }
   const normalized: ToolModule = {
     key,
     name,
-    description: tool.description.trim(),
+    description,
     parameters: tool.parameters,
     execute: tool.execute,
     validateArgs: tool.validateArgs,
@@ -306,8 +231,9 @@ export const parseToolArguments = (text: string): JsonValue => {
   try {
     return parseJson(text);
   } catch (error) {
-    const resolvedError = error instanceof Error ? error : undefined;
-    throw new ToolInputError(resolveErrorMessage(resolvedError));
+    throw new ToolInputError(
+      extractErrorMessage(error, { fallback: "工具参数解析失败" }),
+    );
   }
 };
 
@@ -344,9 +270,6 @@ export const getToolValidator = <TArgs = JsonValue>(
   name: string,
 ): ToolValidator<TArgs> => {
   const tool = getToolModule<TArgs>(name);
-  if (typeof tool.validateArgs !== "function") {
-    throw new ToolInputError(`工具 ${name} 缺少参数校验`);
-  }
   return tool.validateArgs;
 };
 
