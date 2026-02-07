@@ -132,7 +132,7 @@
     "message": "是否将浏览器焦点切换至此页面"
   },
   "toolParamPageNumber": {
-    "message": "页面为 HTML 时代表分片序号（一个分片约为 5000 Tokens）；页面为 PDF 时代表页码"
+    "message": "页面为 HTML 时代表分片序号（一个分片约为 $1 Tokens）；页面为 PDF 时代表页码"
   },
   "toolParamTabIdList": {
     "message": "要关闭的标签页 TabID 列表"

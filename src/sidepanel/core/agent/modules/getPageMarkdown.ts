@@ -1,3 +1,4 @@
+import { MARKDOWN_CHUNK_TOKENS } from "../../../../shared/index.ts";
 import { isInternalUrl, t, type JsonValue } from "../../../lib/utils/index.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 import { parsePageNumber } from "../validation/pageNumber.ts";
@@ -45,7 +46,10 @@ const parameters = {
       tabId: { type: "number" },
       page_number: {
         type: "number",
-        description: t("toolParamPageNumber"),
+        description: t(
+          "toolParamPageNumber",
+          String(MARKDOWN_CHUNK_TOKENS),
+        ),
       },
     },
     required: ["tabId", "page_number"],

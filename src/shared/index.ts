@@ -4,6 +4,7 @@ export {
   tryParsePositiveNumber,
 } from "./positiveNumber.ts";
 export {
+  MARKDOWN_CHUNK_TOKENS,
   createPrefixTokenCounter,
   splitMarkdownByTokens,
 } from "./markdownTokenChunking.ts";

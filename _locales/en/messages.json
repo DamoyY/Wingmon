@@ -132,7 +132,7 @@
     "message": "Whether to switch browser focus to this page"
   },
   "toolParamPageNumber": {
-    "message": "When page is HTML, it represents chunk number (one chunk is approximately 5000 tokens); When page is PDF, it represents page number"
+    "message": "When page is HTML, it represents chunk number (one chunk is approximately $1 tokens); When page is PDF, it represents page number"
   },
   "toolParamTabIdList": {
     "message": "List of TabIDs to close"

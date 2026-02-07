@@ -1,4 +1,5 @@
 import { createO200kBaseEncoding } from "./tiktokenEncoding.ts";
+import { MARKDOWN_CHUNK_TOKENS } from "../../shared/index.ts";
 
 type ViewportEncoding = {
   encode: (text: string) => number[];
@@ -38,7 +39,7 @@ const createViewportEncoding = (): ViewportEncoding => {
   sliceContentAroundMarker = (
     content: string,
     markerToken: string,
-    range = 5000,
+    range = MARKDOWN_CHUNK_TOKENS,
   ): string => {
     if (!Number.isInteger(range) || range < 0) {
       throw new TypeError("截取范围必须是非负整数 token 数");

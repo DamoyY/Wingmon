@@ -7,7 +7,7 @@ declare const chrome: {
 };
 
 const SANDBOX_FRAME_ID = "llm-sandbox-frame";
-const SANDBOX_LOAD_TIMEOUT = 5000;
+const SANDBOX_LOAD_TIMEOUT = 3000;
 
 let sandboxReadyPromise: Promise<Window> | null = null;
 let sandboxWindow: Window | null = null;

@@ -1,4 +1,7 @@
-import { isPdfUrl } from "../../../../shared/index.ts";
+import {
+  MARKDOWN_CHUNK_TOKENS,
+  isPdfUrl,
+} from "../../../../shared/index.ts";
 import { isInternalUrl, t, type JsonValue } from "../../../lib/utils/index.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 import ToolInputError from "../errors.ts";
@@ -31,7 +34,10 @@ const parameters = {
       focus: { type: "boolean", description: t("toolParamFocus") },
       page_number: {
         type: "number",
-        description: t("toolParamPageNumber"),
+        description: t(
+          "toolParamPageNumber",
+          String(MARKDOWN_CHUNK_TOKENS),
+        ),
       },
     },
     required: ["url", "focus", "page_number"],

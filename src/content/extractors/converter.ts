@@ -15,6 +15,7 @@ import {
   type PageNumberInput,
 } from "../shared/index.ts";
 import {
+  MARKDOWN_CHUNK_TOKENS,
   createPrefixTokenCounter,
   splitMarkdownByTokens,
   type ChunkAnchorWeight,
@@ -56,7 +57,6 @@ type ControlMarkerExtraction = {
   anchors: ChunkAnchorPoint[];
 };
 
-const TOKENS_PER_PAGE = 5000;
 const MINIMUM_CHUNK_ANCHOR_WEIGHT = 1;
 const CONTROL_MARKER_PREFIXES = ["[button:", "[input:"] as const;
 
@@ -308,7 +308,7 @@ const convertPageContentToMarkdown = (
       markerToken,
     ),
     chunked = splitMarkdownByTokens(content, resolveMarkdownTokenLength, {
-      tokensPerPage: TOKENS_PER_PAGE,
+      tokensPerPage: MARKDOWN_CHUNK_TOKENS,
       controlMarkerPrefixes: CONTROL_MARKER_PREFIXES,
     }),
     pageNumber = resolvePageNumberInput(pageData.pageNumber ?? null);

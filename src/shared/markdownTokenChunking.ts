@@ -12,6 +12,8 @@ type MarkdownChunkingOptions = {
   controlMarkerPrefixes: readonly string[];
 };
 
+const MARKDOWN_CHUNK_TOKENS = 5000;
+
 const assertNonNegativeInteger = (value: number, label: string): void => {
   if (!Number.isInteger(value) || value < 0) {
     throw new Error(`${label} 必须为非负整数`);
@@ -194,7 +196,11 @@ const splitMarkdownByTokens = (
   };
 };
 
-export { createPrefixTokenCounter, splitMarkdownByTokens };
+export {
+  MARKDOWN_CHUNK_TOKENS,
+  createPrefixTokenCounter,
+  splitMarkdownByTokens,
+};
 export type {
   MarkdownChunkResult,
   MarkdownChunkingOptions,
