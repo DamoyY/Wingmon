@@ -1,7 +1,22 @@
-import { parseJson, type JsonValue } from "../../lib/utils/index.ts";
+import type { ChatCompletionChunk } from "openai/resources/chat/completions";
+import type {
+  Response,
+  ResponseOutputItem,
+  ResponseOutputMessage,
+  ResponseStreamEvent,
+} from "openai/resources/responses/responses";
 import type { ToolCall } from "../agent/definitions.ts";
 
-type JsonObject = { [key: string]: JsonValue };
+type StreamChatToolCall = NonNullable<
+  NonNullable<
+    ChatCompletionChunk["choices"][number]["delta"]["tool_calls"]
+  >[number]
+>;
+
+type ResponsesFunctionCallOutputItem = Extract<
+  ResponseOutputItem,
+  { type: "function_call" }
+>;
 
 export type ChatToolCallDelta = {
   index?: number;
@@ -28,7 +43,6 @@ export type ResponsesToolCallEventPayload = {
   delta?: string;
   arguments?: string;
   name?: string;
-  text?: string;
 };
 
 export type ApiRequestChunk = {
@@ -36,475 +50,227 @@ export type ApiRequestChunk = {
   toolCalls: ToolCall[];
 };
 
-type SsePayloadHandler = (payload: JsonValue, eventType: string) => void;
-
-type ChatCompletionStreamHandlers = {
-  onDelta: (delta: string) => void;
-  onToolCallDelta?: (deltas: ChatToolCallDelta[]) => void;
-  onChunk?: (chunk: ApiRequestChunk) => void;
-};
-
-type ResponsesStreamHandlers = {
-  onDelta: (delta: string) => void;
-  onToolCallEvent?: (
-    payload: ResponsesToolCallEventPayload,
-    eventType: string,
-  ) => void;
-  onChunk?: (chunk: ApiRequestChunk) => void;
-};
-
-const isJsonObject = (value: JsonValue): value is JsonObject =>
-    typeof value === "object" && value !== null && !Array.isArray(value),
-  toJsonObject = (value: JsonValue | undefined): JsonObject | null => {
-    if (value === undefined) {
-      return null;
+const isFunctionCallOutputItem = (
+    item: ResponseOutputItem,
+  ): item is ResponsesFunctionCallOutputItem => item.type === "function_call",
+  isMessageOutputItem = (
+    item: ResponseOutputItem,
+  ): item is ResponseOutputMessage => item.type === "message",
+  toResponsesFunctionCallItem = (
+    item: ResponsesFunctionCallOutputItem,
+  ): ResponsesFunctionCallItem => {
+    const entry: ResponsesFunctionCallItem = { type: item.type };
+    if (typeof item.id === "string" && item.id.length > 0) {
+      entry.id = item.id;
     }
-    return isJsonObject(value) ? value : null;
+    if (typeof item.call_id === "string" && item.call_id.length > 0) {
+      entry.call_id = item.call_id;
+    }
+    if (typeof item.name === "string" && item.name.length > 0) {
+      entry.name = item.name;
+    }
+    if (typeof item.arguments === "string") {
+      entry.arguments = item.arguments;
+    }
+    return entry;
   },
-  toJsonArray = (value: JsonValue | undefined): JsonValue[] | null => {
-    if (value === undefined || !Array.isArray(value)) {
-      return null;
+  toChatToolCallDelta = (toolCall: StreamChatToolCall): ChatToolCallDelta => {
+    const delta: ChatToolCallDelta = {
+      index: toolCall.index,
+    };
+    if (typeof toolCall.id === "string" && toolCall.id.length > 0) {
+      delta.id = toolCall.id;
     }
-    return value;
-  },
-  toStringValue = (value: JsonValue | undefined): string | null => {
-    if (typeof value !== "string") {
-      return null;
+    if (toolCall.type === "function") {
+      delta.type = "function";
     }
-    return value;
-  },
-  toNumberValue = (value: JsonValue | undefined): number | null => {
-    if (typeof value !== "number") {
-      return null;
-    }
-    return value;
-  },
-  isPresent = <T>(value: T | null): value is T => value !== null,
-  parseChatToolCallDeltaFunction = (
-    value: JsonValue | undefined,
-  ): ChatToolCallDelta["function"] | null => {
-    const functionValue = toJsonObject(value);
-    if (functionValue === null) {
-      return null;
-    }
-    const parsedFunction: NonNullable<ChatToolCallDelta["function"]> = {},
-      name = toStringValue(functionValue.name),
-      argumentsText = toStringValue(functionValue.arguments);
-    if (name !== null) {
-      parsedFunction.name = name;
-    }
-    if (argumentsText !== null) {
-      parsedFunction.arguments = argumentsText;
-    }
-    if (
-      parsedFunction.name === undefined &&
-      parsedFunction.arguments === undefined
-    ) {
-      return null;
-    }
-    return parsedFunction;
-  },
-  parseChatToolCallDelta = (value: JsonValue): ChatToolCallDelta | null => {
-    const deltaValue = toJsonObject(value);
-    if (deltaValue === null) {
-      return null;
-    }
-    const delta: ChatToolCallDelta = {},
-      index = toNumberValue(deltaValue.index),
-      id = toStringValue(deltaValue.id),
-      type = toStringValue(deltaValue.type),
-      fn = parseChatToolCallDeltaFunction(deltaValue.function);
-    if (index !== null) {
-      delta.index = index;
-    }
-    if (id !== null) {
-      delta.id = id;
-    }
-    if (type !== null) {
-      delta.type = type;
-    }
-    if (fn !== null) {
-      delta.function = fn;
-    }
-    if (
-      delta.index === undefined &&
-      delta.id === undefined &&
-      delta.type === undefined &&
-      delta.function === undefined
-    ) {
-      return null;
-    }
-    return delta;
-  },
-  extractPayloadErrorMessage = (payload: JsonValue): string => {
-    const payloadValue = toJsonObject(payload);
-    if (payloadValue === null) {
-      return "";
-    }
-    const errorValue = toJsonObject(payloadValue.error);
-    if (errorValue === null) {
-      return "";
-    }
-    const message = toStringValue(errorValue.message);
-    return message ?? "";
-  },
-  extractChatToolCallDeltas = (payload: JsonValue): ChatToolCallDelta[] => {
-    const payloadValue = toJsonObject(payload);
-    if (payloadValue === null) {
-      return [];
-    }
-    const choices = toJsonArray(payloadValue.choices);
-    if (choices === null || choices.length === 0) {
-      return [];
-    }
-    const firstChoice = toJsonObject(choices[0]);
-    if (firstChoice === null) {
-      return [];
-    }
-    const delta = toJsonObject(firstChoice.delta);
-    if (delta === null) {
-      return [];
-    }
-    const toolCallsValue = toJsonArray(delta.tool_calls);
-    if (toolCallsValue === null) {
-      return [];
-    }
-    return toolCallsValue.map(parseChatToolCallDelta).filter(isPresent);
-  },
-  toToolCallFromChatDelta = (delta: ChatToolCallDelta): ToolCall => {
-    const toolCall: ToolCall = {},
-      id = delta.id,
-      fn = delta.function;
-    if (id !== undefined) {
-      toolCall.id = id;
-    }
-    if (fn !== undefined) {
-      const functionPart: NonNullable<ToolCall["function"]> = {};
-      if (fn.name !== undefined) {
-        functionPart.name = fn.name;
+    if (toolCall.function) {
+      const functionPayload: NonNullable<ChatToolCallDelta["function"]> = {};
+      if (
+        typeof toolCall.function.name === "string" &&
+        toolCall.function.name.length > 0
+      ) {
+        functionPayload.name = toolCall.function.name;
       }
-      if (fn.arguments !== undefined) {
-        functionPart.arguments = fn.arguments;
+      if (typeof toolCall.function.arguments === "string") {
+        functionPayload.arguments = toolCall.function.arguments;
       }
       if (
-        functionPart.name !== undefined ||
-        functionPart.arguments !== undefined
+        functionPayload.name !== undefined ||
+        functionPayload.arguments !== undefined
       ) {
-        toolCall.function = functionPart;
+        delta.function = functionPayload;
       }
     }
-    return toolCall;
-  },
-  parseResponsesFunctionCallItem = (
-    value: JsonValue | undefined,
-  ): ResponsesFunctionCallItem | null => {
-    const itemValue = toJsonObject(value);
-    if (itemValue === null) {
-      return null;
-    }
-    const item: ResponsesFunctionCallItem = {},
-      type = toStringValue(itemValue.type),
-      id = toStringValue(itemValue.id),
-      callId = toStringValue(itemValue.call_id),
-      name = toStringValue(itemValue.name),
-      argumentsText = toStringValue(itemValue.arguments);
-    if (type !== null) {
-      item.type = type;
-    }
-    if (id !== null) {
-      item.id = id;
-    }
-    if (callId !== null) {
-      item.call_id = callId;
-    }
-    if (name !== null) {
-      item.name = name;
-    }
-    if (argumentsText !== null) {
-      item.arguments = argumentsText;
-    }
-    if (
-      item.type === undefined &&
-      item.id === undefined &&
-      item.call_id === undefined &&
-      item.name === undefined &&
-      item.arguments === undefined
-    ) {
-      return null;
-    }
-    return item;
-  },
-  parseResponsesToolCallEventPayload = (
-    value: JsonValue,
-  ): ResponsesToolCallEventPayload => {
-    const payloadValue = toJsonObject(value);
-    if (payloadValue === null) {
-      return {};
-    }
-    const payload: ResponsesToolCallEventPayload = {},
-      type = toStringValue(payloadValue.type),
-      outputIndex = toNumberValue(payloadValue.output_index),
-      item = parseResponsesFunctionCallItem(payloadValue.item),
-      delta = toStringValue(payloadValue.delta),
-      argumentsText = toStringValue(payloadValue.arguments),
-      name = toStringValue(payloadValue.name),
-      text = toStringValue(payloadValue.text);
-    if (type !== null) {
-      payload.type = type;
-    }
-    if (outputIndex !== null) {
-      payload.output_index = outputIndex;
-    }
-    if (item !== null) {
-      payload.item = item;
-    }
-    if (delta !== null) {
-      payload.delta = delta;
-    }
-    if (argumentsText !== null) {
-      payload.arguments = argumentsText;
-    }
-    if (name !== null) {
-      payload.name = name;
-    }
-    if (text !== null) {
-      payload.text = text;
-    }
-    return payload;
-  },
-  resolveEventType = (
-    payload: ResponsesToolCallEventPayload,
-    eventType: string,
-  ): string => payload.type ?? eventType;
-
-export const streamSse = async (
-  response: Response,
-  onPayload: SsePayloadHandler,
-): Promise<void> => {
-  if (!response.body) {
-    throw new Error("无法读取流式响应");
-  }
-  const reader = response.body.getReader(),
-    decoder = new TextDecoder("utf-8");
-  let buffer = "",
-    currentEvent = "";
-  const handleLine = (line: string): boolean => {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      currentEvent = "";
-      return false;
-    }
-    if (trimmed.startsWith("event:")) {
-      currentEvent = trimmed.replace(/^event:\s*/, "").trim();
-      return false;
-    }
-    if (!trimmed.startsWith("data:")) {
-      return false;
-    }
-    const dataText = trimmed.replace(/^data:\s*/, "");
-    if (dataText === "[DONE]") {
-      return true;
-    }
-    const payload = parseJson(dataText),
-      errorMessage = extractPayloadErrorMessage(payload);
-    if (errorMessage) {
-      throw new Error(errorMessage);
-    }
-    onPayload(payload, currentEvent);
-    currentEvent = "";
-    return false;
+    return delta;
   };
-  let shouldStop = false;
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) {
-      break;
-    }
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split(/\r?\n/);
-    buffer = lines.pop() ?? "";
-    for (const line of lines) {
-      if (handleLine(line)) {
-        shouldStop = true;
-        break;
-      }
-    }
-    if (shouldStop) {
-      break;
-    }
+
+export const getChatDeltaText = (chunk: ChatCompletionChunk): string => {
+  const firstChoice = chunk.choices.at(0);
+  if (firstChoice === undefined) {
+    return "";
   }
-  const tail = decoder.decode();
-  if (tail.length > 0) {
-    buffer += tail;
+  if (typeof firstChoice.delta.content === "string") {
+    return firstChoice.delta.content;
   }
-  if (buffer.trim().length > 0 && !shouldStop) {
-    handleLine(buffer);
+  if (typeof firstChoice.delta.refusal === "string") {
+    return firstChoice.delta.refusal;
   }
+  return "";
 };
 
-const deltaFromChat = (payload: JsonValue): string => {
-    const payloadValue = toJsonObject(payload);
-    if (payloadValue === null) {
-      return "";
-    }
-    const choices = toJsonArray(payloadValue.choices);
-    if (choices === null || choices.length === 0) {
-      return "";
-    }
-    const firstChoice = toJsonObject(choices[0]);
-    if (firstChoice === null) {
-      return "";
-    }
-    const delta = toJsonObject(firstChoice.delta),
-      deltaContent = delta === null ? null : toStringValue(delta.content);
-    if (deltaContent !== null) {
-      return deltaContent;
-    }
-    const choiceText = toStringValue(firstChoice.text);
-    if (choiceText !== null) {
-      return choiceText;
-    }
-    const message = toJsonObject(firstChoice.message),
-      messageContent = message === null ? null : toStringValue(message.content);
-    if (messageContent !== null) {
-      return messageContent;
-    }
-    return "";
-  },
-  deltaFromResponses = (
-    rawPayload: JsonValue,
-    payload: ResponsesToolCallEventPayload,
-    eventType: string,
-  ): string => {
-    const resolvedType = resolveEventType(payload, eventType);
-    if (resolvedType === "response.output_text.delta") {
-      return payload.delta ?? payload.text ?? "";
-    }
-    if (resolvedType === "response.refusal.delta") {
-      return payload.delta ?? "";
-    }
-    return deltaFromChat(rawPayload);
-  },
-  toolCallsFromResponses = (
-    payload: ResponsesToolCallEventPayload,
-    eventType: string,
-  ): ToolCall[] => {
-    const resolvedType = resolveEventType(payload, eventType);
-    if (
-      resolvedType === "response.output_item.added" ||
-      resolvedType === "response.output_item.done"
-    ) {
-      const item = payload.item;
-      if (item?.type === "function_call") {
-        return [
-          {
-            name: item.name,
-            arguments: typeof item.arguments === "string" ? item.arguments : "",
-          },
-        ];
-      }
-    }
-    if (resolvedType === "response.function_call_arguments.delta") {
-      if (typeof payload.name === "string" && payload.name.length > 0) {
-        return [
-          {
-            name: payload.name,
-            arguments: typeof payload.delta === "string" ? payload.delta : "",
-          },
-        ];
-      }
-    }
-    if (resolvedType === "response.function_call_arguments.done") {
-      if (typeof payload.name === "string" && payload.name.length > 0) {
-        return [
-          {
-            name: payload.name,
-            arguments:
-              typeof payload.arguments === "string" ? payload.arguments : "",
-          },
-        ];
-      }
-    }
+export const getChatToolCallDeltas = (
+  chunk: ChatCompletionChunk,
+): ChatToolCallDelta[] => {
+  const firstChoice = chunk.choices.at(0);
+  if (
+    firstChoice === undefined ||
+    !Array.isArray(firstChoice.delta.tool_calls)
+  ) {
     return [];
-  };
-
-export const streamChatCompletion = (
-  response: Response,
-  { onDelta, onToolCallDelta, onChunk }: ChatCompletionStreamHandlers,
-): Promise<void> =>
-  streamSse(response, (payload) => {
-    const delta = deltaFromChat(payload),
-      toolCallDeltas = extractChatToolCallDeltas(payload);
-    if (delta) {
-      onDelta(delta);
-    }
-    if (toolCallDeltas.length > 0 && onToolCallDelta) {
-      onToolCallDelta(toolCallDeltas);
-    }
-    if (typeof onChunk === "function") {
-      onChunk({
-        delta,
-        toolCalls: toolCallDeltas.map(toToolCallFromChatDelta),
-      });
-    }
-  });
-
-export const streamResponses = (
-  response: Response,
-  { onDelta, onToolCallEvent, onChunk }: ResponsesStreamHandlers,
-): Promise<void> =>
-  streamSse(response, (payload, eventType) => {
-    const parsedPayload = parseResponsesToolCallEventPayload(payload),
-      delta = deltaFromResponses(payload, parsedPayload, eventType);
-    if (delta) {
-      onDelta(delta);
-    }
-    if (onToolCallEvent) {
-      onToolCallEvent(parsedPayload, eventType);
-    }
-    if (typeof onChunk === "function") {
-      onChunk({
-        delta,
-        toolCalls: toolCallsFromResponses(parsedPayload, eventType),
-      });
-    }
-  });
-
-export const extractResponsesText = (data: JsonValue): string => {
-  const payloadValue = toJsonObject(data);
-  if (payloadValue === null) {
-    return "";
   }
-  const outputText = toStringValue(payloadValue.output_text);
-  if (outputText !== null) {
-    return outputText.trim();
-  }
-  const output = toJsonArray(payloadValue.output);
-  if (output === null) {
-    return "";
-  }
-  const texts: string[] = [];
-  output.forEach((itemValue) => {
-    const item = toJsonObject(itemValue);
-    if (item === null) {
-      return;
+  return firstChoice.delta.tool_calls.map(toChatToolCallDelta);
+};
+
+export const getToolCallsFromChatDeltas = (
+  deltas: ChatToolCallDelta[],
+): ToolCall[] =>
+  deltas.map((delta) => {
+    const call: ToolCall = {};
+    if (typeof delta.id === "string" && delta.id.length > 0) {
+      call.id = delta.id;
     }
-    const itemType = toStringValue(item.type),
-      content = toJsonArray(item.content);
-    if (itemType !== "message" || content === null) {
-      return;
-    }
-    content.forEach((partValue) => {
-      const part = toJsonObject(partValue);
-      if (part === null) {
-        return;
+    if (delta.function) {
+      const functionPayload: NonNullable<ToolCall["function"]> = {};
+      if (
+        typeof delta.function.name === "string" &&
+        delta.function.name.length > 0
+      ) {
+        functionPayload.name = delta.function.name;
       }
-      const partType = toStringValue(part.type),
-        text = toStringValue(part.text);
-      if (partType === "output_text" && text !== null) {
-        texts.push(text);
+      if (typeof delta.function.arguments === "string") {
+        functionPayload.arguments = delta.function.arguments;
       }
-    });
+      if (
+        functionPayload.name !== undefined ||
+        functionPayload.arguments !== undefined
+      ) {
+        call.function = functionPayload;
+      }
+    }
+    return call;
   });
+
+export const getResponsesToolCallEventPayload = (
+  event: ResponseStreamEvent,
+): ResponsesToolCallEventPayload | null => {
+  if (
+    event.type === "response.output_item.added" ||
+    event.type === "response.output_item.done"
+  ) {
+    if (!isFunctionCallOutputItem(event.item)) {
+      return null;
+    }
+    return {
+      type: event.type,
+      output_index: event.output_index,
+      item: toResponsesFunctionCallItem(event.item),
+    };
+  }
+  if (event.type === "response.function_call_arguments.delta") {
+    return {
+      type: event.type,
+      output_index: event.output_index,
+      delta: event.delta,
+    };
+  }
+  if (event.type === "response.function_call_arguments.done") {
+    return {
+      type: event.type,
+      output_index: event.output_index,
+      arguments: event.arguments,
+      name: event.name,
+    };
+  }
+  return null;
+};
+
+export const getResponsesDeltaText = (event: ResponseStreamEvent): string => {
+  if (event.type === "response.output_text.delta") {
+    return event.delta;
+  }
+  if (event.type === "response.refusal.delta") {
+    return event.delta;
+  }
+  return "";
+};
+
+const resolveResponsesEventType = (
+  payload: ResponsesToolCallEventPayload,
+  eventType: string,
+): string => payload.type ?? eventType;
+
+export const getToolCallsFromResponsesEvent = (
+  payload: ResponsesToolCallEventPayload,
+  eventType: string,
+): ToolCall[] => {
+  const resolvedType = resolveResponsesEventType(payload, eventType);
+  if (
+    resolvedType === "response.output_item.added" ||
+    resolvedType === "response.output_item.done"
+  ) {
+    const item = payload.item;
+    if (item?.type === "function_call") {
+      return [
+        {
+          name: item.name,
+          arguments: typeof item.arguments === "string" ? item.arguments : "",
+        },
+      ];
+    }
+  }
+  if (resolvedType === "response.function_call_arguments.delta") {
+    if (typeof payload.name === "string" && payload.name.length > 0) {
+      return [
+        {
+          name: payload.name,
+          arguments: typeof payload.delta === "string" ? payload.delta : "",
+        },
+      ];
+    }
+  }
+  if (resolvedType === "response.function_call_arguments.done") {
+    if (typeof payload.name === "string" && payload.name.length > 0) {
+      return [
+        {
+          name: payload.name,
+          arguments:
+            typeof payload.arguments === "string" ? payload.arguments : "",
+        },
+      ];
+    }
+  }
+  return [];
+};
+
+const extractResponsesOutputMessageText = (
+  item: ResponseOutputMessage,
+): string =>
+  item.content
+    .filter((part) => part.type === "output_text")
+    .map((part) => part.text)
+    .join("");
+
+export const extractResponsesText = (response: Response): string => {
+  if (
+    typeof response.output_text === "string" &&
+    response.output_text.trim().length > 0
+  ) {
+    return response.output_text.trim();
+  }
+  const texts = response.output
+    .filter(isMessageOutputItem)
+    .map(extractResponsesOutputMessageText)
+    .filter((text) => text.length > 0);
   return texts.join("").trim();
 };

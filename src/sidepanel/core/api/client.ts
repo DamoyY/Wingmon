@@ -1,7 +1,5 @@
-import { buildEndpoint } from "../services/index.ts";
-import { parseJson, type JsonValue } from "../../lib/utils/index.ts";
+import OpenAI from "openai";
 import getApiStrategy, {
-  type ApiRequestBody,
   type ApiRequestChunk,
   type ApiToolAdapter,
 } from "./strategies.ts";
@@ -27,25 +25,15 @@ type RequestModelResult = {
   streamed: boolean;
 };
 
-type RequestWithRetryPayload = {
-  endpoint: string;
-  apiKey: string;
-  payload: string;
+type RequestWithRetryPayload<TResult> = {
+  requestTag: string;
+  request: () => Promise<TResult>;
   signal: AbortSignal;
 };
 
-class ApiResponseError extends Error {
-  status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = "ApiResponseError";
-    this.status = status;
-  }
-}
-
 const apiRetryTimeoutMs = 60000,
   apiRetryBaseDelayMs = 500,
+  endpointSuffixes = ["/chat/completions", "/responses"],
   normalizeError = (error: unknown): Error => {
     if (error instanceof Error) {
       return error;
@@ -60,8 +48,16 @@ const apiRetryTimeoutMs = 60000,
     abortError.name = "AbortError";
     return abortError;
   },
+  createEmptyStreamError = (): Error => {
+    const streamError = new Error("流式响应为空");
+    streamError.name = "EmptyStreamError";
+    return streamError;
+  },
   isAbortError = (error: unknown): boolean =>
-    error instanceof Error && error.name === "AbortError",
+    error instanceof Error &&
+    (error.name === "AbortError" || error.name === "APIUserAbortError"),
+  isEmptyStreamError = (error: unknown): boolean =>
+    error instanceof Error && error.name === "EmptyStreamError",
   waitForDelay = (delayMs: number, signal: AbortSignal): Promise<void> =>
     new Promise((resolve, reject) => {
       if (signal.aborted) {
@@ -82,44 +78,45 @@ const apiRetryTimeoutMs = 60000,
   resolveRetryDelay = (attemptIndex: number): number =>
     apiRetryBaseDelayMs * 2 ** attemptIndex,
   extractStatusCode = (error: unknown): number | null => {
-    if (error instanceof ApiResponseError) {
-      return error.status;
+    if (error instanceof OpenAI.APIError) {
+      return typeof error.status === "number" ? error.status : null;
     }
     return null;
   },
-  createApiResponseError = async (response: Response): Promise<Error> => {
-    const responseText = (await response.text()).trim(),
-      fallbackMessage =
-        `${String(response.status)} ${response.statusText || "请求失败"}`.trim(),
-      message = responseText || fallbackMessage;
-    return new ApiResponseError(message, response.status);
+  normalizeClientBaseUrl = (baseUrl: string): string => {
+    const trimmed = baseUrl.trim();
+    if (!trimmed) {
+      throw new Error("Base URL 不能为空");
+    }
+    const normalized = trimmed.replace(/\/+$/, "");
+    for (const suffix of endpointSuffixes) {
+      if (normalized.endsWith(suffix)) {
+        return normalized.slice(0, -suffix.length);
+      }
+    }
+    return normalized;
   },
-  requestWithRetry = async ({
-    endpoint,
-    apiKey,
-    payload,
+  createClient = (settings: Settings): OpenAI =>
+    new OpenAI({
+      apiKey: settings.apiKey,
+      baseURL: normalizeClientBaseUrl(settings.baseUrl),
+      timeout: apiRetryTimeoutMs,
+      maxRetries: 0,
+      dangerouslyAllowBrowser: true,
+    }),
+  requestWithRetry = async <TResult>({
+    requestTag,
+    request,
     signal,
-  }: RequestWithRetryPayload): Promise<Response> => {
+  }: RequestWithRetryPayload<TResult>): Promise<TResult> => {
     const startedAt = Date.now();
     let attemptIndex = 0;
     for (;;) {
       try {
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: payload,
-          signal,
-        });
-        if (!response.ok) {
-          throw await createApiResponseError(response);
-        }
-        return response;
+        return await request();
       } catch (error) {
-        if (isAbortError(error)) {
-          throw error;
+        if (signal.aborted || isAbortError(error)) {
+          throw createAbortError();
         }
         const failure = normalizeError(error),
           elapsedMs = Date.now() - startedAt,
@@ -128,6 +125,7 @@ const apiRetryTimeoutMs = 60000,
           attemptsMade = attemptIndex + 1;
         if (remainingMs <= 0) {
           console.error("API 请求失败，已达到重试时限", {
+            requestTag,
             attemptsMade,
             elapsedMs,
             statusCode,
@@ -137,6 +135,7 @@ const apiRetryTimeoutMs = 60000,
         }
         const delayMs = Math.min(resolveRetryDelay(attemptIndex), remainingMs);
         console.warn("API 请求失败，准备指数退避重试", {
+          requestTag,
           attemptsMade,
           delayMs,
           elapsedMs,
@@ -148,52 +147,156 @@ const apiRetryTimeoutMs = 60000,
       }
     }
   },
-  parseResponseData = (rawText: string): JsonValue => {
-    if (!rawText.trim()) {
-      throw new Error("API 响应为空");
+  requestChat = async ({
+    client,
+    settings,
+    systemPrompt,
+    tools,
+    toolAdapter,
+    messages,
+    onDelta,
+    onStreamStart,
+    onChunk,
+    signal,
+  }: RequestModelPayload & { client: OpenAI }): Promise<RequestModelResult> => {
+    const strategy = getApiStrategy("chat", toolAdapter),
+      streamRequestBody = strategy.buildStreamRequestBody(
+        settings,
+        systemPrompt,
+        tools,
+        messages,
+      );
+    let streamStarted = false;
+    const streamState = { chunkCount: 0 };
+    try {
+      const stream = await requestWithRetry({
+        requestTag: "chat.stream",
+        request: () =>
+          client.chat.completions.create(streamRequestBody, { signal }),
+        signal,
+      });
+      onStreamStart();
+      streamStarted = true;
+      const toolCalls = await strategy.stream(stream, {
+        onDelta,
+        onChunk: (chunk) => {
+          streamState.chunkCount += 1;
+          onChunk(chunk);
+        },
+      });
+      if (streamState.chunkCount === 0) {
+        throw createEmptyStreamError();
+      }
+      return { toolCalls, reply: "", streamed: true };
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw error;
+      }
+      if (streamStarted && !isEmptyStreamError(error)) {
+        throw normalizeError(error);
+      }
+      const failure = normalizeError(error);
+      console.warn("聊天流式请求失败，准备回退为非流式", {
+        message: failure.message,
+      });
     }
-    return parseJson(rawText);
+    const nonStreamRequestBody = strategy.buildNonStreamRequestBody(
+        settings,
+        systemPrompt,
+        tools,
+        messages,
+      ),
+      response = await requestWithRetry({
+        requestTag: "chat.non_stream",
+        request: () =>
+          client.chat.completions.create(nonStreamRequestBody, { signal }),
+        signal,
+      });
+    return {
+      toolCalls: strategy.extractToolCalls(response),
+      reply: strategy.extractReply(response),
+      streamed: false,
+    };
+  },
+  requestResponses = async ({
+    client,
+    settings,
+    systemPrompt,
+    tools,
+    toolAdapter,
+    messages,
+    onDelta,
+    onStreamStart,
+    onChunk,
+    signal,
+  }: RequestModelPayload & { client: OpenAI }): Promise<RequestModelResult> => {
+    const strategy = getApiStrategy("responses", toolAdapter),
+      streamRequestBody = strategy.buildStreamRequestBody(
+        settings,
+        systemPrompt,
+        tools,
+        messages,
+      );
+    let streamStarted = false;
+    const streamState = { chunkCount: 0 };
+    try {
+      const stream = await requestWithRetry({
+        requestTag: "responses.stream",
+        request: () => client.responses.create(streamRequestBody, { signal }),
+        signal,
+      });
+      onStreamStart();
+      streamStarted = true;
+      const toolCalls = await strategy.stream(stream, {
+        onDelta,
+        onChunk: (chunk) => {
+          streamState.chunkCount += 1;
+          onChunk(chunk);
+        },
+      });
+      if (streamState.chunkCount === 0) {
+        throw createEmptyStreamError();
+      }
+      return { toolCalls, reply: "", streamed: true };
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw error;
+      }
+      if (streamStarted && !isEmptyStreamError(error)) {
+        throw normalizeError(error);
+      }
+      const failure = normalizeError(error);
+      console.warn("Responses 流式请求失败，准备回退为非流式", {
+        message: failure.message,
+      });
+    }
+    const nonStreamRequestBody = strategy.buildNonStreamRequestBody(
+        settings,
+        systemPrompt,
+        tools,
+        messages,
+      ),
+      response = await requestWithRetry({
+        requestTag: "responses.non_stream",
+        request: () =>
+          client.responses.create(nonStreamRequestBody, { signal }),
+        signal,
+      });
+    return {
+      toolCalls: strategy.extractToolCalls(response),
+      reply: strategy.extractReply(response),
+      streamed: false,
+    };
   };
 
-const requestModel = async ({
-  settings,
-  systemPrompt,
-  tools,
-  toolAdapter,
-  messages,
-  onDelta,
-  onStreamStart,
-  onChunk,
-  signal,
-}: RequestModelPayload): Promise<RequestModelResult> => {
-  const strategy = getApiStrategy(settings.apiType, toolAdapter),
-    requestBody: ApiRequestBody = strategy.buildRequestBody(
-      settings,
-      systemPrompt,
-      tools,
-      messages,
-    ),
-    response = await requestWithRetry({
-      endpoint: buildEndpoint(settings.baseUrl, settings.apiType),
-      apiKey: settings.apiKey,
-      payload: JSON.stringify(requestBody),
-      signal,
-    });
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("text/event-stream")) {
-    if (typeof onStreamStart === "function") {
-      onStreamStart();
-    }
-    const toolCalls = await strategy.stream(response, { onDelta, onChunk });
-    return { toolCalls, reply: "", streamed: true };
+const requestModel = async (
+  payload: RequestModelPayload,
+): Promise<RequestModelResult> => {
+  const client = createClient(payload.settings);
+  if (payload.settings.apiType === "chat") {
+    return requestChat({ ...payload, client });
   }
-  const data = parseResponseData(await response.text()),
-    toolCalls = strategy.extractToolCalls(data),
-    reply = strategy.extractReply(data);
-  return {
-    toolCalls,
-    reply: typeof reply === "string" ? reply : "",
-    streamed: false,
-  };
+  return requestResponses({ ...payload, client });
 };
+
 export default requestModel;

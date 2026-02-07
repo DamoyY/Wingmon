@@ -1,11 +1,32 @@
+import type {
+  ChatCompletion,
+  ChatCompletionAssistantMessageParam,
+  ChatCompletionChunk,
+  ChatCompletionCreateParamsNonStreaming,
+  ChatCompletionCreateParamsStreaming,
+  ChatCompletionMessageParam,
+  ChatCompletionMessageToolCall,
+  ChatCompletionTool,
+} from "openai/resources/chat/completions";
+import type {
+  Response,
+  ResponseCreateParamsNonStreaming,
+  ResponseCreateParamsStreaming,
+  ResponseInputItem,
+  ResponseOutputItem,
+  ResponseStreamEvent,
+  Tool as ResponsesTool,
+} from "openai/resources/responses/responses";
 import {
   extractResponsesText,
-  streamChatCompletion,
-  streamResponses,
+  getChatDeltaText,
+  getChatToolCallDeltas,
+  getResponsesDeltaText,
+  getResponsesToolCallEventPayload,
+  getToolCallsFromChatDeltas,
+  getToolCallsFromResponsesEvent,
   type ApiRequestChunk,
-  type ResponsesToolCallEventPayload,
 } from "./sse.ts";
-import type { JsonValue } from "../../lib/utils/index.ts";
 import type { ToolCall, ToolDefinition } from "../agent/definitions.ts";
 import type {
   buildChatMessages,
@@ -40,36 +61,51 @@ export type ApiToolAdapter = {
   finalizeResponsesToolCalls: typeof finalizeResponsesToolCalls;
 };
 
-type ChatRequestBody = {
-  model: string;
-  messages: ReturnType<ApiToolAdapter["buildChatMessages"]>;
-  stream: true;
-  tools: ToolDefinition[];
-};
+export type ChatRequestBody = ChatCompletionCreateParamsStreaming;
+export type ChatFallbackRequestBody = ChatCompletionCreateParamsNonStreaming;
+export type ResponsesRequestBody = ResponseCreateParamsStreaming;
+export type ResponsesFallbackRequestBody = ResponseCreateParamsNonStreaming;
 
-type ResponsesRequestBody = {
-  model: string;
-  input: ReturnType<ApiToolAdapter["buildResponsesInput"]>;
-  stream: true;
-  tools: ToolDefinition[];
-  instructions?: string;
-};
-
-export type ApiRequestBody = ChatRequestBody | ResponsesRequestBody;
-
-type ApiStrategy = {
-  buildRequestBody: (
+export type ChatApiStrategy = {
+  buildStreamRequestBody: (
     settings: Settings,
     systemPrompt: string,
     tools: ToolDefinition[],
     messages: MessageRecord[],
-  ) => ApiRequestBody;
+  ) => ChatRequestBody;
+  buildNonStreamRequestBody: (
+    settings: Settings,
+    systemPrompt: string,
+    tools: ToolDefinition[],
+    messages: MessageRecord[],
+  ) => ChatFallbackRequestBody;
   stream: (
-    response: Response,
+    stream: AsyncIterable<ChatCompletionChunk>,
     handlers: StreamEventHandlers,
   ) => Promise<ToolCall[]>;
-  extractToolCalls: (data: JsonValue) => ToolCall[];
-  extractReply: (data: JsonValue) => string;
+  extractToolCalls: (data: ChatCompletion) => ToolCall[];
+  extractReply: (data: ChatCompletion) => string;
+};
+
+export type ResponsesApiStrategy = {
+  buildStreamRequestBody: (
+    settings: Settings,
+    systemPrompt: string,
+    tools: ToolDefinition[],
+    messages: MessageRecord[],
+  ) => ResponsesRequestBody;
+  buildNonStreamRequestBody: (
+    settings: Settings,
+    systemPrompt: string,
+    tools: ToolDefinition[],
+    messages: MessageRecord[],
+  ) => ResponsesFallbackRequestBody;
+  stream: (
+    stream: AsyncIterable<ResponseStreamEvent>,
+    handlers: StreamEventHandlers,
+  ) => Promise<ToolCall[]>;
+  extractToolCalls: (data: Response) => ToolCall[];
+  extractReply: (data: Response) => string;
 };
 
 type ChatCollector = Parameters<ApiToolAdapter["addChatToolCallDelta"]>[0];
@@ -80,39 +116,45 @@ type ResponsesCollector = Parameters<
 type ChatExtractionPayload = Parameters<
   ApiToolAdapter["extractChatToolCalls"]
 >[0];
+type ChatChoiceForExtraction = NonNullable<
+  ChatExtractionPayload["choices"]
+>[number];
+type ChatMessageForExtraction = NonNullable<ChatChoiceForExtraction["message"]>;
+type ChatFunctionCallForExtraction = NonNullable<
+  ChatMessageForExtraction["function_call"]
+>;
+type ChatToolCallForExtraction = NonNullable<
+  ChatMessageForExtraction["tool_calls"]
+>[number];
 type ResponsesExtractionPayload = Parameters<
   ApiToolAdapter["extractResponsesToolCalls"]
 >[0];
-type ChatChoice = NonNullable<ChatExtractionPayload["choices"]>[number];
-type ChatMessage = NonNullable<ChatChoice["message"]>;
-type ChatFunctionCall = NonNullable<ChatMessage["function_call"]>;
-type ChatToolCall = NonNullable<ChatMessage["tool_calls"]>[number];
-type ResponsesOutputItem = NonNullable<
+type ResponsesOutputItemForExtraction = NonNullable<
   ResponsesExtractionPayload["output"]
 >[number];
-type JsonObject = { [key: string]: JsonValue };
+type RawChatMessage = ReturnType<ApiToolAdapter["buildChatMessages"]>[number];
+type RawResponsesInputItem = ReturnType<
+  ApiToolAdapter["buildResponsesInput"]
+>[number];
 
-const isJsonObject = (value: JsonValue): value is JsonObject =>
+type ApiStrategyMap = {
+  chat: ChatApiStrategy;
+  responses: ResponsesApiStrategy;
+};
+
+const isPresent = <T>(value: T | null): value is T => value !== null,
+  isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value),
-  toJsonObject = (value: JsonValue | undefined): JsonObject | null => {
-    if (value === undefined) {
+  readStringField = (source: unknown, field: string): string | null => {
+    if (!isRecord(source)) {
       return null;
     }
-    return isJsonObject(value) ? value : null;
-  },
-  toJsonArray = (value: JsonValue | undefined): JsonValue[] | null => {
-    if (value === undefined || !Array.isArray(value)) {
-      return null;
-    }
-    return value;
-  },
-  toStringValue = (value: JsonValue | undefined): string | null => {
+    const value = source[field];
     if (typeof value !== "string") {
       return null;
     }
     return value;
   },
-  isPresent = <T>(value: T | null): value is T => value !== null,
   ensureToolAdapter = (
     adapter: ApiToolAdapter | null | undefined,
   ): ApiToolAdapter => {
@@ -145,212 +187,343 @@ const isJsonObject = (value: JsonValue): value is JsonObject =>
     }
     return adapter;
   },
-  parseChatFunctionCall = (
-    value: JsonValue | undefined,
-  ): ChatFunctionCall | null => {
-    const functionCallValue = toJsonObject(value);
-    if (functionCallValue === null) {
-      return null;
-    }
-    const functionCall: ChatFunctionCall = {},
-      name = toStringValue(functionCallValue.name),
-      argumentsText = toStringValue(functionCallValue.arguments);
-    if (name !== null) {
-      functionCall.name = name;
-    }
-    if (argumentsText !== null) {
-      functionCall.arguments = argumentsText;
+  normalizeToolArguments = (value: unknown): string => {
+    if (typeof value === "string") {
+      return value;
     }
     if (
-      functionCall.name === undefined &&
-      functionCall.arguments === undefined
+      value === null ||
+      typeof value === "number" ||
+      typeof value === "boolean" ||
+      Array.isArray(value) ||
+      isRecord(value)
     ) {
-      return null;
-    }
-    return functionCall;
-  },
-  parseChatToolCall = (value: JsonValue): ChatToolCall | null => {
-    const toolCallValue = toJsonObject(value);
-    if (toolCallValue === null) {
-      return null;
-    }
-    const toolCall: ChatToolCall = {},
-      id = toStringValue(toolCallValue.id),
-      callId = toStringValue(toolCallValue.call_id),
-      functionCall = parseChatFunctionCall(toolCallValue.function);
-    if (id !== null) {
-      toolCall.id = id;
-    }
-    if (callId !== null) {
-      toolCall.call_id = callId;
-    }
-    if (functionCall !== null) {
-      toolCall.function = functionCall;
-    }
-    if (
-      toolCall.id === undefined &&
-      toolCall.call_id === undefined &&
-      toolCall.function === undefined
-    ) {
-      return null;
-    }
-    return toolCall;
-  },
-  parseChatMessageForExtraction = (
-    value: JsonValue | undefined,
-  ): ChatMessage | null => {
-    const messageValue = toJsonObject(value);
-    if (messageValue === null) {
-      return null;
-    }
-    const message: ChatMessage = {},
-      id = toStringValue(messageValue.id),
-      functionCall = parseChatFunctionCall(messageValue.function_call),
-      toolCallsValue = toJsonArray(messageValue.tool_calls);
-    if (id !== null) {
-      message.id = id;
-    }
-    if (functionCall !== null) {
-      message.function_call = functionCall;
-    }
-    if (toolCallsValue !== null) {
-      const toolCalls = toolCallsValue.map(parseChatToolCall).filter(isPresent);
-      if (toolCalls.length > 0) {
-        message.tool_calls = toolCalls;
+      try {
+        const serialized = JSON.stringify(value);
+        if (typeof serialized !== "string") {
+          throw new Error("工具参数序列化结果无效");
+        }
+        return serialized;
+      } catch (error) {
+        console.error("工具参数序列化失败", error);
+        throw new Error("工具参数序列化失败");
       }
     }
+    throw new Error("工具参数类型无效");
+  },
+  toChatMessageToolCall = (value: unknown): ChatCompletionMessageToolCall => {
+    if (!isRecord(value)) {
+      throw new Error("助手工具调用格式无效");
+    }
+    const idValue = value.id,
+      typeValue = value.type,
+      functionValue = value.function;
+    if (typeof idValue !== "string" || idValue.length === 0) {
+      throw new Error("助手工具调用缺少 id");
+    }
+    if (typeValue !== "function") {
+      throw new Error("助手工具调用 type 必须为 function");
+    }
+    if (!isRecord(functionValue)) {
+      throw new Error("助手工具调用缺少 function");
+    }
     if (
-      message.id === undefined &&
-      message.tool_calls === undefined &&
-      message.function_call === undefined
+      typeof functionValue.name !== "string" ||
+      functionValue.name.length === 0
+    ) {
+      throw new Error("助手工具调用缺少函数名");
+    }
+    return {
+      id: idValue,
+      type: "function",
+      function: {
+        name: functionValue.name,
+        arguments: normalizeToolArguments(functionValue.arguments),
+      },
+    };
+  },
+  normalizeChatToolCallList = (
+    value: unknown,
+  ): ChatCompletionMessageToolCall[] => {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value.map(toChatMessageToolCall);
+  },
+  toChatMessageParam = (
+    message: RawChatMessage,
+  ): ChatCompletionMessageParam => {
+    const role = message.role;
+    if (role === "system" || role === "developer" || role === "user") {
+      if (typeof message.content !== "string") {
+        throw new Error(`${role} 消息缺少 content`);
+      }
+      return { role, content: message.content };
+    }
+    if (role === "tool") {
+      if (typeof message.content !== "string") {
+        throw new Error("tool 消息缺少 content");
+      }
+      const toolCallId = readStringField(message, "tool_call_id");
+      if (toolCallId === null || toolCallId.length === 0) {
+        throw new Error("tool 消息缺少 tool_call_id");
+      }
+      return {
+        role: "tool",
+        content: message.content,
+        tool_call_id: toolCallId,
+      };
+    }
+    if (role === "assistant") {
+      const entry: ChatCompletionAssistantMessageParam = {
+          role: "assistant",
+        },
+        toolCalls = normalizeChatToolCallList(message.tool_calls);
+      if (
+        typeof message.content === "string" &&
+        message.content.trim().length > 0
+      ) {
+        entry.content = message.content;
+      }
+      if (toolCalls.length > 0) {
+        entry.tool_calls = toolCalls;
+      }
+      if (
+        entry.content === undefined &&
+        (entry.tool_calls === undefined || entry.tool_calls.length === 0)
+      ) {
+        throw new Error("assistant 消息缺少 content 和 tool_calls");
+      }
+      return entry;
+    }
+    throw new Error(`不支持的 Chat 消息角色：${role}`);
+  },
+  toResponsesInputItem = (item: RawResponsesInputItem): ResponseInputItem => {
+    if ("role" in item) {
+      if (typeof item.content !== "string") {
+        throw new Error(`${item.role} 消息缺少 content`);
+      }
+      return { role: item.role, content: item.content };
+    }
+    if (item.type === "function_call") {
+      return {
+        type: "function_call",
+        call_id: item.call_id,
+        name: item.name,
+        arguments: normalizeToolArguments(item.arguments),
+      };
+    }
+    return {
+      type: "function_call_output",
+      call_id: item.call_id,
+      output: item.output,
+    };
+  },
+  toChatTool = (tool: ToolDefinition): ChatCompletionTool => {
+    if ("function" in tool) {
+      return {
+        type: "function",
+        function: {
+          name: tool.function.name,
+          description: tool.function.description,
+          parameters: tool.function.parameters,
+          strict: tool.function.strict,
+        },
+      };
+    }
+    return {
+      type: "function",
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters,
+        strict: tool.strict,
+      },
+    };
+  },
+  toResponsesTool = (tool: ToolDefinition): ResponsesTool => {
+    if ("function" in tool) {
+      return {
+        type: "function",
+        name: tool.function.name,
+        description: tool.function.description,
+        parameters: tool.function.parameters,
+        strict: tool.function.strict,
+      };
+    }
+    return {
+      type: "function",
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parameters,
+      strict: tool.strict,
+    };
+  },
+  toChatToolCallForExtraction = (
+    toolCall: ChatCompletionMessageToolCall,
+  ): ChatToolCallForExtraction | null => {
+    if (toolCall.type !== "function") {
+      return null;
+    }
+    const parsed: ChatToolCallForExtraction = {};
+    if (typeof toolCall.id === "string" && toolCall.id.length > 0) {
+      parsed.id = toolCall.id;
+      parsed.call_id = toolCall.id;
+    }
+    const parsedFunction: NonNullable<ChatToolCallForExtraction["function"]> =
+      {};
+    if (
+      typeof toolCall.function.name === "string" &&
+      toolCall.function.name.length > 0
+    ) {
+      parsedFunction.name = toolCall.function.name;
+    }
+    if (typeof toolCall.function.arguments === "string") {
+      parsedFunction.arguments = toolCall.function.arguments;
+    }
+    if (
+      parsedFunction.name !== undefined ||
+      parsedFunction.arguments !== undefined
+    ) {
+      parsed.function = parsedFunction;
+    }
+    if (
+      parsed.id === undefined &&
+      parsed.call_id === undefined &&
+      parsed.function === undefined
     ) {
       return null;
     }
-    return message;
+    return parsed;
   },
-  toChatExtractionPayload = (data: JsonValue): ChatExtractionPayload => {
-    const payloadValue = toJsonObject(data);
-    if (payloadValue === null) {
-      return {};
-    }
-    const choicesValue = toJsonArray(payloadValue.choices);
-    if (choicesValue === null) {
-      return {};
-    }
-    const choices: ChatChoice[] = choicesValue
-      .map((choiceValue) => {
-        const choiceObject = toJsonObject(choiceValue);
-        if (choiceObject === null) {
-          return null;
-        }
-        const message = parseChatMessageForExtraction(choiceObject.message);
-        if (message === null) {
-          return null;
-        }
-        return { message };
-      })
-      .filter(isPresent);
-    if (choices.length === 0) {
-      return {};
-    }
-    return { choices };
-  },
-  parseResponsesOutputItem = (value: JsonValue): ResponsesOutputItem | null => {
-    const itemValue = toJsonObject(value);
-    if (itemValue === null) {
+  toChatFunctionCallForExtraction = (
+    value: unknown,
+  ): ChatFunctionCallForExtraction | null => {
+    if (!isRecord(value)) {
       return null;
     }
-    const outputItem: ResponsesOutputItem = {},
-      type = toStringValue(itemValue.type),
-      id = toStringValue(itemValue.id),
-      callId = toStringValue(itemValue.call_id),
-      name = toStringValue(itemValue.name),
-      argumentsText = toStringValue(itemValue.arguments);
-    if (type !== null) {
-      outputItem.type = type;
+    const name = readStringField(value, "name");
+    if (name === null || name.length === 0) {
+      return null;
     }
-    if (id !== null) {
-      outputItem.id = id;
-    }
-    if (callId !== null) {
-      outputItem.call_id = callId;
-    }
-    if (name !== null) {
-      outputItem.name = name;
-    }
+    const functionPayload: ChatFunctionCallForExtraction = { name },
+      argumentsText = readStringField(value, "arguments");
     if (argumentsText !== null) {
-      outputItem.arguments = argumentsText;
+      functionPayload.arguments = argumentsText;
     }
-    if (
-      outputItem.type === undefined &&
-      outputItem.id === undefined &&
-      outputItem.call_id === undefined &&
-      outputItem.name === undefined &&
-      outputItem.arguments === undefined
-    ) {
+    return functionPayload;
+  },
+  toChatExtractionPayload = (data: ChatCompletion): ChatExtractionPayload => {
+    const firstChoice = data.choices.at(0);
+    if (firstChoice === undefined) {
+      return {};
+    }
+    const toolCalls = Array.isArray(firstChoice.message.tool_calls)
+      ? firstChoice.message.tool_calls
+          .map(toChatToolCallForExtraction)
+          .filter(isPresent)
+      : [];
+    if (toolCalls.length === 0) {
+      const rawMessage = firstChoice.message as unknown,
+        functionPayload = toChatFunctionCallForExtraction(
+          isRecord(rawMessage) ? rawMessage.function_call : null,
+        );
+      if (functionPayload !== null) {
+        const message: ChatMessageForExtraction = {
+          function_call: functionPayload,
+        };
+        if (typeof data.id === "string" && data.id.length > 0) {
+          message.id = data.id;
+        } else {
+          message.id = functionPayload.name;
+        }
+        return {
+          choices: [{ message }],
+        };
+      }
+      return {};
+    }
+    return {
+      choices: [{ message: { tool_calls: toolCalls } }],
+    };
+  },
+  isFunctionCallOutputItem = (
+    item: ResponseOutputItem,
+  ): item is Extract<ResponseOutputItem, { type: "function_call" }> =>
+    item.type === "function_call",
+  toResponsesOutputItemForExtraction = (
+    item: ResponseOutputItem,
+  ): ResponsesOutputItemForExtraction | null => {
+    if (!isFunctionCallOutputItem(item)) {
       return null;
+    }
+    const outputItem: ResponsesOutputItemForExtraction = {
+      type: "function_call",
+      call_id: item.call_id,
+      name: item.name,
+      arguments: item.arguments,
+    };
+    if (typeof item.id === "string" && item.id.length > 0) {
+      outputItem.id = item.id;
     }
     return outputItem;
   },
   toResponsesExtractionPayload = (
-    data: JsonValue,
+    data: Response,
   ): ResponsesExtractionPayload => {
-    const payloadValue = toJsonObject(data);
-    if (payloadValue === null) {
-      return {};
-    }
-    const outputValue = toJsonArray(payloadValue.output);
-    if (outputValue === null) {
-      return {};
-    }
-    const output = outputValue.map(parseResponsesOutputItem).filter(isPresent);
+    const output = data.output
+      .map(toResponsesOutputItemForExtraction)
+      .filter(isPresent);
     if (output.length === 0) {
       return {};
     }
     return { output };
   },
-  extractChatReply = (data: JsonValue): string => {
-    const payloadValue = toJsonObject(data);
-    if (payloadValue === null) {
+  extractChatReply = (data: ChatCompletion): string => {
+    const firstChoice = data.choices.at(0);
+    if (
+      firstChoice === undefined ||
+      typeof firstChoice.message.content !== "string"
+    ) {
       return "";
     }
-    const choicesValue = toJsonArray(payloadValue.choices);
-    if (choicesValue === null || choicesValue.length === 0) {
-      return "";
-    }
-    const choiceValue = toJsonObject(choicesValue[0]);
-    if (choiceValue === null) {
-      return "";
-    }
-    const messageValue = toJsonObject(choiceValue.message);
-    if (messageValue === null) {
-      return "";
-    }
-    const content = toStringValue(messageValue.content);
-    if (content === null) {
-      return "";
-    }
-    return content.trim();
+    return firstChoice.message.content.trim();
   },
-  createApiStrategies = (
-    toolAdapter: ApiToolAdapter,
-  ): Record<ApiType, ApiStrategy> => ({
+  createApiStrategies = (toolAdapter: ApiToolAdapter): ApiStrategyMap => ({
     chat: {
-      buildRequestBody: (settings, systemPrompt, tools, messages) => ({
+      buildStreamRequestBody: (settings, systemPrompt, tools, messages) => ({
         model: settings.model,
-        messages: toolAdapter.buildChatMessages(systemPrompt, messages),
+        messages: toolAdapter
+          .buildChatMessages(systemPrompt, messages)
+          .map(toChatMessageParam),
         stream: true,
-        tools,
+        tools: tools.map(toChatTool),
       }),
-      stream: async (response, { onDelta, onChunk }) => {
+      buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) => ({
+        model: settings.model,
+        messages: toolAdapter
+          .buildChatMessages(systemPrompt, messages)
+          .map(toChatMessageParam),
+        stream: false,
+        tools: tools.map(toChatTool),
+      }),
+      stream: async (stream, { onDelta, onChunk }) => {
         let collector: ChatCollector = {};
-        await streamChatCompletion(response, {
-          onDelta,
-          onChunk,
-          onToolCallDelta: (deltas: ChatDeltaList) => {
-            collector = toolAdapter.addChatToolCallDelta(collector, deltas);
-          },
-        });
+        for await (const chunk of stream) {
+          const delta = getChatDeltaText(chunk),
+            toolCallDeltas: ChatDeltaList = getChatToolCallDeltas(chunk),
+            toolCalls = getToolCallsFromChatDeltas(toolCallDeltas);
+          if (delta.length > 0) {
+            onDelta(delta);
+          }
+          if (toolCallDeltas.length > 0) {
+            collector = toolAdapter.addChatToolCallDelta(
+              collector,
+              toolCallDeltas,
+            );
+          }
+          onChunk({ delta, toolCalls });
+        }
         return toolAdapter.finalizeChatToolCalls(collector);
       },
       extractToolCalls: (data) =>
@@ -358,34 +531,55 @@ const isJsonObject = (value: JsonValue): value is JsonObject =>
       extractReply: (data) => extractChatReply(data),
     },
     responses: {
-      buildRequestBody: (settings, systemPrompt, tools, messages) => {
-        const requestBody: ResponsesRequestBody = {
+      buildStreamRequestBody: (settings, systemPrompt, tools, messages) => {
+        const body: ResponsesRequestBody = {
           model: settings.model,
-          input: toolAdapter.buildResponsesInput(messages),
+          input: toolAdapter
+            .buildResponsesInput(messages)
+            .map(toResponsesInputItem),
           stream: true,
-          tools,
+          tools: tools.map(toResponsesTool),
         };
         if (systemPrompt) {
-          requestBody.instructions = systemPrompt;
+          body.instructions = systemPrompt;
         }
-        return requestBody;
+        return body;
       },
-      stream: async (response, { onDelta, onChunk }) => {
+      buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) => {
+        const body: ResponsesFallbackRequestBody = {
+          model: settings.model,
+          input: toolAdapter
+            .buildResponsesInput(messages)
+            .map(toResponsesInputItem),
+          stream: false,
+          tools: tools.map(toResponsesTool),
+        };
+        if (systemPrompt) {
+          body.instructions = systemPrompt;
+        }
+        return body;
+      },
+      stream: async (stream, { onDelta, onChunk }) => {
         let collector: ResponsesCollector = {};
-        await streamResponses(response, {
-          onDelta,
-          onChunk,
-          onToolCallEvent: (
-            payload: ResponsesToolCallEventPayload,
-            eventType: string,
-          ) => {
+        for await (const event of stream) {
+          const payload = getResponsesToolCallEventPayload(event),
+            delta = getResponsesDeltaText(event),
+            toolCalls =
+              payload === null
+                ? []
+                : getToolCallsFromResponsesEvent(payload, event.type);
+          if (delta.length > 0) {
+            onDelta(delta);
+          }
+          if (payload !== null) {
             collector = toolAdapter.addResponsesToolCallEvent(
               collector,
               payload,
-              eventType,
+              event.type,
             );
-          },
-        });
+          }
+          onChunk({ delta, toolCalls });
+        }
         return toolAdapter.finalizeResponsesToolCalls(collector);
       },
       extractToolCalls: (data) =>
@@ -394,11 +588,21 @@ const isJsonObject = (value: JsonValue): value is JsonObject =>
         ),
       extractReply: (data) => extractResponsesText(data),
     },
-  }),
-  getApiStrategy = (
-    apiType: ApiType,
-    toolAdapter: ApiToolAdapter,
-  ): ApiStrategy =>
-    createApiStrategies(ensureToolAdapter(toolAdapter))[apiType];
+  });
+
+function getApiStrategy(
+  apiType: "chat",
+  toolAdapter: ApiToolAdapter,
+): ChatApiStrategy;
+function getApiStrategy(
+  apiType: "responses",
+  toolAdapter: ApiToolAdapter,
+): ResponsesApiStrategy;
+function getApiStrategy(
+  apiType: ApiType,
+  toolAdapter: ApiToolAdapter,
+): ChatApiStrategy | ResponsesApiStrategy {
+  return createApiStrategies(ensureToolAdapter(toolAdapter))[apiType];
+}
 
 export default getApiStrategy;
