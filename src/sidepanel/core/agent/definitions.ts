@@ -1,6 +1,7 @@
 import type { BrowserTab, CreatedBrowserTab } from "../services/index.ts";
 import { parseJson, type JsonValue } from "../../lib/utils/index.ts";
 import type {
+  ChunkAnchorWeight,
   ContentScriptRequest,
   ContentScriptResponseByRequest,
 } from "../../../shared/index.ts";
@@ -43,7 +44,7 @@ export type ToolPageHashData = {
   pageNumber?: number;
   totalPages?: number;
   viewportPage?: number;
-  chunkAnchorId?: string;
+  chunkAnchorWeights?: ChunkAnchorWeight[];
 };
 
 export type ToolExecutionContext = {

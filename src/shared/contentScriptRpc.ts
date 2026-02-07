@@ -8,7 +8,13 @@ import type {
 } from "./rpc.ts";
 
 type PageNumberInput = number | string | null;
-type ChunkAnchorInput = string | null;
+
+export type ChunkAnchorWeight = {
+  id: string;
+  weight: number;
+};
+
+type ChunkAnchorWeightsInput = ChunkAnchorWeight[] | null;
 
 export type PingRequest = {
   type: "ping";
@@ -35,7 +41,7 @@ export type GetPageContentResponse = {
   totalPages?: number;
   pageNumber?: number;
   viewportPage?: number;
-  chunkAnchorId?: string;
+  chunkAnchorWeights?: ChunkAnchorWeight[];
   totalTokens?: number;
   error?: string;
 };
@@ -48,8 +54,8 @@ export type SetPageHashRequest = {
   total_pages?: PageNumberInput;
   viewportPage?: PageNumberInput;
   viewport_page?: PageNumberInput;
-  chunkAnchorId?: ChunkAnchorInput;
-  chunk_anchor_id?: ChunkAnchorInput;
+  chunkAnchorWeights?: ChunkAnchorWeightsInput;
+  chunk_anchor_weights?: ChunkAnchorWeightsInput;
 };
 
 export type SetPageHashResponse = {

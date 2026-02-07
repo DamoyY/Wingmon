@@ -1,5 +1,6 @@
 import { t } from "../../lib/utils/index.ts";
 import {
+  type ChunkAnchorWeight,
   type GetPageContentRequest,
   type GetPageContentResponse,
   type SetPageHashRequest,
@@ -26,7 +27,7 @@ export type PageReadMetadata = {
   pageNumber: number;
   totalPages: number;
   viewportPage: number;
-  chunkAnchorId?: string;
+  chunkAnchorWeights?: ChunkAnchorWeight[];
 };
 
 export type PageMarkdownData = PageReadMetadata & {
@@ -38,6 +39,7 @@ export type PageMarkdownData = PageReadMetadata & {
 const pageContentRetryBaseDelayMs = 200,
   pageContentRetryMaxDelayMs = 2000,
   pageContentRetryTimeoutMs = 10000,
+  chunkAnchorIdPattern = /^[a-z0-9]+$/i,
   resolvePageContentRetryDelay = (attempt: number) =>
     Math.min(
       pageContentRetryBaseDelayMs * 2 ** attempt,
@@ -48,17 +50,60 @@ const pageContentRetryBaseDelayMs = 200,
       setTimeout(resolve, delayMs);
     });
 
-const parseOptionalTrimmedString = (
+const parseChunkAnchorWeightItem = (
+    item: unknown,
+    fieldName: string,
+    index: number,
+  ): ChunkAnchorWeight => {
+    if (typeof item !== "object" || item === null || Array.isArray(item)) {
+      throw new Error(`${fieldName}[${String(index)}] 必须是对象`);
+    }
+    const chunkAnchorWeight = item as {
+      id?: unknown;
+      weight?: unknown;
+    } | null;
+    if (!chunkAnchorWeight || typeof chunkAnchorWeight.id !== "string") {
+      throw new Error(`${fieldName}[${String(index)}].id 必须是字符串`);
+    }
+    const id = chunkAnchorWeight.id.trim().toLowerCase();
+    if (!id || !chunkAnchorIdPattern.test(id)) {
+      throw new Error(
+        `${fieldName}[${String(index)}].id 必须是非空字母数字字符串`,
+      );
+    }
+    const weight = parseOptionalPositiveInteger(
+      chunkAnchorWeight.weight,
+      `${fieldName}[${String(index)}].weight`,
+    );
+    if (weight === undefined) {
+      throw new Error(`${fieldName}[${String(index)}].weight 必须是正整数`);
+    }
+    return {
+      id,
+      weight,
+    };
+  },
+  parseOptionalChunkAnchorWeights = (
     value: unknown,
     fieldName: string,
-  ): string | undefined => {
+  ): ChunkAnchorWeight[] | undefined => {
     if (value === undefined || value === null) {
       return undefined;
     }
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
+    if (!Array.isArray(value)) {
+      throw new Error(`${fieldName} 必须是数组`);
     }
-    throw new Error(`${fieldName} 必须是非空字符串`);
+    const usedIds = new Set<string>();
+    const chunkAnchorWeights = value.map((item, index) =>
+      parseChunkAnchorWeightItem(item, fieldName, index),
+    );
+    chunkAnchorWeights.forEach((chunkAnchorWeight) => {
+      if (usedIds.has(chunkAnchorWeight.id)) {
+        throw new Error(`${fieldName} 存在重复 id：${chunkAnchorWeight.id}`);
+      }
+      usedIds.add(chunkAnchorWeight.id);
+    });
+    return chunkAnchorWeights;
   },
   ensurePageInRange = (
     value: number,
@@ -93,7 +138,7 @@ const parseOptionalTrimmedString = (
       pageNumber?: unknown;
       totalPages?: unknown;
       viewportPage?: unknown;
-      chunkAnchorId?: unknown;
+      chunkAnchorWeights?: unknown;
     },
     fallbackPageNumber?: number,
   ): PageReadMetadata => {
@@ -114,15 +159,15 @@ const parseOptionalTrimmedString = (
         "viewportPage",
         totalPages,
       ),
-      chunkAnchorId = parseOptionalTrimmedString(
-        meta.chunkAnchorId,
-        "chunkAnchorId",
+      chunkAnchorWeights = parseOptionalChunkAnchorWeights(
+        meta.chunkAnchorWeights,
+        "chunkAnchorWeights",
       );
     return {
       pageNumber,
       totalPages,
       viewportPage,
-      chunkAnchorId,
+      chunkAnchorWeights,
     };
   };
 
@@ -155,7 +200,7 @@ const buildPageHashMessage = (pageData?: {
   pageNumber?: number;
   totalPages?: number;
   viewportPage?: number;
-  chunkAnchorId?: string;
+  chunkAnchorWeights?: ChunkAnchorWeight[];
 }): SetPageHashRequest => ({
   type: "setPageHash",
   ...resolvePageMetadata(pageData ?? {}),
@@ -215,7 +260,7 @@ export const syncPageHash = async (
     pageNumber?: number;
     totalPages?: number;
     viewportPage?: number;
-    chunkAnchorId?: string;
+    chunkAnchorWeights?: ChunkAnchorWeight[];
   },
 ): Promise<void> => {
   await waitForContentScript(tabId);

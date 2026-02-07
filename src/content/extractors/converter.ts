@@ -17,6 +17,7 @@ import {
 import {
   createPrefixTokenCounter,
   splitMarkdownByTokens,
+  type ChunkAnchorWeight,
 } from "../../shared/index.ts";
 
 type PageContentData = {
@@ -33,7 +34,7 @@ type MarkdownPageContent = {
   totalPages: number;
   pageNumber: number;
   viewportPage: number;
-  chunkAnchorId?: string;
+  chunkAnchorWeights: ChunkAnchorWeight[];
   totalTokens: number;
 };
 
@@ -56,6 +57,7 @@ type ControlMarkerExtraction = {
 };
 
 const TOKENS_PER_PAGE = 5000;
+const MINIMUM_CHUNK_ANCHOR_WEIGHT = 1;
 const CONTROL_MARKER_PREFIXES = ["[button:", "[input:"] as const;
 
 const createTurndownServiceTyped =
@@ -164,13 +166,14 @@ const extractControlMarkers = (
   };
 };
 
-const resolveChunkAnchorId = (
+const resolveChunkAnchorWeights = (
   anchors: ChunkAnchorPoint[],
   boundaries: number[],
   pageNumber: number,
-): string | null => {
+  getPrefixTokenCount: (boundary: number) => number,
+): ChunkAnchorWeight[] => {
   if (!anchors.length) {
-    return null;
+    return [];
   }
   const chunkStartRaw = boundaries[pageNumber - 1],
     chunkEndRaw = boundaries[pageNumber];
@@ -178,23 +181,74 @@ const resolveChunkAnchorId = (
     throw new Error("分片边界无效");
   }
   const chunkStart = chunkStartRaw,
-    chunkEnd = chunkEndRaw;
-  const chunkCenter = (chunkStart + chunkEnd) / 2;
-  const anchorsInChunk = anchors.filter(
-    (anchor) => anchor.index >= chunkStart && anchor.index <= chunkEnd,
+    chunkEnd = chunkEndRaw,
+    anchorsInChunk = anchors.filter(
+      (anchor) => anchor.index >= chunkStart && anchor.index <= chunkEnd,
+    );
+  if (!anchorsInChunk.length) {
+    return [];
+  }
+  const chunkStartTokens = getPrefixTokenCount(chunkStart),
+    chunkEndTokens = getPrefixTokenCount(chunkEnd),
+    chunkTokenSpan = chunkEndTokens - chunkStartTokens;
+  if (!Number.isInteger(chunkTokenSpan) || chunkTokenSpan < 0) {
+    throw new Error("分片 token 范围无效");
+  }
+  const chunkCenterTokens = (chunkStartTokens + chunkEndTokens) / 2,
+    chunkRadiusTokens = Math.max(
+      MINIMUM_CHUNK_ANCHOR_WEIGHT,
+      Math.ceil(chunkTokenSpan / 2),
+    );
+  return anchorsInChunk
+    .map((anchor) => {
+      const anchorTokenIndex = getPrefixTokenCount(anchor.index),
+        distanceTokens = Math.abs(anchorTokenIndex - chunkCenterTokens),
+        weight = Math.max(
+          MINIMUM_CHUNK_ANCHOR_WEIGHT,
+          Math.round(
+            chunkRadiusTokens - distanceTokens + MINIMUM_CHUNK_ANCHOR_WEIGHT,
+          ),
+        );
+      return {
+        id: anchor.id,
+        weight,
+      };
+    })
+    .sort((left, right) => {
+      if (right.weight !== left.weight) {
+        return right.weight - left.weight;
+      }
+      if (left.id < right.id) {
+        return -1;
+      }
+      if (left.id > right.id) {
+        return 1;
+      }
+      return 0;
+    });
+};
+
+const resolveChunkAnchorWeightsOrThrow = (
+  anchors: ChunkAnchorPoint[],
+  boundaries: number[],
+  pageNumber: number,
+  getPrefixTokenCount: (boundary: number) => number,
+): ChunkAnchorWeight[] => {
+  const chunkAnchorWeights = resolveChunkAnchorWeights(
+    anchors,
+    boundaries,
+    pageNumber,
+    getPrefixTokenCount,
   );
-  const candidates = anchorsInChunk.length ? anchorsInChunk : anchors;
-  let nearest = candidates[0];
-  let minDistance = Math.abs(nearest.index - chunkCenter);
-  for (let i = 1; i < candidates.length; i += 1) {
-    const candidate = candidates[i],
-      distance = Math.abs(candidate.index - chunkCenter);
-    if (distance < minDistance) {
-      nearest = candidate;
-      minDistance = distance;
+  for (const chunkAnchorWeight of chunkAnchorWeights) {
+    if (
+      !Number.isInteger(chunkAnchorWeight.weight) ||
+      chunkAnchorWeight.weight <= 0
+    ) {
+      throw new Error("chunk anchor 权重无效");
     }
   }
-  return nearest.id;
+  return chunkAnchorWeights;
 };
 
 const resolveTextFallback = (
@@ -273,10 +327,11 @@ const convertPageContentToMarkdown = (
         ? (markerTokenCount / chunked.totalTokens) * chunked.totalPages
         : 1,
     viewportPage = Math.min(chunked.totalPages, Math.max(1, viewportPageRaw)),
-    chunkAnchorId = resolveChunkAnchorId(
+    chunkAnchorWeights = resolveChunkAnchorWeightsOrThrow(
       anchors,
       chunked.boundaries,
       pageNumber,
+      prefixTokenCounter,
     );
   const pageChunk = chunked.chunks[pageNumber - 1];
   if (typeof pageChunk !== "string") {
@@ -289,7 +344,7 @@ const convertPageContentToMarkdown = (
     totalPages: chunked.totalPages,
     pageNumber,
     viewportPage,
-    ...(chunkAnchorId === null ? {} : { chunkAnchorId }),
+    chunkAnchorWeights,
     totalTokens: chunked.totalTokens,
   };
 };

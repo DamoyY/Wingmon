@@ -2,6 +2,7 @@ import { assignLlmIds, insertViewportMarker } from "../dom/index.js";
 import { chunkAnchorAttribute } from "../dom/chunkAnchors.js";
 import convertPageContentToMarkdown from "../extractors/converter.js";
 import type {
+  ChunkAnchorWeight,
   SetPageHashRequest,
   SetPageHashResponse,
 } from "../../shared/index.ts";
@@ -11,23 +12,33 @@ import {
   resolvePageNumberInput,
 } from "../shared/index.ts";
 
-type ChunkAnchorInput = string | null;
+type ChunkAnchorWeightsInput = ChunkAnchorWeight[] | null;
 
 type SendResponse = (response: SetPageHashResponse) => void;
+
+type ChunkAnchorCenterPoint = {
+  id: string;
+  weight: number;
+  anchorSelector: string;
+  anchorRectTop: number;
+  anchorRectHeight: number;
+  anchorAbsoluteCenterY: number;
+};
 
 type ChunkAnchorScrollResult =
   | {
       ok: true;
-      anchorSelector: string;
-      anchorAbsoluteTop: number;
-      anchorRectTop: number;
-      anchorRectHeight: number;
+      anchors: ChunkAnchorCenterPoint[];
+      missingAnchorIds: string[];
+      weightedMedianCenterY: number;
+      totalWeight: number;
       targetTop: number;
     }
   | {
       ok: false;
       reason: "chunk_anchor_not_found" | "chunk_anchor_not_scrollable";
-      anchorSelector: string;
+      anchors: ChunkAnchorCenterPoint[];
+      missingAnchorIds: string[];
     };
 
 type HtmlFallbackScrollMetrics = {
@@ -62,27 +73,97 @@ const resolveMessageTotalPages = (
   });
 };
 
-const resolveChunkAnchorId = (value: ChunkAnchorInput): string | null => {
+const chunkAnchorIdPattern = /^[a-z0-9]+$/i;
+
+const normalizeChunkAnchorId = (value: string, fieldName: string): string => {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized || !chunkAnchorIdPattern.test(normalized)) {
+    throw new Error(`${fieldName} 必须是非空字母数字字符串`);
+  }
+  return normalized;
+};
+
+const resolveChunkAnchorWeights = (
+  value: ChunkAnchorWeightsInput,
+): ChunkAnchorWeight[] | null => {
   if (value === null) {
     return null;
   }
-  if (typeof value === "string" && /^[a-z0-9]+$/i.test(value)) {
-    return value;
+  if (!Array.isArray(value)) {
+    throw new Error("chunk_anchor_weights 必须是数组");
   }
-  throw new Error("chunk_anchor_id 必须是非空字母数字字符串");
+  const resolvedWeights: ChunkAnchorWeight[] = [];
+  const usedAnchorIds = new Set<string>();
+  value.forEach((chunkAnchorWeight, index) => {
+    const fieldPrefix = `chunk_anchor_weights[${String(index)}]`,
+      chunkAnchorRecord =
+        chunkAnchorWeight as Partial<ChunkAnchorWeight> | null;
+    if (!chunkAnchorRecord || typeof chunkAnchorRecord !== "object") {
+      throw new Error(`${fieldPrefix} 必须是对象`);
+    }
+    if (typeof chunkAnchorRecord.id !== "string") {
+      throw new Error(`${fieldPrefix}.id 必须是字符串`);
+    }
+    const normalizedId = normalizeChunkAnchorId(
+      chunkAnchorRecord.id,
+      `${fieldPrefix}.id`,
+    );
+    if (usedAnchorIds.has(normalizedId)) {
+      throw new Error(`chunk_anchor_weights 存在重复 id：${normalizedId}`);
+    }
+    usedAnchorIds.add(normalizedId);
+    if (
+      !Number.isInteger(chunkAnchorRecord.weight) ||
+      chunkAnchorRecord.weight <= 0
+    ) {
+      throw new Error(`${fieldPrefix}.weight 必须是正整数`);
+    }
+    resolvedWeights.push({
+      id: normalizedId,
+      weight: chunkAnchorRecord.weight,
+    });
+  });
+  return resolvedWeights;
 };
 
-const resolveMessageChunkAnchorId = (
+const areChunkAnchorWeightsEqual = (
+  left: ChunkAnchorWeight[] | null,
+  right: ChunkAnchorWeight[] | null,
+): boolean => {
+  if (left === null || right === null) {
+    return left === right;
+  }
+  if (left.length !== right.length) {
+    return false;
+  }
+  for (let index = 0; index < left.length; index += 1) {
+    const leftWeight = left[index],
+      rightWeight = right[index];
+    if (
+      leftWeight.id !== rightWeight.id ||
+      leftWeight.weight !== rightWeight.weight
+    ) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const resolveMessageChunkAnchorWeights = (
   message: SetPageHashRequest,
-): string | null => {
-  return resolveAliasedInput<ChunkAnchorInput, string | null>({
-    camelProvided: "chunkAnchorId" in message,
-    snakeProvided: "chunk_anchor_id" in message,
-    camelValue: message.chunkAnchorId ?? null,
-    snakeValue: message.chunk_anchor_id ?? null,
-    mismatchMessage: "chunkAnchorId 与 chunk_anchor_id 不一致",
+): ChunkAnchorWeight[] | null => {
+  return resolveAliasedInput<
+    ChunkAnchorWeightsInput,
+    ChunkAnchorWeight[] | null
+  >({
+    camelProvided: "chunkAnchorWeights" in message,
+    snakeProvided: "chunk_anchor_weights" in message,
+    camelValue: message.chunkAnchorWeights ?? null,
+    snakeValue: message.chunk_anchor_weights ?? null,
+    mismatchMessage: "chunkAnchorWeights 与 chunk_anchor_weights 不一致",
     defaultValue: null,
-    resolve: resolveChunkAnchorId,
+    resolve: resolveChunkAnchorWeights,
+    equals: areChunkAnchorWeightsEqual,
   });
 };
 
@@ -170,34 +251,97 @@ const scrollHtmlByPage = (
   return metrics;
 };
 
-const scrollHtmlByChunkAnchor = (anchorId: string): ChunkAnchorScrollResult => {
-  const anchorSelector = `[${chunkAnchorAttribute}="${anchorId}"]`,
-    anchor = document.querySelector(anchorSelector);
-  if (!anchor) {
+const resolveWeightedMedianCenterY = (
+  anchors: ChunkAnchorCenterPoint[],
+): { weightedMedianCenterY: number; totalWeight: number } => {
+  if (!anchors.length) {
+    throw new Error("锚点坐标集合为空");
+  }
+  const sortedAnchors = [...anchors].sort((left, right) => {
+      if (left.anchorAbsoluteCenterY !== right.anchorAbsoluteCenterY) {
+        return left.anchorAbsoluteCenterY - right.anchorAbsoluteCenterY;
+      }
+      return right.weight - left.weight;
+    }),
+    totalWeight = sortedAnchors.reduce((sum, anchor) => sum + anchor.weight, 0);
+  if (!Number.isFinite(totalWeight) || totalWeight <= 0) {
+    throw new Error("锚点总权重无效");
+  }
+  const medianThreshold = totalWeight / 2;
+  let cumulativeWeight = 0;
+  for (const anchor of sortedAnchors) {
+    cumulativeWeight += anchor.weight;
+    if (cumulativeWeight >= medianThreshold) {
+      return {
+        weightedMedianCenterY: anchor.anchorAbsoluteCenterY,
+        totalWeight,
+      };
+    }
+  }
+  const fallbackAnchor = sortedAnchors[sortedAnchors.length - 1];
+  return {
+    weightedMedianCenterY: fallbackAnchor.anchorAbsoluteCenterY,
+    totalWeight,
+  };
+};
+
+const scrollHtmlByChunkAnchors = (
+  chunkAnchorWeights: ChunkAnchorWeight[],
+): ChunkAnchorScrollResult => {
+  const anchors: ChunkAnchorCenterPoint[] = [];
+  const missingAnchorIds: string[] = [];
+  for (const chunkAnchorWeight of chunkAnchorWeights) {
+    const anchorSelector = `[${chunkAnchorAttribute}="${chunkAnchorWeight.id}"]`,
+      anchor = document.querySelector(anchorSelector);
+    if (!anchor) {
+      missingAnchorIds.push(chunkAnchorWeight.id);
+      continue;
+    }
+    const rect = anchor.getBoundingClientRect(),
+      anchorAbsoluteCenterY = window.scrollY + rect.top + rect.height / 2;
+    if (!Number.isFinite(anchorAbsoluteCenterY)) {
+      return {
+        ok: false,
+        reason: "chunk_anchor_not_scrollable",
+        anchors,
+        missingAnchorIds,
+      };
+    }
+    anchors.push({
+      id: chunkAnchorWeight.id,
+      weight: chunkAnchorWeight.weight,
+      anchorSelector,
+      anchorRectTop: rect.top,
+      anchorRectHeight: rect.height,
+      anchorAbsoluteCenterY,
+    });
+  }
+  if (!anchors.length) {
     return {
       ok: false,
       reason: "chunk_anchor_not_found",
-      anchorSelector,
+      anchors,
+      missingAnchorIds,
     };
   }
-  const rect = anchor.getBoundingClientRect(),
-    absoluteTop = window.scrollY + rect.top,
-    centerOffset = window.innerHeight / 2 - rect.height / 2,
-    targetTop = Math.max(0, absoluteTop - centerOffset);
+  const { weightedMedianCenterY, totalWeight } =
+      resolveWeightedMedianCenterY(anchors),
+    targetTop = Math.max(0, weightedMedianCenterY - window.innerHeight / 2);
   if (!Number.isFinite(targetTop)) {
     return {
       ok: false,
       reason: "chunk_anchor_not_scrollable",
-      anchorSelector,
+      anchors,
+      missingAnchorIds,
     };
   }
   scrollWindowTo(targetTop);
   return {
     ok: true,
-    anchorSelector,
-    anchorAbsoluteTop: absoluteTop,
-    anchorRectTop: rect.top,
-    anchorRectHeight: rect.height,
+    anchors,
+    missingAnchorIds,
+    weightedMedianCenterY,
+    totalWeight,
     targetTop,
   };
 };
@@ -206,14 +350,14 @@ const warnFallbackToPageRatioScroll = ({
   reason,
   pageNumber,
   totalPages,
-  chunkAnchorId,
+  chunkAnchorWeights,
   fallbackMetrics,
   anchorResult,
 }: {
   reason: string;
   pageNumber: number;
   totalPages: number;
-  chunkAnchorId: string | null;
+  chunkAnchorWeights: ChunkAnchorWeight[] | null;
   fallbackMetrics: HtmlFallbackScrollMetrics;
   anchorResult: ChunkAnchorScrollResult | null;
 }): void => {
@@ -221,7 +365,7 @@ const warnFallbackToPageRatioScroll = ({
     reason,
     pageNumber,
     totalPages,
-    chunkAnchorId,
+    chunkAnchorWeights,
     url: window.location.href || "",
     title: document.title || "",
     viewport: {
@@ -240,29 +384,39 @@ const handleSetPageHash = (
 ): void => {
   try {
     const pageNumber = resolveMessagePageNumber(message),
-      chunkAnchorId = resolveMessageChunkAnchorId(message);
+      chunkAnchorWeights = resolveMessageChunkAnchorWeights(message);
     if (isHtmlDocument()) {
       const providedTotalPages = resolveMessageTotalPages(message),
         totalPages = providedTotalPages ?? resolveHtmlTotalPages();
-      if (!chunkAnchorId) {
+      if (!chunkAnchorWeights) {
         const fallbackMetrics = scrollHtmlByPage(pageNumber, totalPages);
         warnFallbackToPageRatioScroll({
-          reason: "chunk_anchor_id_missing",
+          reason: "chunk_anchor_weights_missing",
           pageNumber,
           totalPages,
-          chunkAnchorId: null,
+          chunkAnchorWeights: null,
+          fallbackMetrics,
+          anchorResult: null,
+        });
+      } else if (!chunkAnchorWeights.length) {
+        const fallbackMetrics = scrollHtmlByPage(pageNumber, totalPages);
+        warnFallbackToPageRatioScroll({
+          reason: "chunk_anchor_weights_empty",
+          pageNumber,
+          totalPages,
+          chunkAnchorWeights,
           fallbackMetrics,
           anchorResult: null,
         });
       } else {
-        const anchorResult = scrollHtmlByChunkAnchor(chunkAnchorId);
+        const anchorResult = scrollHtmlByChunkAnchors(chunkAnchorWeights);
         if (!anchorResult.ok) {
           const fallbackMetrics = scrollHtmlByPage(pageNumber, totalPages);
           warnFallbackToPageRatioScroll({
             reason: anchorResult.reason,
             pageNumber,
             totalPages,
-            chunkAnchorId,
+            chunkAnchorWeights,
             fallbackMetrics,
             anchorResult,
           });
