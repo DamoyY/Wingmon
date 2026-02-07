@@ -5,7 +5,7 @@ import {
   setMessageContent,
   updateMessageStatusLine,
 } from "./components/index.ts";
-import { wrapTrailingText } from "../../../../lib/dom/index.ts";
+import { wrapTrailingText } from "../../../../lib/domTools/index.ts";
 import {
   requireElementById,
   resolveIndicesKey,

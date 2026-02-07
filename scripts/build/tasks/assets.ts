@@ -7,7 +7,7 @@ import {
   outputRoot,
   rootDir,
   shouldCopyFile,
-} from "../core/index.ts";
+} from "../basekit/index.ts";
 import {
   publicAssetProcessors,
   resolveFlatCopyAction,

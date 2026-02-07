@@ -1,6 +1,6 @@
 import { setStateValue, state } from "../store/index.ts";
 import { resolveSystemPromptContent } from "./systemPromptContent.ts";
-import { getActiveTab } from "./tabs.ts";
+import { getActiveTab } from "./browserTabs.ts";
 
 type ChromeI18n = {
   getUILanguage: () => string;

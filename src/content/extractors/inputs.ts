@@ -1,4 +1,4 @@
-import { EXCLUDED_INPUT_TYPES, TEXT_INPUT_ROLES } from "../shared/index.ts";
+import { EXCLUDED_INPUT_TYPES, TEXT_INPUT_ROLES } from "../common/index.ts";
 import { buildIdMap, normalizeText, resolveElementLabel } from "./labels.js";
 
 const getLabelFromAssociatedLabel = (

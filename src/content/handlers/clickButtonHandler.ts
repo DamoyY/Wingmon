@@ -1,4 +1,4 @@
-import { normalizeLlmId } from "../shared/index.ts";
+import { normalizeLlmId } from "../common/index.ts";
 import type {
   ClickButtonRequest,
   ClickButtonResponse,

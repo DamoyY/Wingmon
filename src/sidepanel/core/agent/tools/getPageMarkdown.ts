@@ -1,7 +1,7 @@
 import { MARKDOWN_CHUNK_TOKENS } from "../../../../shared/index.ts";
 import { isInternalUrl, t, type JsonValue } from "../../../lib/utils/index.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
-import { parsePageNumber } from "../validation/pageNumber.ts";
+import { parsePageNumber } from "../validation/parsePageNumber.ts";
 import {
   ensureObjectArgs,
   validateTabIdArgs,

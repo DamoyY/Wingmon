@@ -1,7 +1,7 @@
 import bindComposerEvents from "./composer.ts";
-import bindHistoryEvents from "./history.ts";
+import bindHistoryEvents from "./historyController.ts";
 import bindSettingsEvents from "./settings.ts";
-import bindTabEvents from "./tabs.ts";
+import bindTabEvents from "./tabEventsController.ts";
 
 const bindPanelEvents = (): void => {
   bindComposerEvents();

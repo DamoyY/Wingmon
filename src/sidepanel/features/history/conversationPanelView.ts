@@ -7,7 +7,7 @@ import {
 import { state } from "../../core/store/index.ts";
 import { t } from "../../lib/utils/index.ts";
 import { fetchSortedHistory } from "./data.ts";
-import type { HistoryActionHandler } from "./ui/listView.js";
+import type { HistoryActionHandler } from "./listView.ts";
 import {
   deleteConversationById,
   loadConversationIntoState,

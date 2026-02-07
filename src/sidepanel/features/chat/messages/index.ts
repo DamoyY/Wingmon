@@ -13,4 +13,4 @@ export {
   refreshSendWithPageButton,
   setSendWithPagePromptReady,
   updateSendWithPageButtonAvailability,
-} from "./sendWithPageButton.ts";
+} from "./sendWithPageButtonAvailability.ts";

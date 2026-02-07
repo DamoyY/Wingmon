@@ -6,7 +6,7 @@ import {
   type ContentScriptRequest,
   type ContentScriptResponseByRequest,
 } from "../../../shared/index.ts";
-import toolModules from "./modules/index.ts";
+import toolModules from "./tools/index.ts";
 import type { PageMarkdownData } from "./pageReadHelpers.ts";
 import ToolInputError from "./errors.ts";
 

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { minifyHtmlContent } from "./minify.ts";
 import { obfuscateCode } from "./obfuscate.ts";
-import { isNodeModulesPath } from "../core/index.ts";
+import { isNodeModulesPath } from "../basekit/index.ts";
 
 export type FlatCopyContext = Readonly<{
   sourcePath: string;

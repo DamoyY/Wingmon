@@ -1,1 +1,4 @@
-export { handleOpenHistory, handleCloseHistory } from "./panel.ts";
+export {
+  handleOpenHistory,
+  handleCloseHistory,
+} from "./conversationPanelView.ts";

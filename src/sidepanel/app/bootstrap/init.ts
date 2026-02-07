@@ -22,7 +22,7 @@ import {
 } from "../../features/chat/messages/index.ts";
 import { syncSettingsSnapshot } from "../../features/settings/index.ts";
 import { setLocale, translateDOM } from "../../lib/utils/index.ts";
-import { bindPanelEvents } from "../bindings/index.ts";
+import { bindPanelEvents } from "../controllers/index.ts";
 
 const initPanel = async () => {
   initTabListeners();

@@ -2,7 +2,7 @@ import { MARKDOWN_CHUNK_TOKENS, isPdfUrl } from "../../../../shared/index.ts";
 import { isInternalUrl, t, type JsonValue } from "../../../lib/utils/index.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 import ToolInputError from "../errors.ts";
-import { parsePageNumber } from "../validation/pageNumber.ts";
+import { parsePageNumber } from "../validation/parsePageNumber.ts";
 import { ensureObjectArgs } from "../validation/toolArgsValidation.ts";
 import {
   buildOpenBrowserPageMessageContext,

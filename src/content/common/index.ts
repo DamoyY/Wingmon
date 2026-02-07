@@ -5,5 +5,5 @@ export { hasPdfEmbed, isPdfContentType, isPdfDocument } from "./pdfDocument.ts";
 export {
   resolveAliasedPageNumberInput,
   resolvePageNumberInput,
-} from "./pageNumber.ts";
-export type { PageNumberInput } from "./pageNumber.ts";
+} from "./pageNumberInput.ts";
+export type { PageNumberInput } from "./pageNumberInput.ts";

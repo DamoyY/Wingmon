@@ -5,9 +5,9 @@ import type {
   ToolNameKey,
   ToolPageReadDedupeAction,
 } from "../definitions.ts";
-import clickButton from "./clickButton.ts";
+import clickButton from "./clickButtonTool.ts";
 import closeBrowserPage from "./closeBrowserPage.ts";
-import enterText from "./enterText.ts";
+import enterText from "./enterTextTool.ts";
 import find from "./find.ts";
 import getPageMarkdown from "./getPageMarkdown.ts";
 import listTabs from "./listTabs.ts";

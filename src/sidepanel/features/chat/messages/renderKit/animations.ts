@@ -1,4 +1,7 @@
-import { elements, prefersReducedMotion } from "../../../../ui/core/index.ts";
+import {
+  elements,
+  prefersReducedMotion,
+} from "../../../../ui/foundation/index.ts";
 import { resolveIndicesKey } from "../../../../lib/utils/index.ts";
 
 const FADE_OUT_DURATION = 100;

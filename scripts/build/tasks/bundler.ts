@@ -6,7 +6,7 @@ import {
   outputRoot,
   resolveEntryPath,
   rootDir,
-} from "../core/index.ts";
+} from "../basekit/index.ts";
 import { obfuscateFile, shouldObfuscateBuild } from "../transformers/index.ts";
 import { getToolIndexPlugin } from "../plugins/index.ts";
 

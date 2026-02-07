@@ -1,5 +1,5 @@
 import { isEditableElement } from "../dom/editableElements.js";
-import { normalizeLlmId } from "../shared/index.ts";
+import { normalizeLlmId } from "../common/index.ts";
 import type {
   EnterTextRequest,
   EnterTextResponse,

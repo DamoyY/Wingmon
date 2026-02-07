@@ -1,4 +1,4 @@
-import { elements } from "../../../ui/core/elements.ts";
+import { elements } from "../../ui/foundation/elements.ts";
 
 export type HistoryActionHandler = (id: string) => Promise<void> | void;
 

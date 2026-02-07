@@ -3,7 +3,7 @@ import {
   setComposerButtonsSending,
   setSendButtonEnabled,
 } from "../../ui/index.ts";
-import { setSendWithPagePromptReady } from "./messages/sendWithPageButton.ts";
+import { setSendWithPagePromptReady } from "./messages/sendWithPageButtonAvailability.ts";
 import { hasPromptContent } from "./composerState.ts";
 
 type PromptElement = (typeof elements)["promptEl"];

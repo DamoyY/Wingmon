@@ -1,7 +1,7 @@
 import path from "node:path";
 import { readdir } from "node:fs/promises";
 import type { Plugin, PluginBuild } from "esbuild";
-import { rootDir } from "../core/index.ts";
+import { rootDir } from "../basekit/index.ts";
 
 type ToolEntry = { file: string; name: string };
 
@@ -17,7 +17,7 @@ const toModuleName = (file: string): string => {
 };
 
 export const getToolIndexPlugin = async (): Promise<Plugin> => {
-  const toolsDir = path.join(rootDir, "src/sidepanel/core/agent/modules");
+  const toolsDir = path.join(rootDir, "src/sidepanel/core/agent/tools");
   const toolsIndexPath = path.join(toolsDir, "index.ts");
   const toolExtensions = new Set([".js", ".ts", ".tsx"]);
   const excludedToolBases = new Set([

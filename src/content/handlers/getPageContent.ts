@@ -7,7 +7,7 @@ import convertPdfToMarkdown from "../extractors/pdfConverter.js";
 import {
   isPdfDocument,
   resolveAliasedPageNumberInput,
-} from "../shared/index.ts";
+} from "../common/index.ts";
 import withPreparedBody from "./withPreparedBody.js";
 
 type SendResponse = (response: GetPageContentResponse) => void;

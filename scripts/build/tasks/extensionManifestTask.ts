@@ -7,7 +7,7 @@ import {
   rootDir,
   type GuardRecord,
   type GuardValue,
-} from "../core/index.ts";
+} from "../basekit/index.ts";
 
 type Manifest = GuardRecord;
 

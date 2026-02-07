@@ -1,4 +1,4 @@
-import { elements } from "../core/elements.ts";
+import { elements } from "../foundation/elements.ts";
 import { ensureElement } from "../../lib/utils/index.ts";
 
 const updateChatBarSizes = (): void => {

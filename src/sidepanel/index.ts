@@ -1,4 +1,4 @@
-import "./ui/core/setupMaterial.ts";
-import { initPanel } from "./app/core/index.ts";
+import "./ui/foundation/setupMaterial.ts";
+import { initPanel } from "./app/bootstrap/index.ts";
 
 void initPanel();

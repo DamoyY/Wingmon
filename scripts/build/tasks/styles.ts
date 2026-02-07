@@ -5,12 +5,12 @@ import {
   ensureFlattenTarget,
   outputPublicDir,
   rootDir,
-} from "../core/index.ts";
+} from "../basekit/index.ts";
 import { minifyCss } from "../transformers/index.ts";
 
 export const buildStyles = async (): Promise<void> => {
   const sassResult = sass.compile(
-    path.join(rootDir, "src/sidepanel/styles/panel.scss"),
+    path.join(rootDir, "src/sidepanel/styles/sidepanelStyle.scss"),
     {
       loadPaths: [path.join(rootDir, "node_modules")],
       style: "expanded",

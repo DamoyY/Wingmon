@@ -1,4 +1,8 @@
-import { elements, prefersReducedMotion, setText } from "../core/index.ts";
+import {
+  elements,
+  prefersReducedMotion,
+  setText,
+} from "../foundation/index.ts";
 
 const ANIMATION_DURATION = 320,
   ANIMATION_EASING = "cubic-bezier(0.2, 0, 0, 1)";

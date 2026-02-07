@@ -1,4 +1,4 @@
-export { outputPublicDir, outputRoot } from "./core/index.ts";
+export { outputPublicDir, outputRoot } from "./basekit/index.ts";
 export {
   buildBundles,
   buildManifest,

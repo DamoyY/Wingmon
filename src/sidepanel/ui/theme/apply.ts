@@ -15,7 +15,7 @@ import {
   type ThemeMode,
   type ThemeVariant,
 } from "../../lib/utils/index.ts";
-import { prefersReducedMotion } from "../core/index.ts";
+import { prefersReducedMotion } from "../foundation/index.ts";
 
 type ApplyCallback = () => void;
 type ThemeInput = string | null;

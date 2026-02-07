@@ -1,4 +1,4 @@
-import { createMaterialIconButton } from "../../../../../lib/dom/index.ts";
+import { createMaterialIconButton } from "../../../../../lib/domTools/index.ts";
 import { t } from "../../../../../lib/utils/index.ts";
 import type { MessageActionHandlers } from "../../actions.ts";
 

@@ -4,7 +4,7 @@ import {
 } from "../../shared/index.ts";
 import { convertPageContentToMarkdownPages } from "../extractors/converter.js";
 import { convertPdfToMarkdownPages } from "../extractors/pdfConverter.js";
-import { isPdfDocument } from "../shared/index.ts";
+import { isPdfDocument } from "../common/index.ts";
 import withPreparedBody from "./withPreparedBody.js";
 
 type SendResponse = (response: GetAllPageContentResponse) => void;
