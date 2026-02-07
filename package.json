@@ -15,6 +15,7 @@
     "js-tiktoken": "latest",
     "katex": "latest",
     "md4w": "latest",
+    "openai": "latest",
     "tiktoken": "latest",
     "turndown": "latest",
     "turndown-plugin-gfm": "latest"

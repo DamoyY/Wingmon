@@ -19,7 +19,7 @@ import {
   type ToolCall,
 } from "../../../core/agent/definitions.ts";
 import { handleToolCalls } from "../../../core/agent/executor.ts";
-import requestModel from "../../../core/api/client.js";
+import requestModel from "../../../core/api/client.ts";
 import {
   addMessage,
   appendAssistantDelta,
