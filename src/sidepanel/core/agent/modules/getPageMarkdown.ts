@@ -46,10 +46,7 @@ const parameters = {
       tabId: { type: "number" },
       page_number: {
         type: "number",
-        description: t(
-          "toolParamPageNumber",
-          String(MARKDOWN_CHUNK_TOKENS),
-        ),
+        description: t("toolParamPageNumber", String(MARKDOWN_CHUNK_TOKENS)),
       },
     },
     required: ["tabId", "page_number"],

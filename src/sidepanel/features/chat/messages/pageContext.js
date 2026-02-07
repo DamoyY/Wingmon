@@ -101,38 +101,30 @@ const resolveTabId = (activeTab) => {
     ensureNotAborted(signal);
     const pageData = await fetchPageMarkdownData(tabId),
       viewportPlan = resolveViewportPlan(pageData),
-      firstPageNumber = viewportPlan.currentChunk,
-      firstCallId = createRandomId("local"),
-      firstToolMessage = await executeGetPageToolCall({
-        tabId,
-        callId: firstCallId,
-        pageNumber: firstPageNumber,
-        signal,
-      });
-    appendToolCallMessages({
-      tabId,
-      callId: firstCallId,
-      pageNumber: firstPageNumber,
-      toolMessage: firstToolMessage,
-    });
-    ensureNotAborted(signal);
-    if (viewportPlan.nearbyChunk === null) {
-      return;
+      pageNumbers = [viewportPlan.currentChunk];
+    if (viewportPlan.nearbyChunk !== null) {
+      pageNumbers.push(viewportPlan.nearbyChunk);
     }
-    const secondCallId = createRandomId("local"),
-      secondPageNumber = viewportPlan.nearbyChunk,
-      secondToolMessage = await executeGetPageToolCall({
+    const orderedPageNumbers =
+      pageNumbers.length === 2 && pageNumbers[1] < pageNumbers[0]
+        ? [pageNumbers[1], pageNumbers[0]]
+        : pageNumbers;
+    for (const pageNumber of orderedPageNumbers) {
+      ensureNotAborted(signal);
+      const callId = createRandomId("local"),
+        toolMessage = await executeGetPageToolCall({
+          tabId,
+          callId,
+          pageNumber,
+          signal,
+        });
+      appendToolCallMessages({
         tabId,
-        callId: secondCallId,
-        pageNumber: secondPageNumber,
-        signal,
+        callId,
+        pageNumber,
+        toolMessage,
       });
-    appendToolCallMessages({
-      tabId,
-      callId: secondCallId,
-      pageNumber: secondPageNumber,
-      toolMessage: secondToolMessage,
-    });
+    }
   };
 
 export default appendSharedPageContext;
