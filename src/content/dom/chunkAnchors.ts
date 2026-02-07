@@ -11,8 +11,7 @@ import {
 const HASH_LENGTH = 8;
 const chunkAnchorPrefix = "LLMCHUNKANCHORSTART_";
 const chunkAnchorSuffix = "_LLMCHUNKANCHOREND";
-const minimumAnchorGapPx = 120;
-const maximumAnchorCount = 240;
+const maximumAnchorCount = 25;
 const minimumTextLength = 24;
 const anchorVisibilityOptions: ElementVisibilityOptions = {
   minimumWidth: 8,
@@ -49,6 +48,16 @@ const clearChunkAnchors = (root: HTMLElement): void => {
 
 const normalizeText = (value: string): string =>
   value.replace(/\s+/g, " ").trim();
+
+const shuffleElements = (elements: HTMLElement[]): void => {
+  for (let index = elements.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    const current = elements[index];
+    const target = elements[swapIndex];
+    elements[index] = target;
+    elements[swapIndex] = current;
+  }
+};
 
 const resolveAnchorId = (
   element: Element,
@@ -107,14 +116,6 @@ const isAnchorCandidate = (
   return true;
 };
 
-const resolveElementTop = (element: HTMLElement): number => {
-  const win = element.ownerDocument.defaultView;
-  if (!win) {
-    throw new Error("无法获取窗口对象");
-  }
-  return win.scrollY + element.getBoundingClientRect().top;
-};
-
 export const buildChunkAnchorMarker = (anchorId: string): string =>
   `${chunkAnchorPrefix}${anchorId}${chunkAnchorSuffix}`;
 
@@ -124,9 +125,8 @@ export const assignChunkAnchors = (root: HTMLElement): void => {
     throw new Error("无法获取窗口对象");
   }
   clearChunkAnchors(root);
-  const minGap = Math.max(minimumAnchorGapPx, Math.floor(win.innerHeight / 5));
   const usedIds = new Set<string>();
-  const candidates: Array<{ element: HTMLElement; top: number }> = [];
+  const candidates: HTMLElement[] = [];
   const walker = root.ownerDocument.createTreeWalker(
     root,
     NodeFilter.SHOW_ELEMENT,
@@ -135,25 +135,15 @@ export const assignChunkAnchors = (root: HTMLElement): void => {
   while (node) {
     const element = node as Element;
     if (isAnchorCandidate(element, win)) {
-      candidates.push({
-        element,
-        top: resolveElementTop(element),
-      });
+      candidates.push(element);
     }
     node = walker.nextNode();
   }
-  candidates.sort((left, right) => left.top - right.top);
-  let assigned = 0;
-  let lastTop = Number.NEGATIVE_INFINITY;
-  for (const candidate of candidates) {
-    if (assigned === 0 || candidate.top - lastTop >= minGap) {
-      const anchorId = resolveAnchorId(candidate.element, root, usedIds);
-      candidate.element.setAttribute(chunkAnchorAttribute, anchorId);
-      lastTop = candidate.top;
-      assigned += 1;
-      if (assigned >= maximumAnchorCount) {
-        return;
-      }
-    }
+  shuffleElements(candidates);
+  const assignLimit = Math.min(maximumAnchorCount, candidates.length);
+  for (let index = 0; index < assignLimit; index += 1) {
+    const candidate = candidates[index];
+    const anchorId = resolveAnchorId(candidate, root, usedIds);
+    candidate.setAttribute(chunkAnchorAttribute, anchorId);
   }
 };
