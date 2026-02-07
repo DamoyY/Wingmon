@@ -19,6 +19,7 @@ import {
   createPrefixTokenCounter,
   splitMarkdownByTokens,
   type ChunkAnchorWeight,
+  type MarkdownChunkResult,
 } from "../../shared/index.ts";
 
 type PageContentData = {
@@ -39,6 +40,20 @@ type MarkdownPageContent = {
   totalTokens: number;
 };
 
+export type MarkdownPageChunk = {
+  pageNumber: number;
+  content: string;
+};
+
+export type MarkdownPageContentCollection = {
+  title: string;
+  url: string;
+  totalPages: number;
+  viewportPage: number;
+  pages: MarkdownPageChunk[];
+  totalTokens: number;
+};
+
 type TurndownService = {
   turndown: (input: string) => string;
 };
@@ -55,6 +70,15 @@ type ControlMarkerExtraction = {
   content: string;
   viewportIndex: number;
   anchors: ChunkAnchorPoint[];
+};
+
+type PreparedMarkdownPageContent = {
+  title: string;
+  url: string;
+  chunked: MarkdownChunkResult;
+  viewportPage: number;
+  anchors: ChunkAnchorPoint[];
+  prefixTokenCounter: (boundary: number) => number;
 };
 
 const MINIMUM_CHUNK_ANCHOR_WEIGHT = 1;
@@ -286,9 +310,9 @@ const resolveTextFallback = (
   return htmlContent;
 };
 
-const convertPageContentToMarkdown = (
+const prepareMarkdownPageContent = (
   pageData: PageContentData | null = null,
-): MarkdownPageContent => {
+): PreparedMarkdownPageContent => {
   if (!pageData?.body) {
     throw new Error("页面内容为空");
   }
@@ -311,13 +335,7 @@ const convertPageContentToMarkdown = (
       tokensPerPage: MARKDOWN_CHUNK_TOKENS,
       controlMarkerPrefixes: CONTROL_MARKER_PREFIXES,
     }),
-    pageNumber = resolvePageNumberInput(pageData.pageNumber ?? null);
-  if (pageNumber > chunked.totalPages) {
-    throw new Error(
-      `page_number 超出范围：${String(pageNumber)}，总页数：${String(chunked.totalPages)}`,
-    );
-  }
-  const prefixTokenCounter = createPrefixTokenCounter(
+    prefixTokenCounter = createPrefixTokenCounter(
       content,
       resolveMarkdownTokenLength,
     ),
@@ -325,27 +343,67 @@ const convertPageContentToMarkdown = (
     viewportPageRaw =
       chunked.totalTokens > 0
         ? (markerTokenCount / chunked.totalTokens) * chunked.totalPages
-        : 1,
-    viewportPage = Math.min(chunked.totalPages, Math.max(1, viewportPageRaw)),
-    chunkAnchorWeights = resolveChunkAnchorWeightsOrThrow(
-      anchors,
-      chunked.boundaries,
-      pageNumber,
-      prefixTokenCounter,
+        : 1;
+  const viewportPage = Math.min(
+    chunked.totalPages,
+    Math.max(1, viewportPageRaw),
+  );
+  return {
+    title: pageData.title ?? "",
+    url: pageData.url ?? "",
+    chunked,
+    viewportPage,
+    anchors,
+    prefixTokenCounter,
+  };
+};
+
+export const convertPageContentToMarkdownPages = (
+  pageData: PageContentData | null = null,
+): MarkdownPageContentCollection => {
+  const prepared = prepareMarkdownPageContent(pageData);
+  return {
+    title: prepared.title,
+    url: prepared.url,
+    totalPages: prepared.chunked.totalPages,
+    viewportPage: prepared.viewportPage,
+    pages: prepared.chunked.chunks.map((content, index) => ({
+      pageNumber: index + 1,
+      content,
+    })),
+    totalTokens: prepared.chunked.totalTokens,
+  };
+};
+
+const convertPageContentToMarkdown = (
+  pageData: PageContentData | null = null,
+): MarkdownPageContent => {
+  const prepared = prepareMarkdownPageContent(pageData);
+  const pageNumber = resolvePageNumberInput(pageData?.pageNumber ?? null);
+  if (pageNumber > prepared.chunked.totalPages) {
+    throw new Error(
+      `page_number 超出范围：${String(pageNumber)}，总页数：${String(prepared.chunked.totalPages)}`,
     );
-  const pageChunk = chunked.chunks[pageNumber - 1];
+  }
+  const chunkAnchorWeights = resolveChunkAnchorWeightsOrThrow(
+      prepared.anchors,
+      prepared.chunked.boundaries,
+      pageNumber,
+      prepared.prefixTokenCounter,
+    ),
+    pageChunk = prepared.chunked.chunks[pageNumber - 1];
   if (typeof pageChunk !== "string") {
     throw new Error("分片内容缺失");
   }
   return {
-    title: pageData.title ?? "",
-    url: pageData.url ?? "",
+    title: prepared.title,
+    url: prepared.url,
     content: pageChunk,
-    totalPages: chunked.totalPages,
+    totalPages: prepared.chunked.totalPages,
     pageNumber,
-    viewportPage,
+    viewportPage: prepared.viewportPage,
     chunkAnchorWeights,
-    totalTokens: chunked.totalTokens,
+    totalTokens: prepared.chunked.totalTokens,
   };
 };
 

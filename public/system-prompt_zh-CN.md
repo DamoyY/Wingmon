@@ -108,8 +108,8 @@
 ```
 {user-agent}
 ```
-## 用户当前正在查看的标签页的 TabID：
-"{focus-tabid}"
+## 用户当前正在查看的标签页的 Tab ID：
+"{focus-tabId}"
 
 ---
 

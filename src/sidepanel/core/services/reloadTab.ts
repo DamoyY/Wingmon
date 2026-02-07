@@ -21,7 +21,7 @@ declare const chrome: ChromeApi;
 
 export const reloadTab = (tabId: number): Promise<void> => {
   if (typeof tabId !== "number") {
-    const error = new Error("TabID 必须是数字");
+    const error = new Error("Tab ID 必须是数字");
     console.error(error.message);
     return Promise.reject(error);
   }

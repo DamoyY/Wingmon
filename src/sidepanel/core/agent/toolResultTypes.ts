@@ -14,6 +14,15 @@ export type GetPageMarkdownToolResult = PageReadToolResult;
 
 export type OpenBrowserPageToolResult = PageReadToolResult;
 
+export type FindToolPageResult = {
+  pageNumber: number;
+  lines: string[];
+};
+
+export type FindToolResult = {
+  pages: FindToolPageResult[];
+};
+
 export type EnterTextToolResult = {
   ok: boolean;
 };

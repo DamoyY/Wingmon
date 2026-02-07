@@ -46,6 +46,23 @@ export type GetPageContentResponse = {
   error?: string;
 };
 
+export type PageContentChunk = {
+  pageNumber?: number;
+  content?: string;
+};
+
+export type GetAllPageContentRequest = {
+  type: "getAllPageContent";
+};
+
+export type GetAllPageContentResponse = {
+  title?: string;
+  url?: string;
+  totalPages?: number;
+  pages?: PageContentChunk[];
+  error?: string;
+};
+
 export type SetPageHashRequest = {
   type: "setPageHash";
   pageNumber?: PageNumberInput;
@@ -93,6 +110,10 @@ export type EnterTextResponse = {
 export type ContentScriptRpcSchema = {
   ping: RpcEndpoint<PingRequest, PingResponse>;
   getPageContent: RpcEndpoint<GetPageContentRequest, GetPageContentResponse>;
+  getAllPageContent: RpcEndpoint<
+    GetAllPageContentRequest,
+    GetAllPageContentResponse
+  >;
   setPageHash: RpcEndpoint<SetPageHashRequest, SetPageHashResponse>;
   clickButton: RpcEndpoint<ClickButtonRequest, ClickButtonResponse>;
   enterText: RpcEndpoint<EnterTextRequest, EnterTextResponse>;
@@ -118,6 +139,7 @@ export type ContentScriptRpcHandlerMap = RpcHandlerMap<ContentScriptRpcSchema>;
 const contentScriptRequestTypeMap: Record<ContentScriptRequestType, true> = {
   ping: true,
   getPageContent: true,
+  getAllPageContent: true,
   setPageHash: true,
   clickButton: true,
   enterText: true,

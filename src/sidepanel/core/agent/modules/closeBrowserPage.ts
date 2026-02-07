@@ -35,7 +35,7 @@ const parameters = {
         await context.closeTab(tabId);
         items.push({ tabId, ok: true });
       } catch (error) {
-        console.error(`关闭 TabID 为 ${String(tabId)} 的标签页失败`, error);
+        console.error(`关闭 Tab ID 为 ${String(tabId)} 的标签页失败`, error);
         items.push({ tabId, ok: false });
       }
     }

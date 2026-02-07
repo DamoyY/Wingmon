@@ -24,7 +24,7 @@ export const validateTabIdArgs = (args: JsonValue): { tabId: number } => {
   const record = ensureObjectArgs(args),
     rawTabId = readObjectField(record, "tabId");
   return {
-    tabId: parseRequiredPositiveInteger(rawTabId, "tabId", ToolInputError),
+    tabId: parseRequiredPositiveInteger(rawTabId, "Tab ID", ToolInputError),
   };
 };
 
@@ -34,12 +34,12 @@ export const validateTabIdListArgs = (
   const record = ensureObjectArgs(args),
     rawTabIds = readObjectField(record, "tabIds");
   if (!Array.isArray(rawTabIds) || rawTabIds.length === 0) {
-    throw new ToolInputError("tabIds 必须是非空数组");
+    throw new ToolInputError("Tab IDs 必须是非空数组");
   }
   const tabIds = rawTabIds.map((rawTabId, index) =>
     parseRequiredPositiveInteger(
       rawTabId,
-      `tabIds[${String(index)}]`,
+      `Tab IDs[${String(index)}]`,
       ToolInputError,
     ),
   );

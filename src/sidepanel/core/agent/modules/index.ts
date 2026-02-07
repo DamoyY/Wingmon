@@ -3,6 +3,7 @@ import type { ToolExecutionContext } from "../definitions.ts";
 import clickButton from "./clickButton.ts";
 import closeBrowserPage from "./closeBrowserPage.ts";
 import enterText from "./enterText.ts";
+import find from "./find.ts";
 import getPageMarkdown from "./getPageMarkdown.ts";
 import listTabs from "./listTabs.ts";
 import openBrowserPage from "./openBrowserPage.ts";
@@ -30,12 +31,13 @@ type ToolModuleEntry = {
 };
 
 const toolModules: ToolModuleEntry[] = [
-  clickButton,
-  closeBrowserPage,
-  enterText,
-  getPageMarkdown,
-  listTabs,
   openBrowserPage,
+  getPageMarkdown,
+  closeBrowserPage,
+  listTabs,
+  clickButton,
+  enterText,
+  find,
   runConsoleCommand,
   showHtml,
 ];

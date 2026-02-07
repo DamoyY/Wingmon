@@ -97,7 +97,7 @@ export const runTabAction = async <
       }
       const tabId = resolveTabId(tab);
       if (tabId === null) {
-        return { ...state, errors: [...state.errors, "标签页缺少 TabID"] };
+        return { ...state, errors: [...state.errors, "标签页缺少 Tab ID"] };
       }
       try {
         await waitForContentScript(tabId);
@@ -132,7 +132,7 @@ export const runTabAction = async <
           message = buildErrorMessage(errorValue);
         return {
           ...state,
-          errors: [...state.errors, `TabID ${String(tabId)}: ${message}`],
+          errors: [...state.errors, `Tab ID ${String(tabId)}: ${message}`],
         };
       }
     },

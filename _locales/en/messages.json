@@ -39,13 +39,34 @@
     "message": "Responding"
   },
   "statusOpenSuccess": {
-    "message": "**Opened successfully**"
+    "message": "**Open succeeded**"
   },
   "statusReadSuccess": {
-    "message": "**Readed successfully**"
+    "message": "**Read succeeded**"
   },
   "statusClickSuccess": {
-    "message": "**Clicked successfully**"
+    "message": "**Click succeeded**"
+  },
+  "statusFindSuccess": {
+    "message": "**Find succeeded**"
+  },
+  "statusFindFailed": {
+    "message": "**Find failed**"
+  },
+  "statusFindReasonLabel": {
+    "message": "Reason: "
+  },
+  "statusFindInvalidArgs": {
+    "message": "Invalid input arguments"
+  },
+  "statusFindNoMatch": {
+    "message": "(No matching results)"
+  },
+  "statusFindPageNumberLine": {
+    "message": "page_number: \"$1\""
+  },
+  "statusFindMatchedLine": {
+    "message": "- \"`$1`\""
   },
   "statusInternalToolError": {
     "message": "**Internal Tool Error**"
@@ -66,7 +87,7 @@
     "message": "Title"
   },
   "statusTabId": {
-    "message": "TabID"
+    "message": "Tab ID"
   },
   "statusContent": {
     "message": "Content"
@@ -81,7 +102,7 @@
     "message": "URL:"
   },
   "statusAlreadyExists": {
-    "message": "Failed, the same page already exists in the browser, TabID: \"$1\""
+    "message": "Failed, the same page already exists in the browser, Tab ID: \"$1\""
   },
   "statusSuccess": {
     "message": "Success"
@@ -90,10 +111,10 @@
     "message": "Failed"
   },
   "statusCloseTabSuccess": {
-    "message": "Successfully closed the tab with TabID \"$1\";"
+    "message": "Successfully closed the tab with Tab ID \"$1\";"
   },
   "statusCloseTabFailed": {
-    "message": "Failed to close the tab with TabID \"$1\";"
+    "message": "Failed to close the tab with Tab ID \"$1\";"
   },
   "statusNoTitle": {
     "message": "No Title"
@@ -123,19 +144,28 @@
     "message": "Execute console command in Sandbox Page and get results"
   },
   "toolListTabs": {
-    "message": "List the titles, URLs, and TabIDs of all tabs"
+    "message": "List the titles, URLs, and Tab IDs of all tabs"
   },
   "toolShowHtml": {
     "message": "This tool will open the input HTML in user's browser while providing download options"
   },
+  "toolFind": {
+    "message": "Find text in the specified tab"
+  },
   "toolParamFocus": {
     "message": "Whether to switch browser focus to this page"
+  },
+  "toolParamTabId": {
+    "message": "Tab ID of the page to search"
+  },
+  "toolParamQuery": {
+    "message": "Search expression with regex support (e.g. /keyword/i)"
   },
   "toolParamPageNumber": {
     "message": "When page is HTML, it represents chunk number (one chunk is approximately $1 tokens); When page is PDF, it represents page number"
   },
   "toolParamTabIdList": {
-    "message": "List of TabIDs to close"
+    "message": "List of Tab IDs to close"
   },
   "toolParamId": {
     "message": "The ID of the button to click"

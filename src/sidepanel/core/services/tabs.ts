@@ -198,7 +198,7 @@ export const createTab = (
         return;
       }
       if (typeof tab.id !== "number") {
-        reject(new Error("创建标签页失败：缺少 tab.id"));
+        reject(new Error("创建标签页失败：缺少 Tab ID"));
         return;
       }
       resolve({ ...tab, id: tab.id });
@@ -220,7 +220,7 @@ export const closeTab = (tabId: number): Promise<void> =>
 export const focusTab = (tabId: number): Promise<void> =>
   new Promise((resolve, reject) => {
     if (typeof tabId !== "number") {
-      reject(new Error("TabID 必须是数字"));
+      reject(new Error("Tab ID 必须是数字"));
       return;
     }
     chrome.tabs.get(tabId, (tab) => {
@@ -287,7 +287,7 @@ export const waitForContentScript = async (
   timeoutMs = 10000,
 ): Promise<boolean> => {
   if (!Number.isInteger(tabId) || tabId <= 0) {
-    const error = new Error("TabID 必须是正整数");
+    const error = new Error("Tab ID 必须是正整数");
     console.error(error.message);
     throw error;
   }

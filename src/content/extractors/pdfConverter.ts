@@ -19,6 +19,18 @@ type MarkdownPageContent = {
   viewportPage: number;
 };
 
+export type MarkdownPdfPage = {
+  pageNumber: number;
+  content: string;
+};
+
+export type MarkdownPdfPageCollection = {
+  title: string;
+  url: string;
+  totalPages: number;
+  pages: MarkdownPdfPage[];
+};
+
 type PdfDocument = {
   cleanup?: (keepLoadedFonts?: boolean) => Promise<void> | void;
   destroy?: () => Promise<void> | void;
@@ -103,61 +115,72 @@ const cleanupPdfDocument = async (
   }
 };
 
-const buildMarkdownContent = (
-  parsed: PdfParseResult,
-  pageNumber: number,
-): { content: string; totalPages: number } => {
+const buildMarkdownPages = (parsed: PdfParseResult): string[] => {
   if (!Array.isArray(parsed.pages) || !parsed.pages.length) {
     throw new Error("PDF 内容为空");
-  }
-  const pageIndex = pageNumber - 1;
-  if (pageIndex < 0 || pageIndex >= parsed.pages.length) {
-    throw new Error(`PDF 页码超出范围：${String(pageNumber)}`);
   }
   const transformations = makeTransformations(parsed.fonts.map);
   const parseResult = transform(
     parsed.pages,
     transformations,
   ) as TransformedPdfResult;
-  const targetPage = parseResult.pages[pageIndex];
-  if (!targetPage || !Array.isArray(targetPage.items)) {
-    throw new Error("PDF 转换结果无效");
-  }
-  const lines = targetPage.items.map((item) => {
-    if (typeof item !== "string") {
-      throw new Error("PDF 转换结果无效");
+  return parseResult.pages.map((page, pageIndex) => {
+    if (!page || !Array.isArray(page.items)) {
+      throw new Error(`PDF 转换结果无效：第 ${String(pageIndex + 1)} 页`);
     }
-    return item;
+    const lines = page.items.map((item) => {
+      if (typeof item !== "string") {
+        throw new Error(`PDF 转换结果无效：第 ${String(pageIndex + 1)} 页`);
+      }
+      return item;
+    });
+    return `${lines.join("\n")}\n`;
   });
-  return {
-    content: `${lines.join("\n")}\n`,
-    totalPages: parsed.pages.length,
-  };
 };
 
-const convertPdfToMarkdown = async (
+export const convertPdfToMarkdownPages = async (
   pageData: PageContentData | null = null,
-): Promise<MarkdownPageContent> => {
+): Promise<MarkdownPdfPageCollection> => {
   const url = resolveUrl(pageData),
     title = resolveTitle(pageData),
-    pageNumber = resolvePageNumber(pageData),
     pdfBytes = await fetchPdfBytes(url);
   let pdfDocument: PdfDocument | null = null;
   try {
     const parsed = (await parse(pdfBytes)) as PdfParseResult;
     pdfDocument = parsed.pdfDocument ?? null;
-    const { content, totalPages } = buildMarkdownContent(parsed, pageNumber);
+    const pageContents = buildMarkdownPages(parsed);
     return {
       title,
       url,
-      content,
-      totalPages,
-      pageNumber,
-      viewportPage: pageNumber,
+      totalPages: pageContents.length,
+      pages: pageContents.map((content, index) => ({
+        pageNumber: index + 1,
+        content,
+      })),
     };
   } finally {
     await cleanupPdfDocument(pdfDocument);
   }
+};
+
+const convertPdfToMarkdown = async (
+  pageData: PageContentData | null = null,
+): Promise<MarkdownPageContent> => {
+  const pageCollection = await convertPdfToMarkdownPages(pageData),
+    pageNumber = resolvePageNumber(pageData),
+    pageIndex = pageNumber - 1,
+    targetPage = pageCollection.pages[pageIndex];
+  if (pageIndex < 0 || pageIndex >= pageCollection.totalPages) {
+    throw new Error(`PDF 页码超出范围：${String(pageNumber)}`);
+  }
+  return {
+    title: pageCollection.title,
+    url: pageCollection.url,
+    content: targetPage.content,
+    totalPages: pageCollection.totalPages,
+    pageNumber: targetPage.pageNumber,
+    viewportPage: targetPage.pageNumber,
+  };
 };
 
 export default convertPdfToMarkdown;

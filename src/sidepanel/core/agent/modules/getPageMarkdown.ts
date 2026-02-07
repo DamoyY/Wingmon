@@ -68,7 +68,7 @@ const parameters = {
     const tabs: BrowserTab[] = await context.getAllTabs(),
       targetTab = tabs.find((tab) => tab.id === tabId);
     if (!targetTab) {
-      throw new Error(`未找到 TabID 为 ${String(tabId)} 的标签页`);
+      throw new Error(`未找到 Tab ID 为 ${String(tabId)} 的标签页`);
     }
     if (typeof targetTab.url !== "string" || !targetTab.url.trim()) {
       throw new Error("标签页缺少 URL");

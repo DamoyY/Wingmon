@@ -40,7 +40,7 @@ type ExecuteGetPageToolCallPayload = {
 
 const resolveTabId = (activeTab: BrowserTab): number => {
     if (typeof activeTab.id !== "number") {
-      throw new Error("活动标签页缺少 TabID");
+      throw new Error("活动标签页缺少 Tab ID");
     }
     return activeTab.id;
   },

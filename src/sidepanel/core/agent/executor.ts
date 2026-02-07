@@ -259,6 +259,7 @@ const buildToolMessage = ({
         message: errorMessage,
         isInputError,
         isCloseTool: name === toolNames.closeBrowserPage,
+        isFindTool: name === toolNames.find,
       });
     }
     if (!callId || !name) {

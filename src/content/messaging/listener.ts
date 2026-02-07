@@ -1,6 +1,7 @@
 import {
   handleClickButton,
   handleEnterText,
+  handleGetAllPageContent,
   handleGetPageContent,
   handleSetPageHash,
 } from "../handlers/index.js";
@@ -33,6 +34,9 @@ const resolveErrorMessage = (error: unknown, fallback = "未知错误"): string 
     },
     getPageContent: (message, sendResponse) => {
       return handleGetPageContent(message, sendResponse);
+    },
+    getAllPageContent: (message, sendResponse) => {
+      return handleGetAllPageContent(message, sendResponse);
     },
     setPageHash: (message, sendResponse): void => {
       handleSetPageHash(message, sendResponse);

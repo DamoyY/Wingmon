@@ -107,8 +107,8 @@ After obtaining URLs of high-value pages, open those pages and read their conten
 ```
 {user-agent}
 ```
-## TabID of the tab currently viewed by the user:
-"{focus-tabid}"
+## Tab ID of the tab currently viewed by the user:
+"{focus-tabId}"
 
 ---
 

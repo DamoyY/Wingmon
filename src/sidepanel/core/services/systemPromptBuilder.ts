@@ -46,7 +46,7 @@ const loadSystemPrompt = (language: string): string => {
   resolveFocusTabId = async (): Promise<string> => {
     const activeTab = await getActiveTab();
     if (typeof activeTab.id !== "number") {
-      throw new Error("无法获取当前标签页 TabID");
+      throw new Error("无法获取当前标签页 Tab ID");
     }
     return String(activeTab.id);
   },
@@ -58,9 +58,9 @@ const loadSystemPrompt = (language: string): string => {
     if (output.includes("{user-agent}")) {
       output = output.replaceAll("{user-agent}", resolveUserAgent());
     }
-    if (output.includes("{focus-tabid}")) {
+    if (output.includes("{focus-tabId}")) {
       const tabId = await resolveFocusTabId();
-      output = output.replaceAll("{focus-tabid}", tabId);
+      output = output.replaceAll("{focus-tabId}", tabId);
     }
     return output;
   },

@@ -83,7 +83,7 @@ const parameters = {
       matchedTab = normalizedTabs.find((tab) => tab.normalizedUrl === url);
     if (matchedTab) {
       if (typeof matchedTab.id !== "number") {
-        throw new Error("标签页缺少 TabID");
+        throw new Error("标签页缺少 Tab ID");
       }
       if (shouldFocus) {
         await context.focusTab(matchedTab.id);

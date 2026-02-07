@@ -97,6 +97,7 @@ const STATUS_DOT_INTERVAL_MS = 360,
   STATUS_DOT_COUNT_MAX = 3,
   TOOL_STATUS_MAP: Record<string, StatusKey> = {
     get_page: STATUS_KEYS.browsing,
+    find: STATUS_KEYS.searching,
     list_tabs: STATUS_KEYS.browsing,
     click_button: STATUS_KEYS.operating,
     enter_text: STATUS_KEYS.operating,

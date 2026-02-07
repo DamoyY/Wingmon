@@ -5,6 +5,7 @@ import type {
   ClickButtonToolResult,
   CloseBrowserPageToolResult,
   EnterTextToolResult,
+  FindToolResult,
   GetPageMarkdownToolResult,
   OpenBrowserPageToolResult,
   PageReadToolResult,
@@ -65,7 +66,7 @@ const resolveOptionalTrimmedString = (value: string): string | undefined => {
 const resolvePageReadResult = (
   result: PageReadToolResult,
 ): NormalizedPageReadResult => ({
-  tabId: resolvePositiveInteger(result.tabId, "tabId"),
+  tabId: resolvePositiveInteger(result.tabId, "Tab ID"),
   title: resolveString(result.title, "title"),
   url: resolveString(result.url, "url"),
   content: resolveString(result.content, "content"),
@@ -237,6 +238,38 @@ export const formatClickButtonResult = (
   });
 };
 
+export const formatFindResult = (result: FindToolResult): string => {
+  if (!Array.isArray(result.pages)) {
+    throw new Error("find 响应 pages 字段无效");
+  }
+  if (!result.pages.length) {
+    return `${t("statusFindSuccess")}\n\n${t("statusFindNoMatch")}`;
+  }
+  const pageBlocks = result.pages.map((page, pageIndex) => {
+    const pageNumber = resolvePositiveInteger(
+      page.pageNumber,
+      `pages[${String(pageIndex)}].pageNumber`,
+    );
+    if (!Array.isArray(page.lines) || !page.lines.length) {
+      throw new Error(`pages[${String(pageIndex)}].lines 必须是非空数组`);
+    }
+    const lines = page.lines.map((line, lineIndex) => {
+      const normalizedLine = resolveString(
+        line,
+        `pages[${String(pageIndex)}].lines[${String(lineIndex)}]`,
+      ).trim();
+      if (!normalizedLine) {
+        throw new Error(
+          `pages[${String(pageIndex)}].lines[${String(lineIndex)}] 不能为空`,
+        );
+      }
+      return t("statusFindMatchedLine", [normalizedLine]);
+    });
+    return `${t("statusFindPageNumberLine", [String(pageNumber)])}\n${lines.join("\n")}`;
+  });
+  return `${t("statusFindSuccess")}\n\n${pageBlocks.join("\n\n")}`;
+};
+
 export const formatEnterTextResult = (result: EnterTextToolResult): string => {
   return resolveBoolean(result.ok, "ok")
     ? t("statusSuccess")
@@ -251,7 +284,7 @@ export const formatCloseBrowserPageResult = (
   }
   return result.items
     .map((item) => {
-      const tabId = resolvePositiveInteger(item.tabId, "tabId");
+      const tabId = resolvePositiveInteger(item.tabId, "Tab ID");
       const ok = resolveBoolean(item.ok, "ok");
       if (ok) {
         return t("statusCloseTabSuccess", [String(tabId)]);
