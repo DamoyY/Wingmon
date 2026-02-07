@@ -78,21 +78,24 @@ type StatusTracker = {
   reset: () => void;
   setInitial: () => void;
   updateFromChunk: (chunk: RequestChunk) => void;
+  dispose: () => void;
 };
 
 const STATUS_KEYS = {
-    thinking: "statusThinking",
-    searching: "statusSearching",
-    browsing: "statusBrowsing",
-    operating: "statusOperating",
-    coding: "statusCoding",
-    speaking: "statusSpeaking",
-    idle: "",
-  } as const,
-  TOOL_STATUS_MAP: Record<
-    string,
-    (typeof STATUS_KEYS)[keyof typeof STATUS_KEYS]
-  > = {
+  thinking: "statusThinking",
+  searching: "statusSearching",
+  browsing: "statusBrowsing",
+  operating: "statusOperating",
+  coding: "statusCoding",
+  speaking: "statusSpeaking",
+  idle: "",
+} as const;
+
+type StatusKey = (typeof STATUS_KEYS)[keyof typeof STATUS_KEYS];
+
+const STATUS_DOT_INTERVAL_MS = 360,
+  STATUS_DOT_COUNT_MAX = 3,
+  TOOL_STATUS_MAP: Record<string, StatusKey> = {
     get_page: STATUS_KEYS.browsing,
     list_tabs: STATUS_KEYS.browsing,
     click_button: STATUS_KEYS.operating,
@@ -197,9 +200,19 @@ const createAbortError = (): Error => {
     }
     return reporter;
   },
-  getStatusText = (
-    statusKey: (typeof STATUS_KEYS)[keyof typeof STATUS_KEYS],
-  ): string => (statusKey ? t(statusKey) : ""),
+  buildAnimatedStatusText = (
+    statusKey: StatusKey,
+    dotCount: number,
+  ): string => {
+    if (!statusKey) {
+      return "";
+    }
+    const baseText = t(statusKey).trimEnd();
+    if (!baseText) {
+      return "";
+    }
+    return `${baseText}${".".repeat(dotCount)}`;
+  },
   getToolCallName = (call: ToolCall): string =>
     call.function?.name ?? call.name ?? "",
   getToolCallArguments = (call: ToolCall): string => {
@@ -208,9 +221,9 @@ const createAbortError = (): Error => {
   },
   isGoogleSearchOpen = (argsText: string): boolean =>
     argsText.includes("https://www.google.com/search"),
-  resolveStatusFromToolCalls = (toolCalls: ToolCall[]): string => {
+  resolveStatusFromToolCalls = (toolCalls: ToolCall[]): StatusKey => {
     if (!toolCalls.length) {
-      return "";
+      return STATUS_KEYS.idle;
     }
     for (const call of toolCalls) {
       const name = getToolCallName(call);
@@ -219,27 +232,27 @@ const createAbortError = (): Error => {
       }
       if (name === "open_page") {
         return isGoogleSearchOpen(getToolCallArguments(call))
-          ? getStatusText(STATUS_KEYS.searching)
-          : getStatusText(STATUS_KEYS.browsing);
+          ? STATUS_KEYS.searching
+          : STATUS_KEYS.browsing;
       }
       const mapped = TOOL_STATUS_MAP[name];
       if (mapped) {
-        return getStatusText(mapped);
+        return mapped;
       }
     }
-    return "";
+    return STATUS_KEYS.idle;
   },
-  resolveStatusFromChunk = ({ delta, toolCalls }: RequestChunk): string => {
+  resolveStatusFromChunk = ({ delta, toolCalls }: RequestChunk): StatusKey => {
     const toolStatus = resolveStatusFromToolCalls(
       normalizeToolCalls(toolCalls),
     );
-    if (toolStatus) {
+    if (toolStatus !== STATUS_KEYS.idle) {
       return toolStatus;
     }
     if (typeof delta === "string" && delta.length > 0) {
-      return getStatusText(STATUS_KEYS.speaking);
+      return STATUS_KEYS.speaking;
     }
-    return "";
+    return STATUS_KEYS.idle;
   },
   resolvePendingAssistantIndex = (
     assistantIndex: number | null,
@@ -254,26 +267,76 @@ const createAbortError = (): Error => {
     return assistantIndex;
   },
   createStatusTracker = (reportStatus: StatusReporter): StatusTracker => {
-    let lastStatus = getStatusText(STATUS_KEYS.idle);
-    const setStatus = (nextStatus: string): void => {
-      if (nextStatus === lastStatus) {
-        return;
-      }
-      lastStatus = nextStatus;
-      reportStatus(nextStatus);
-    };
+    let activeStatusKey: StatusKey = STATUS_KEYS.idle,
+      lastRenderedStatus = "",
+      dotCount = 0,
+      dotTimer: ReturnType<typeof setInterval> | null = null;
+    const reportIfChanged = (nextStatus: string): void => {
+        if (nextStatus === lastRenderedStatus) {
+          return;
+        }
+        lastRenderedStatus = nextStatus;
+        reportStatus(nextStatus);
+      },
+      stopDotTimer = (): void => {
+        if (dotTimer === null) {
+          return;
+        }
+        clearInterval(dotTimer);
+        dotTimer = null;
+      },
+      updateAnimatedStatus = (): void => {
+        if (!activeStatusKey) {
+          reportIfChanged("");
+          return;
+        }
+        dotCount = (dotCount % STATUS_DOT_COUNT_MAX) + 1;
+        reportIfChanged(buildAnimatedStatusText(activeStatusKey, dotCount));
+      },
+      startDotTimer = (): void => {
+        if (!activeStatusKey || dotTimer !== null) {
+          return;
+        }
+        dotTimer = setInterval(() => {
+          updateAnimatedStatus();
+        }, STATUS_DOT_INTERVAL_MS);
+      },
+      setStatusKey = (statusKey: StatusKey): void => {
+        if (statusKey === activeStatusKey) {
+          return;
+        }
+        stopDotTimer();
+        activeStatusKey = statusKey;
+        dotCount = 0;
+        if (!statusKey) {
+          reportIfChanged("");
+          return;
+        }
+        updateAnimatedStatus();
+        startDotTimer();
+      };
     return {
       reset: (): void => {
-        lastStatus = getStatusText(STATUS_KEYS.idle);
+        stopDotTimer();
+        activeStatusKey = STATUS_KEYS.idle;
+        dotCount = 0;
+        lastRenderedStatus = "";
       },
       setInitial: (): void => {
-        setStatus(getStatusText(STATUS_KEYS.thinking));
+        setStatusKey(STATUS_KEYS.thinking);
       },
       updateFromChunk: (chunk: RequestChunk): void => {
         const resolved = resolveStatusFromChunk(chunk);
-        if (resolved) {
-          setStatus(resolved);
+        if (resolved === STATUS_KEYS.idle) {
+          return;
         }
+        setStatusKey(resolved);
+      },
+      dispose: (): void => {
+        stopDotTimer();
+        activeStatusKey = STATUS_KEYS.idle;
+        dotCount = 0;
+        lastRenderedStatus = "";
       },
     };
   },
@@ -385,7 +448,11 @@ const createAbortError = (): Error => {
       finalizeToolCallAssistant();
       yield* requestNext({ assistantIndex });
     };
-    yield* requestNext({ assistantIndex: initialAssistantIndex });
+    try {
+      yield* requestNext({ assistantIndex: initialAssistantIndex });
+    } finally {
+      statusTracker.dispose();
+    }
   };
 
 export default createResponseStream;

@@ -11,5 +11,6 @@ export {
 export {
   setComposerSending,
   clearPromptInput,
+  focusPromptInput,
   updateComposerButtonsState,
 } from "./composerView.ts";

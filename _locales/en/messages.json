@@ -21,22 +21,22 @@
     "message": "Invalid status reporter"
   },
   "statusThinking": {
-    "message": "Thinking..."
+    "message": "Thinking"
   },
   "statusSearching": {
-    "message": "Searching..."
+    "message": "Searching"
   },
   "statusBrowsing": {
-    "message": "Browsing..."
+    "message": "Browsing"
   },
   "statusOperating": {
-    "message": "Operating..."
+    "message": "Operating"
   },
   "statusCoding": {
-    "message": "Coding..."
+    "message": "Coding"
   },
   "statusSpeaking": {
-    "message": "Responding..."
+    "message": "Responding"
   },
   "statusOpenSuccess": {
     "message": "**Opened successfully**"

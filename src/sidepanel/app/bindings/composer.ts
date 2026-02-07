@@ -1,6 +1,7 @@
 import { elements } from "../../ui/index.ts";
 import {
   createPromptKeydownHandler,
+  focusPromptInput,
   handleNewChat,
   handlePromptInput,
 } from "../../features/chat/index.ts";
@@ -21,9 +22,11 @@ const bindComposerEvents = (): void => {
     handlePromptKeydown = createPromptKeydownHandler(sendMessage);
   sendButton.addEventListener("click", () => {
     void sendMessage();
+    focusPromptInput();
   });
   sendWithPageButton.addEventListener("click", () => {
     void sendMessageWithPage();
+    focusPromptInput();
   });
   stopButton.addEventListener("click", () => {
     void stopSending();

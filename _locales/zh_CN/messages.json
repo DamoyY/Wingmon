@@ -21,22 +21,22 @@
     "message": "状态回调无效"
   },
   "statusThinking": {
-    "message": "思索中..."
+    "message": "思索中"
   },
   "statusSearching": {
-    "message": "搜索中..."
+    "message": "搜索中"
   },
   "statusBrowsing": {
-    "message": "浏览中..."
+    "message": "浏览中"
   },
   "statusOperating": {
-    "message": "操作中..."
+    "message": "操作中"
   },
   "statusCoding": {
-    "message": "编码中..."
+    "message": "编码中"
   },
   "statusSpeaking": {
-    "message": "表达中..."
+    "message": "表达中"
   },
   "statusOpenSuccess": {
     "message": "**打开成功**"

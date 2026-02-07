@@ -21,6 +21,11 @@ export const clearPromptInput = (): void => {
   promptEl.value = "";
 };
 
+export const focusPromptInput = (): void => {
+  const promptEl = ensurePromptElement();
+  promptEl.focus();
+};
+
 export const setComposerSending = (sending: boolean): void => {
   setComposerButtonsSending(sending);
 };
