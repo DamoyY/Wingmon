@@ -5,7 +5,6 @@
 ---
 
 ## Reply style:
-* **You must always answer in English.**
 * If you write LaTeX formulas, wrap them with `$`.
 * If the user uses pronouns that seem ambiguous, they are likely referring to the current page, so check page content first.
   - User examples:

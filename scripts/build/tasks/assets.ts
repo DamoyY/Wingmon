@@ -14,6 +14,11 @@ import {
   type FlatCopyProcessor,
 } from "../transformers/index.ts";
 
+const nonCopyExtensions = new Set([".ts", ".tsx", ".md"]);
+
+const shouldSkipByExtension = (fileName: string): boolean =>
+  nonCopyExtensions.has(path.extname(fileName).toLowerCase());
+
 export const copyDir = async (
   source: string,
   target: string,
@@ -29,8 +34,7 @@ export const copyDir = async (
         return;
       }
       if (entry.isFile()) {
-        const ext = path.extname(entry.name);
-        if (ext === ".ts" || ext === ".tsx") {
+        if (shouldSkipByExtension(entry.name)) {
           return;
         }
         if (await shouldCopyFile(sourcePath, targetPath)) {
@@ -57,13 +61,10 @@ export const copyDirFlat = async (
       if (!entry.isFile()) {
         return;
       }
-      if (entry.name === "system_prompt.md") {
+      if (shouldSkipByExtension(entry.name)) {
         return;
       }
-      const ext = path.extname(entry.name);
-      if (ext === ".ts" || ext === ".tsx") {
-        return;
-      }
+      const ext = path.extname(entry.name).toLowerCase();
       const targetPath = path.join(target, entry.name);
       ensureFlattenTarget(targetPath, sourcePath);
       const action = await resolveFlatCopyAction(
