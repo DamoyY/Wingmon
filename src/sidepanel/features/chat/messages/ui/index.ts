@@ -5,7 +5,7 @@ export {
   fadeOutMessages,
   resetMessagesFade,
 } from "./animations.ts";
-export { default as renderMessageContent } from "./contentRenderer.js";
+export { default as renderMessageContent } from "./contentRenderer.ts";
 export {
   normalizeIndices,
   resolveIndicesKey,

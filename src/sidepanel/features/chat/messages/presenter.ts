@@ -9,17 +9,13 @@ import {
   renderMessages,
   updateLastAssistantMessage,
 } from "../../../ui/index.ts";
-import createMessageActionHandlers from "./actions.ts";
+import createMessageActionHandlers, {
+  type MessageActionHandlers,
+} from "./actions.ts";
 import {
   buildDisplayMessages,
   type DisplayMessage,
 } from "./displayMessages.ts";
-
-type MessageActionHandlers = {
-  onCopy?: (indices: number[]) => Promise<void> | void;
-  onDelete?: (indices: number[]) => Promise<void> | void;
-  onError?: (error: unknown) => void;
-};
 
 type RenderMessagesOptions = {
   animateIndices?: number[];
@@ -30,25 +26,6 @@ type MessagesStateChange = StateChangePayload<"messages"> & {
   index?: number;
   message?: MessageRecord;
 };
-
-const renderMessagesSafe = renderMessages as (
-  displayMessages: DisplayMessage[],
-  handlers: MessageActionHandlers,
-  options?: RenderMessagesOptions,
-) => void;
-
-const updateLastAssistantMessageSafe = updateLastAssistantMessage as (
-  message: DisplayMessage | null | undefined,
-) => boolean;
-
-const animateMessageRemovalSafe = animateMessageRemoval as (
-  indices: number[],
-) => Promise<boolean> | boolean;
-
-const createMessageActionHandlersSafe = createMessageActionHandlers as (
-  refreshMessages: () => void,
-  animateRemoval: (indices: number[]) => Promise<boolean> | boolean,
-) => MessageActionHandlers;
 
 let actionHandlers: MessageActionHandlers | null = null;
 let unsubscribeMessages: (() => void) | null = null;
@@ -74,19 +51,19 @@ const buildMessagesForView = (): DisplayMessage[] =>
     if (!actionHandlers) {
       throw new Error("消息操作处理器尚未初始化");
     }
-    renderMessagesSafe(buildMessagesForView(), actionHandlers);
+    renderMessages(buildMessagesForView(), actionHandlers);
   },
   ensureActionHandlers = (): MessageActionHandlers => {
     if (!actionHandlers) {
-      actionHandlers = createMessageActionHandlersSafe(
+      actionHandlers = createMessageActionHandlers(
         refreshMessages,
-        animateMessageRemovalSafe,
+        animateMessageRemoval,
       );
     }
     return actionHandlers;
   },
   renderMessagesFromState = (options?: RenderMessagesOptions): void => {
-    renderMessagesSafe(buildMessagesForView(), ensureActionHandlers(), options);
+    renderMessages(buildMessagesForView(), ensureActionHandlers(), options);
   },
   isInLastAssistantGroup = (index: number): boolean => {
     if (!Number.isInteger(index) || index < 0) {
@@ -140,7 +117,10 @@ const buildMessagesForView = (): DisplayMessage[] =>
           for (let i = changeIndex - 1; i >= 0; i -= 1) {
             const message = state.messages[i];
             if (!message.hidden) {
-              return message.role ?? null;
+              if (typeof message.role === "string") {
+                return message.role;
+              }
+              return null;
             }
           }
           return null;
@@ -165,12 +145,15 @@ const buildMessagesForView = (): DisplayMessage[] =>
       isInLastAssistantGroup(changeIndex)
     ) {
       const displayMessages = buildMessagesForView();
-      const lastEntry = displayMessages.at(-1);
-      const updated = updateLastAssistantMessageSafe(lastEntry);
+      const lastEntry =
+        displayMessages.length > 0
+          ? displayMessages[displayMessages.length - 1]
+          : null;
+      const updated = updateLastAssistantMessage(lastEntry);
       if (updated) {
         return;
       }
-      renderMessagesSafe(displayMessages, ensureActionHandlers());
+      renderMessages(displayMessages, ensureActionHandlers());
       return;
     }
     renderMessagesFromState();

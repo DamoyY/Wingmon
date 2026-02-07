@@ -1,32 +1,17 @@
-import renderMessageContent from "./contentRenderer.js";
+import renderMessageContent from "./contentRenderer.ts";
 import { animateMessageRowEnter } from "./animations.ts";
 import {
   requireElementById,
   resolveIndicesKey,
+  t,
 } from "../../../../lib/utils/index.ts";
 import { applyMessageHeadingTypography } from "../../../../ui/theme/typography.ts";
-import { t } from "../../../../lib/utils/index.ts";
 import type { DisplayMessage } from "../displayMessages.ts";
-
-type RenderedContent = { html: string; text: string };
-
-const renderMessageContentSafe = renderMessageContent as (
-  content: string,
-  options?: { decorateContainer?: (container: HTMLElement) => void },
-) => RenderedContent;
-const animateMessageRowEnterSafe = animateMessageRowEnter as (
-  row: HTMLElement,
-) => void;
+import type { MessageActionHandlers } from "../actions.ts";
 
 type MessageActionHandler = (indices: number[]) => Promise<void> | void;
 
-type MessageErrorHandler = (error: unknown) => void;
-
-type MessageActionHandlers = {
-  onCopy?: MessageActionHandler;
-  onDelete?: MessageActionHandler;
-  onError?: MessageErrorHandler;
-};
+type MessageErrorHandler = (error: Error) => void;
 
 type ActionButtonConfig = {
   icon: string;
@@ -35,7 +20,7 @@ type ActionButtonConfig = {
   onClick: () => Promise<void> | void;
 };
 
-type RenderOptions = {
+export type RenderOptions = {
   animateIndices?: number[];
 };
 
@@ -55,24 +40,28 @@ const requireMessagesElement = (): HTMLElement =>
       "空状态容器未找到",
     ).classList.toggle("is-visible", visible);
   },
-  ensureActionHandler = (
-    handler: unknown,
-    label: string,
-  ): MessageActionHandler => {
-    if (typeof handler !== "function") {
-      throw new Error(`消息操作处理器缺失：${label}`);
+  resolveActionError = (error: unknown): Error => {
+    if (error instanceof Error) {
+      return error;
     }
-    return handler as MessageActionHandler;
-  },
-  ensureErrorHandler = (
-    handler: unknown,
-    label: string,
-  ): MessageErrorHandler => {
-    if (typeof handler !== "function") {
-      throw new Error(`消息操作处理器缺失：${label}`);
+    if (typeof error === "string" && error.trim()) {
+      return new Error(error);
     }
-    return handler as MessageErrorHandler;
+    return new Error(t("actionFailed"));
   },
+  toActionHandler =
+    (
+      handler:
+        | MessageActionHandlers["onCopy"]
+        | MessageActionHandlers["onDelete"],
+    ): MessageActionHandler =>
+    (indices: number[]) =>
+      handler(indices),
+  toErrorHandler =
+    (handler: MessageActionHandlers["onError"]): MessageErrorHandler =>
+    (error: Error) => {
+      handler(error);
+    },
   runAction = async (
     handler: MessageActionHandler,
     indices: number[],
@@ -81,7 +70,7 @@ const requireMessagesElement = (): HTMLElement =>
     try {
       await handler(indices);
     } catch (error) {
-      onError(error);
+      onError(resolveActionError(error));
     }
   },
   createActionButton = ({
@@ -110,9 +99,9 @@ const requireMessagesElement = (): HTMLElement =>
     if (!Array.isArray(indices) || indices.length === 0) {
       throw new Error("消息索引无效");
     }
-    const onCopy = ensureActionHandler(handlers.onCopy, t("copy")),
-      onDelete = ensureActionHandler(handlers.onDelete, t("delete")),
-      onError = ensureErrorHandler(handlers.onError, t("error")),
+    const onCopy = toActionHandler(handlers.onCopy),
+      onDelete = toActionHandler(handlers.onDelete),
+      onError = toErrorHandler(handlers.onError),
       actions = document.createElement("div");
     actions.className = "message-actions";
     const copyButton = createActionButton({
@@ -135,7 +124,7 @@ const requireMessagesElement = (): HTMLElement =>
   createMessageContent = (content: string, role: string): HTMLDivElement => {
     const body = document.createElement("div");
     body.className = `message-content ${resolveMessageContentTypescaleClass(role)}`;
-    const { html, text } = renderMessageContentSafe(content, {
+    const { html, text } = renderMessageContent(content, {
       decorateContainer: applyMessageHeadingTypography,
     });
     body.innerHTML = html;
@@ -181,7 +170,9 @@ const requireMessagesElement = (): HTMLElement =>
       nodes: Text[] = [];
     let current = walker.nextNode();
     while (current) {
-      nodes.push(current as Text);
+      if (current instanceof Text) {
+        nodes.push(current);
+      }
       current = walker.nextNode();
     }
     let remaining = length;
@@ -234,12 +225,9 @@ const resolvePendingAnimateKey = (now: number): string | null => {
 
 export const renderMessages = (
   displayMessages: DisplayMessage[],
-  handlers: MessageActionHandlers | null | undefined,
+  handlers: MessageActionHandlers,
   options: RenderOptions = {},
 ): void => {
-  if (!handlers || typeof handlers !== "object") {
-    throw new Error("消息操作处理器缺失");
-  }
   const messagesEl = requireMessagesElement();
   let hasVisibleMessages = false;
   const now = Date.now();
@@ -287,7 +275,7 @@ export const renderMessages = (
   }
   messagesEl.scrollTop = messagesEl.scrollHeight;
   rowsToAnimate.forEach((row) => {
-    animateMessageRowEnterSafe(row);
+    animateMessageRowEnter(row);
   });
   const button = requireNewChatButton();
   button.classList.toggle("hidden", !hasVisibleMessages);
@@ -295,7 +283,7 @@ export const renderMessages = (
 };
 
 export const updateLastAssistantMessage = (
-  message: DisplayMessage | null | undefined,
+  message: DisplayMessage | null,
 ): boolean => {
   const messagesEl = requireMessagesElement();
   if (!message || message.role !== "assistant") {
@@ -306,12 +294,12 @@ export const updateLastAssistantMessage = (
     return false;
   }
   const contentEl = lastEl.querySelector(".message-content");
-  if (!contentEl) {
+  if (!(contentEl instanceof HTMLElement)) {
     return false;
   }
   const previousRenderedText =
       contentEl.getAttribute("data-rendered-text") ?? "",
-    { html, text } = renderMessageContentSafe(message.content, {
+    { html, text } = renderMessageContent(message.content, {
       decorateContainer: applyMessageHeadingTypography,
     });
   contentEl.innerHTML = html;

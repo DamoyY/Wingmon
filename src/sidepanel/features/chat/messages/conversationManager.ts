@@ -1,6 +1,5 @@
 import {
   addMessage,
-  type MessageRecord,
   removeMessage,
   setStateValue,
   state,
@@ -12,59 +11,15 @@ import {
   type Settings,
 } from "../../../core/services/index.ts";
 import { ensureSettingsReady } from "../../settings/model.ts";
-import appendSharedPageContext from "./pageContext.js";
-import createResponseStream from "./requestCycle.js";
+import appendSharedPageContext from "./pageContext.ts";
+import createResponseStream, {
+  type ResponseStreamChunk,
+} from "./requestCycle.ts";
 import { createRandomId } from "../../../lib/utils/index.ts";
 import {
   applyNonStreamedResponse,
   applyStreamedResponse,
-} from "./responseHandlers.js";
-
-type JsonPrimitive = string | number | boolean | null;
-type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
-type JsonObject = { [key: string]: JsonValue };
-
-type ResponseStreamChunk = {
-  toolCalls: JsonObject[];
-  reply: string;
-  streamed: boolean;
-  assistantIndex: number | null;
-};
-
-type ResponseStreamFactory = (payload: {
-  settings: Settings;
-  signal: AbortSignal;
-  onStatus: (status: string) => void;
-  assistantIndex: number | null;
-}) => AsyncGenerator<ResponseStreamChunk>;
-
-type PageContextAppender = (payload: { signal: AbortSignal }) => Promise<void>;
-
-type SaveConversation = (
-  conversationId: string,
-  messages: MessageRecord[],
-  updatedAt: number,
-) => Promise<void>;
-
-type ApplyStreamedResponse = (
-  toolCalls: JsonObject[],
-  assistantIndex: number | null,
-) => void;
-
-type ApplyNonStreamedResponse = (
-  reply: string,
-  toolCalls: JsonObject[],
-  assistantIndex: number | null,
-) => void;
-
-const createResponseStreamSafe = createResponseStream as ResponseStreamFactory;
-const appendSharedPageContextSafe =
-  appendSharedPageContext as PageContextAppender;
-const saveConversationSafe = saveConversation as SaveConversation;
-const applyStreamedResponseSafe =
-  applyStreamedResponse as ApplyStreamedResponse;
-const applyNonStreamedResponseSafe =
-  applyNonStreamedResponse as ApplyNonStreamedResponse;
+} from "./responseHandlers.ts";
 
 type ConversationManagerEvent =
   | { type: "sending-change"; sending: boolean }
@@ -74,14 +29,10 @@ type ConversationManagerEvent =
 
 type ConversationManagerListener = (event: ConversationManagerEvent) => void;
 
-type ErrorLike =
-  | Error
-  | {
-      name?: string;
-      message?: string;
-    }
-  | null
-  | undefined;
+type ErrorDescriptor = {
+  name: string;
+  message: string;
+};
 
 type SendMessagePayload = {
   content: string;
@@ -116,14 +67,29 @@ const ensureNotAborted = (signal: AbortSignal): void => {
     }
     return null;
   },
-  isAbortError = (error: ErrorLike): boolean => {
-    if (!error) {
-      return false;
+  resolveErrorDescriptor = (error: unknown): ErrorDescriptor => {
+    if (error instanceof Error) {
+      return {
+        name: error.name,
+        message: error.message,
+      };
     }
+    if (typeof error === "string" && error.trim()) {
+      return {
+        name: "Error",
+        message: error,
+      };
+    }
+    return {
+      name: "Error",
+      message: "",
+    };
+  },
+  isAbortError = (error: ErrorDescriptor): boolean => {
     if (error.name === "AbortError") {
       return true;
     }
-    if (typeof error.message === "string" && error.message === "已停止") {
+    if (error.message === "已停止") {
       return true;
     }
     return false;
@@ -168,7 +134,7 @@ const ensureNotAborted = (signal: AbortSignal): void => {
       return;
     }
     touchUpdatedAt();
-    await saveConversationSafe(
+    await saveConversation(
       state.conversationId,
       state.messages,
       state.updatedAt,
@@ -243,7 +209,7 @@ export class ConversationManager {
       await saveCurrentConversation();
       ensureNotAborted(abortController.signal);
       if (includePage) {
-        await appendSharedPageContextSafe({ signal: abortController.signal });
+        await appendSharedPageContext({ signal: abortController.signal });
       }
       ensureNotAborted(abortController.signal);
       addMessage({
@@ -253,17 +219,17 @@ export class ConversationManager {
         groupId: createRandomId("assistant"),
       });
       pendingAssistantIndex = state.messages.length - 1;
-      const responseStream = createResponseStreamSafe({
+      const responseStream = createResponseStream({
         settings,
         signal: abortController.signal,
-        onStatus: (status) => {
+        onStatus: (status: string) => {
           this.#emitStatus(status);
         },
         assistantIndex: pendingAssistantIndex,
       });
       let response = await responseStream.next();
       while (!response.done) {
-        const value = response.value;
+        const value: ResponseStreamChunk = response.value;
         if (
           value.assistantIndex !== null &&
           Number.isInteger(value.assistantIndex)
@@ -271,9 +237,9 @@ export class ConversationManager {
           pendingAssistantIndex = value.assistantIndex;
         }
         if (value.streamed) {
-          applyStreamedResponseSafe(value.toolCalls, value.assistantIndex);
+          applyStreamedResponse(value.toolCalls, value.assistantIndex);
         } else {
-          applyNonStreamedResponseSafe(
+          applyNonStreamedResponse(
             value.reply,
             value.toolCalls,
             value.assistantIndex,
@@ -284,7 +250,7 @@ export class ConversationManager {
       this.#emitStatus("");
       await saveCurrentConversation();
     } catch (error) {
-      const resolvedError = error as ErrorLike;
+      const resolvedError = resolveErrorDescriptor(error);
       if (isAbortError(resolvedError)) {
         clearPendingAssistant(pendingAssistantIndex);
         this.#emitStatus("");
@@ -295,7 +261,7 @@ export class ConversationManager {
         }
         return;
       }
-      console.error(resolvedError?.message || "请求失败");
+      console.error(resolvedError.message || "请求失败");
       clearPendingAssistant(pendingAssistantIndex);
       this.#emitStatus("");
       try {

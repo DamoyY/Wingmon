@@ -1,31 +1,64 @@
 import { addMessage } from "../../../core/store/index.ts";
-import { getActiveTab } from "../../../core/services/index.ts";
-import { handleToolCalls, toolNames } from "../../../core/agent/index.js";
-import { fetchPageMarkdownData } from "../../../core/agent/pageReadHelpers.ts";
+import { getActiveTab, type BrowserTab } from "../../../core/services/index.ts";
+import { handleToolCalls } from "../../../core/agent/executor.ts";
+import { toolNames, type ToolCall } from "../../../core/agent/definitions.ts";
+import {
+  fetchPageMarkdownData,
+  type PageMarkdownData,
+} from "../../../core/agent/pageReadHelpers.ts";
 import { createRandomId } from "../../../lib/utils/index.ts";
 
-const resolveTabId = (activeTab) => {
-    if (typeof activeTab?.id !== "number") {
+type GetPageArguments = {
+  tabId: number;
+  page_number: number;
+  preserve_viewport: true;
+};
+
+type GetPageToolCall = ToolCall & {
+  id: string;
+  type: "function";
+  function: {
+    name: string;
+    arguments: string;
+  };
+  call_id: string;
+};
+
+type ToolMessage = Awaited<ReturnType<typeof handleToolCalls>>[number];
+
+type ViewportPlan = {
+  currentChunk: number;
+  nearbyChunk: number | null;
+};
+
+type ExecuteGetPageToolCallPayload = {
+  tabId: number;
+  callId: string;
+  pageNumber: number;
+  signal?: AbortSignal;
+};
+
+const resolveTabId = (activeTab: BrowserTab): number => {
+    if (typeof activeTab.id !== "number") {
       throw new Error("活动标签页缺少 TabID");
     }
     return activeTab.id;
   },
-  ensureNotAborted = (signal) => {
+  ensureNotAborted = (signal?: AbortSignal): void => {
     if (signal?.aborted) {
       throw new Error("已停止");
     }
   },
-  clamp = (value, min, max) => Math.min(max, Math.max(min, value)),
-  resolveViewportPlan = (pageData) => {
+  clamp = (value: number, min: number, max: number): number =>
+    Math.min(max, Math.max(min, value)),
+  resolveViewportPlan = (pageData: PageMarkdownData): ViewportPlan => {
     const totalChunks =
-        Number.isInteger(pageData?.totalPages) && pageData.totalPages > 0
+        Number.isInteger(pageData.totalPages) && pageData.totalPages > 0
           ? pageData.totalPages
           : 1,
-      viewportCenterRaw =
-        typeof pageData?.viewportPage === "number" &&
-        Number.isFinite(pageData.viewportPage)
-          ? pageData.viewportPage
-          : 1,
+      viewportCenterRaw = Number.isFinite(pageData.viewportPage)
+        ? pageData.viewportPage
+        : 1,
       viewportCenter = clamp(viewportCenterRaw, 1, totalChunks),
       currentChunk = clamp(Math.ceil(viewportCenter), 1, totalChunks);
     if (totalChunks === 1) {
@@ -46,21 +79,25 @@ const resolveTabId = (activeTab) => {
     }
     return { currentChunk, nearbyChunk };
   },
-  resolvePageNumber = (value) => {
+  resolvePageNumber = (value: number): number => {
     if (Number.isInteger(value) && value > 0) {
       return value;
     }
     throw new Error("page_number 必须是正整数");
   },
-  buildGetPageArguments = (tabId, pageNumber) => {
-    const args = {
-      tabId,
-      page_number: resolvePageNumber(pageNumber),
-    };
-    args.preserve_viewport = true;
-    return args;
-  },
-  buildGetPageToolCall = (tabId, callId, pageNumber) => ({
+  buildGetPageArguments = (
+    tabId: number,
+    pageNumber: number,
+  ): GetPageArguments => ({
+    tabId,
+    page_number: resolvePageNumber(pageNumber),
+    preserve_viewport: true,
+  }),
+  buildGetPageToolCall = (
+    tabId: number,
+    callId: string,
+    pageNumber: number,
+  ): GetPageToolCall => ({
     id: callId,
     type: "function",
     function: {
@@ -69,7 +106,12 @@ const resolveTabId = (activeTab) => {
     },
     call_id: callId,
   }),
-  executeGetPageToolCall = async ({ tabId, callId, pageNumber, signal }) => {
+  executeGetPageToolCall = async ({
+    tabId,
+    callId,
+    pageNumber,
+    signal,
+  }: ExecuteGetPageToolCallPayload): Promise<ToolMessage> => {
     ensureNotAborted(signal);
     const toolCall = buildGetPageToolCall(tabId, callId, pageNumber),
       toolMessages = await handleToolCalls([toolCall], signal);
@@ -77,16 +119,19 @@ const resolveTabId = (activeTab) => {
     if (toolMessages.length !== 1) {
       throw new Error("get_page 工具调用结果数量无效");
     }
-    const [toolMessage] = toolMessages;
-    if (!toolMessage || toolMessage.role !== "tool") {
-      throw new Error("get_page 工具调用结果格式无效");
-    }
-    if (typeof toolMessage.content !== "string") {
-      throw new Error("get_page 工具调用结果内容无效");
-    }
-    return toolMessage;
+    return toolMessages[0];
   },
-  appendToolCallMessages = ({ tabId, callId, pageNumber, toolMessage }) => {
+  appendToolCallMessages = ({
+    tabId,
+    callId,
+    pageNumber,
+    toolMessage,
+  }: {
+    tabId: number;
+    callId: string;
+    pageNumber: number;
+    toolMessage: ToolMessage;
+  }): void => {
     addMessage({
       role: "assistant",
       content: "",
@@ -95,7 +140,9 @@ const resolveTabId = (activeTab) => {
     });
     addMessage(toolMessage);
   },
-  appendSharedPageContext = async ({ signal } = {}) => {
+  appendSharedPageContext = async ({
+    signal,
+  }: { signal?: AbortSignal } = {}): Promise<void> => {
     const activeTab = await getActiveTab(),
       tabId = resolveTabId(activeTab);
     ensureNotAborted(signal);

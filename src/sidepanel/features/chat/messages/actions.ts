@@ -11,15 +11,15 @@ import {
   t,
 } from "../../../lib/utils/index.ts";
 
-type ActionIndices = number | readonly number[];
+export type ActionIndices = number | readonly number[];
 type RefreshMessages = () => void;
-type AnimateRemoval = (indices: number[]) => Promise<boolean> | boolean;
-type ErrorLike = Error | { message?: string } | null | undefined;
+type AnimateRemoval = (indices: ActionIndices) => Promise<boolean> | boolean;
+export type MessageActionError = Error;
 
-type MessageActionHandlers = {
+export type MessageActionHandlers = {
   onCopy: (indices: ActionIndices) => Promise<void>;
   onDelete: (indices: ActionIndices) => Promise<void>;
-  onError: (error: ErrorLike) => void;
+  onError: (error: MessageActionError) => void;
 };
 
 const resolveMessageContent = (message: MessageRecord): string => {
@@ -127,16 +127,13 @@ const resolveMessageContent = (message: MessageRecord): string => {
     refreshMessages();
     await persistConversationState();
   },
-  resolveErrorMessage = (error: ErrorLike): string => {
-    if (error instanceof Error && error.message) {
-      return error.message;
-    }
-    if (error && typeof error.message === "string" && error.message) {
+  resolveErrorMessage = (error: MessageActionError): string => {
+    if (error.message) {
       return error.message;
     }
     return t("actionFailed");
   },
-  reportActionError = (error: ErrorLike): void => {
+  reportActionError = (error: MessageActionError): void => {
     const message = resolveErrorMessage(error);
     console.error(message, error);
   },
