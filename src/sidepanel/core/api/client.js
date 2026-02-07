@@ -38,11 +38,15 @@ const requestModel = async ({
       onStreamStart();
     }
     const toolCalls = await strategy.stream(response, { onDelta, onChunk });
-    return { toolCalls, streamed: true };
+    return { toolCalls, reply: "", streamed: true };
   }
   const data = await response.json(),
     toolCalls = strategy.extractToolCalls(data),
     reply = strategy.extractReply(data);
-  return { toolCalls, reply, streamed: false };
+  return {
+    toolCalls,
+    reply: typeof reply === "string" ? reply : "",
+    streamed: false,
+  };
 };
 export default requestModel;

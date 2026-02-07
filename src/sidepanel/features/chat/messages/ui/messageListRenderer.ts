@@ -1,30 +1,24 @@
-import renderMessageContent from "./contentRenderer.ts";
 import { animateMessageRowEnter } from "./animations.ts";
+import {
+  createMessageRow,
+  getMessageRenderedText,
+  setMessageContent,
+  updateMessageStatusLine,
+} from "./components/index.ts";
+import { wrapTrailingText } from "../../../../lib/dom/index.ts";
 import {
   requireElementById,
   resolveIndicesKey,
-  t,
 } from "../../../../lib/utils/index.ts";
-import { applyMessageHeadingTypography } from "../../../../ui/theme/typography.ts";
 import type { DisplayMessage } from "../displayMessages.ts";
 import type { MessageActionHandlers } from "../actions.ts";
-
-type MessageActionHandler = (indices: number[]) => Promise<void> | void;
-
-type MessageErrorHandler = (error: Error) => void;
-
-type ActionButtonConfig = {
-  icon: string;
-  className: string;
-  title: string;
-  onClick: () => Promise<void> | void;
-};
 
 export type RenderOptions = {
   animateIndices?: number[];
 };
 
 const MESSAGE_REANIMATE_WINDOW = 200;
+const STREAM_DELTA_CLASS_NAME = "stream-delta";
 
 let pendingAnimateKey: string | null = null;
 let pendingAnimateExpiresAt = 0;
@@ -39,165 +33,6 @@ const requireMessagesElement = (): HTMLElement =>
       "emptyState",
       "空状态容器未找到",
     ).classList.toggle("is-visible", visible);
-  },
-  resolveActionError = (error: unknown): Error => {
-    if (error instanceof Error) {
-      return error;
-    }
-    if (typeof error === "string" && error.trim()) {
-      return new Error(error);
-    }
-    return new Error(t("actionFailed"));
-  },
-  toActionHandler =
-    (
-      handler:
-        | MessageActionHandlers["onCopy"]
-        | MessageActionHandlers["onDelete"],
-    ): MessageActionHandler =>
-    (indices: number[]) =>
-      handler(indices),
-  toErrorHandler =
-    (handler: MessageActionHandlers["onError"]): MessageErrorHandler =>
-    (error: Error) => {
-      handler(error);
-    },
-  runAction = async (
-    handler: MessageActionHandler,
-    indices: number[],
-    onError: MessageErrorHandler,
-  ): Promise<void> => {
-    try {
-      await handler(indices);
-    } catch (error) {
-      onError(resolveActionError(error));
-    }
-  },
-  createActionButton = ({
-    icon,
-    className,
-    title,
-    onClick,
-  }: ActionButtonConfig): HTMLElement => {
-    const button = document.createElement("md-icon-button");
-    button.className = className;
-    button.title = title;
-    button.setAttribute("aria-label", title);
-    const iconEl = document.createElement("md-icon");
-    iconEl.textContent = icon;
-    button.appendChild(iconEl);
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
-      void onClick();
-    });
-    return button;
-  },
-  createMessageActions = (
-    indices: number[],
-    handlers: MessageActionHandlers,
-  ): HTMLDivElement => {
-    if (!Array.isArray(indices) || indices.length === 0) {
-      throw new Error("消息索引无效");
-    }
-    const onCopy = toActionHandler(handlers.onCopy),
-      onDelete = toActionHandler(handlers.onDelete),
-      onError = toErrorHandler(handlers.onError),
-      actions = document.createElement("div");
-    actions.className = "message-actions";
-    const copyButton = createActionButton({
-        icon: "content_copy",
-        className: "message-action message-copy",
-        title: t("copy"),
-        onClick: () => runAction(onCopy, indices, onError),
-      }),
-      deleteButton = createActionButton({
-        icon: "delete",
-        className: "message-action message-delete",
-        title: t("delete"),
-        onClick: () => runAction(onDelete, indices, onError),
-      });
-    actions.append(copyButton, deleteButton);
-    return actions;
-  },
-  resolveMessageContentTypescaleClass = (role: string): string =>
-    role === "user" ? "md-typescale-body-large" : "md-typescale-body-medium",
-  createMessageContent = (content: string, role: string): HTMLDivElement => {
-    const body = document.createElement("div");
-    body.className = `message-content ${resolveMessageContentTypescaleClass(role)}`;
-    const { html, text } = renderMessageContent(content, {
-      decorateContainer: applyMessageHeadingTypography,
-    });
-    body.innerHTML = html;
-    body.setAttribute("data-rendered-text", text);
-    return body;
-  },
-  createMessageStatusLine = (statusText: string): HTMLDivElement | null => {
-    if (!statusText) {
-      return null;
-    }
-    const status = document.createElement("div");
-    status.className = "message-status status md-typescale-label-small";
-    status.textContent = statusText;
-    return status;
-  },
-  updateMessageStatusLine = (
-    messageEl: HTMLElement,
-    statusText: string,
-  ): void => {
-    const existing = messageEl.querySelector(".message-status");
-    if (!statusText) {
-      if (existing) {
-        existing.remove();
-      }
-      return;
-    }
-    if (existing) {
-      if (existing.textContent !== statusText) {
-        existing.textContent = statusText;
-      }
-      return;
-    }
-    const status = createMessageStatusLine(statusText);
-    if (status) {
-      messageEl.appendChild(status);
-    }
-  },
-  wrapTrailingText = (container: HTMLElement, length: number): void => {
-    if (!Number.isInteger(length) || length <= 0) {
-      return;
-    }
-    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT),
-      nodes: Text[] = [];
-    let current = walker.nextNode();
-    while (current) {
-      if (current instanceof Text) {
-        nodes.push(current);
-      }
-      current = walker.nextNode();
-    }
-    let remaining = length;
-    for (let i = nodes.length - 1; i >= 0 && remaining > 0; i -= 1) {
-      const node = nodes[i],
-        value = node.nodeValue || "";
-      if (value) {
-        const take = Math.min(remaining, value.length),
-          splitIndex = value.length - take,
-          beforeText = value.slice(0, splitIndex),
-          targetText = value.slice(splitIndex),
-          parent = node.parentNode;
-        if (parent) {
-          if (beforeText) {
-            parent.insertBefore(document.createTextNode(beforeText), node);
-          }
-          const span = document.createElement("span");
-          span.className = "stream-delta";
-          span.textContent = targetText;
-          parent.insertBefore(span, node);
-          parent.removeChild(node);
-          remaining -= take;
-        }
-      }
-    }
   },
   resolveCommonPrefixLength = (
     previousText: string,
@@ -223,6 +58,51 @@ const resolvePendingAnimateKey = (now: number): string | null => {
   return pendingAnimateKey;
 };
 
+const resolveAnimationState = (
+  options: RenderOptions,
+): {
+  animateKey: string | null;
+  carryoverKey: string | null;
+  shouldRefreshCarryover: boolean;
+  animateKeys: Set<string>;
+} => {
+  const now = Date.now();
+  const animateKey =
+    options.animateIndices !== undefined
+      ? resolveIndicesKey(options.animateIndices)
+      : null;
+  const carryoverKey = resolvePendingAnimateKey(now);
+  const shouldRefreshCarryover = Boolean(carryoverKey) && !animateKey;
+  const animateKeys = new Set<string>();
+  if (animateKey) {
+    animateKeys.add(animateKey);
+  }
+  if (carryoverKey) {
+    animateKeys.add(carryoverKey);
+  }
+  return {
+    animateKey,
+    carryoverKey,
+    shouldRefreshCarryover,
+    animateKeys,
+  };
+};
+
+const updatePendingAnimateState = (
+  animateKey: string | null,
+  shouldRefreshCarryover: boolean,
+): void => {
+  const now = Date.now();
+  if (animateKey) {
+    pendingAnimateKey = animateKey;
+    pendingAnimateExpiresAt = now + MESSAGE_REANIMATE_WINDOW;
+    return;
+  }
+  if (shouldRefreshCarryover) {
+    pendingAnimateExpiresAt = now + MESSAGE_REANIMATE_WINDOW;
+  }
+};
+
 export const renderMessages = (
   displayMessages: DisplayMessage[],
   handlers: MessageActionHandlers,
@@ -230,36 +110,14 @@ export const renderMessages = (
 ): void => {
   const messagesEl = requireMessagesElement();
   let hasVisibleMessages = false;
-  const now = Date.now();
-  const animateKey =
-      options.animateIndices !== undefined
-        ? resolveIndicesKey(options.animateIndices)
-        : null,
-    carryoverKey = resolvePendingAnimateKey(now),
-    shouldRefreshCarryover = Boolean(carryoverKey) && !animateKey,
-    animateKeys = new Set<string>(),
-    rowsToAnimate: HTMLElement[] = [];
-  if (animateKey) {
-    animateKeys.add(animateKey);
-  }
-  if (carryoverKey) {
-    animateKeys.add(carryoverKey);
-  }
+  const { animateKey, shouldRefreshCarryover, animateKeys } =
+    resolveAnimationState(options);
+  const rowsToAnimate: HTMLElement[] = [];
+
   messagesEl.innerHTML = "";
-  displayMessages.forEach((msg) => {
+  displayMessages.forEach((message) => {
     hasVisibleMessages = true;
-    const row = document.createElement("div");
-    row.className = `message-row ${msg.role}`;
-    row.dataset.indices = resolveIndicesKey(msg.indices);
-    const node = document.createElement("div");
-    node.className = `message ${msg.role}`;
-    node.appendChild(createMessageContent(msg.content, msg.role));
-    const status = createMessageStatusLine(msg.status || "");
-    if (status) {
-      node.appendChild(status);
-    }
-    row.appendChild(node);
-    row.appendChild(createMessageActions(msg.indices, handlers));
+    const row = createMessageRow(message, handlers);
     messagesEl.appendChild(row);
     if (animateKeys.size && row.dataset.indices) {
       if (animateKeys.has(row.dataset.indices)) {
@@ -267,19 +125,30 @@ export const renderMessages = (
       }
     }
   });
-  if (animateKey) {
-    pendingAnimateKey = animateKey;
-    pendingAnimateExpiresAt = now + MESSAGE_REANIMATE_WINDOW;
-  } else if (shouldRefreshCarryover) {
-    pendingAnimateExpiresAt = now + MESSAGE_REANIMATE_WINDOW;
-  }
+
+  updatePendingAnimateState(animateKey, shouldRefreshCarryover);
+
   messagesEl.scrollTop = messagesEl.scrollHeight;
   rowsToAnimate.forEach((row) => {
     animateMessageRowEnter(row);
   });
+
   const button = requireNewChatButton();
   button.classList.toggle("hidden", !hasVisibleMessages);
   setEmptyStateVisible(!hasVisibleMessages);
+};
+
+const resolveLastAssistantRow = (
+  messagesEl: HTMLElement,
+): HTMLElement | null => {
+  const lastEl = messagesEl.lastElementChild;
+  if (!(lastEl instanceof HTMLElement)) {
+    return null;
+  }
+  if (!lastEl.classList.contains("assistant")) {
+    return null;
+  }
+  return lastEl;
 };
 
 export const updateLastAssistantMessage = (
@@ -289,31 +158,25 @@ export const updateLastAssistantMessage = (
   if (!message || message.role !== "assistant") {
     return false;
   }
-  const lastEl = messagesEl.lastElementChild;
-  if (!lastEl || !lastEl.classList.contains("assistant")) {
+  const lastAssistantRow = resolveLastAssistantRow(messagesEl);
+  if (!lastAssistantRow) {
     return false;
   }
-  const contentEl = lastEl.querySelector(".message-content");
+  const contentEl = lastAssistantRow.querySelector(".message-content");
   if (!(contentEl instanceof HTMLElement)) {
     return false;
   }
-  const previousRenderedText =
-      contentEl.getAttribute("data-rendered-text") ?? "",
-    { html, text } = renderMessageContent(message.content, {
-      decorateContainer: applyMessageHeadingTypography,
-    });
-  contentEl.innerHTML = html;
-  const newRenderedText = text,
-    commonPrefixLength = resolveCommonPrefixLength(
-      previousRenderedText,
-      newRenderedText,
-    ),
-    appendedLength = newRenderedText.length - commonPrefixLength;
-  wrapTrailingText(contentEl, appendedLength);
-  contentEl.setAttribute("data-rendered-text", newRenderedText);
+  const previousRenderedText = getMessageRenderedText(contentEl);
+  const newRenderedText = setMessageContent(contentEl, message.content);
+  const commonPrefixLength = resolveCommonPrefixLength(
+    previousRenderedText,
+    newRenderedText,
+  );
+  const appendedLength = newRenderedText.length - commonPrefixLength;
+  wrapTrailingText(contentEl, appendedLength, STREAM_DELTA_CLASS_NAME);
   const messageEl = contentEl.parentElement;
-  if (!messageEl) {
-    return false;
+  if (!(messageEl instanceof HTMLElement)) {
+    throw new Error("消息容器无效");
   }
   updateMessageStatusLine(messageEl, message.status || "");
   messagesEl.scrollTop = messagesEl.scrollHeight;

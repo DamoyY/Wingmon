@@ -92,7 +92,7 @@ const createMarkdownEncoding = (): MarkdownEncoding => {
   try {
     return createO200kBaseEncoding();
   } catch (wasmError) {
-    console.warn("tiktoken WASM 初始化失败，回退至 js-tiktoken", wasmError);
+    console.info("tiktoken WASM 初始化失败，回退至 js-tiktoken", wasmError);
     try {
       return new JsTiktoken(o200kBase);
     } catch (jsError) {

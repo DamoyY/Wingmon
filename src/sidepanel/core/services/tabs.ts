@@ -16,44 +16,54 @@ export type CreatedBrowserTab = BrowserTab & {
   id: number;
 };
 
-type RuntimeLastError = {
-  message?: string;
-};
-
-type ChromeRuntime = {
-  lastError?: RuntimeLastError;
-};
-
 type ChromeTabChangeInfo = {
   status?: string;
 };
 
 type ChromeTabsApi = {
-  get: (
+  get(tabId: number): Promise<BrowserTab | undefined>;
+  get(
     tabId: number,
     callback: (currentTab: BrowserTab | undefined) => void,
-  ) => void;
-  query: (
+  ): void;
+  query(queryInfo: {
+    active?: boolean;
+    currentWindow?: boolean;
+  }): Promise<BrowserTab[]>;
+  query(
     queryInfo: { active?: boolean; currentWindow?: boolean },
     callback: (tabs: BrowserTab[]) => void,
-  ) => void;
-  create: (
+  ): void;
+  create(createProperties: {
+    url: string;
+    active: boolean;
+  }): Promise<BrowserTab | undefined>;
+  create(
     createProperties: { url: string; active: boolean },
     callback: (tab: BrowserTab | undefined) => void,
-  ) => void;
-  remove: (tabId: number, callback: () => void) => void;
-  update: (
+  ): void;
+  remove(tabId: number): Promise<void>;
+  remove(tabId: number, callback: () => void): void;
+  update(
+    tabId: number,
+    updateProperties: { active: boolean },
+  ): Promise<BrowserTab | undefined>;
+  update(
     tabId: number,
     updateProperties: { active: boolean },
     callback: () => void,
-  ) => void;
-  sendMessage: <TRequest extends ContentScriptRequest>(
+  ): void;
+  sendMessage<TRequest extends ContentScriptRequest>(
+    tabId: number,
+    payload: TRequest,
+  ): Promise<ContentScriptResponseByRequest<TRequest> | null | undefined>;
+  sendMessage<TRequest extends ContentScriptRequest>(
     tabId: number,
     payload: TRequest,
     callback: (
       response: ContentScriptResponseByRequest<TRequest> | null | undefined,
     ) => void,
-  ) => void;
+  ): void;
   onUpdated: {
     addListener: (
       callback: (tabId: number, changeInfo: ChromeTabChangeInfo) => void,
@@ -62,15 +72,18 @@ type ChromeTabsApi = {
 };
 
 type ChromeWindowsApi = {
-  update: (
+  update(
+    windowId: number,
+    updateProperties: { focused: boolean },
+  ): Promise<void>;
+  update(
     windowId: number,
     updateProperties: { focused: boolean },
     callback: () => void,
-  ) => void;
+  ): void;
 };
 
 declare const chrome: {
-  runtime: ChromeRuntime;
   tabs: ChromeTabsApi;
   windows: ChromeWindowsApi;
 };
@@ -85,8 +98,20 @@ const pendingWaits: Map<number, Set<PendingWaiter>> = new Map();
 let listenersReady = false;
 
 const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
-  resolveRuntimeErrorMessage = (fallback: string): string =>
-    chrome.runtime.lastError?.message || fallback,
+  normalizeError = (error: unknown, fallback: string): Error => {
+    if (error instanceof Error) {
+      if (error.message.trim()) {
+        return error;
+      }
+      return new Error(fallback);
+    }
+    return new Error(fallback);
+  },
+  logAndNormalizeError = (error: unknown, fallback: string): Error => {
+    const failure = normalizeError(error, fallback);
+    console.error(failure.message);
+    return failure;
+  },
   resolvePendingWaits = (tabId: number, isComplete: boolean): void => {
     const waiters = pendingWaits.get(tabId);
     if (!waiters) {
@@ -98,25 +123,17 @@ const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
     });
     pendingWaits.delete(tabId);
   },
-  getTabSnapshot = (tabId: number): Promise<BrowserTab> =>
-    new Promise((resolve, reject) => {
-      chrome.tabs.get(tabId, (currentTab) => {
-        if (chrome.runtime.lastError) {
-          const message = resolveRuntimeErrorMessage("无法获取标签页状态"),
-            error = new Error(message);
-          console.error(error.message);
-          reject(error);
-          return;
-        }
-        if (!currentTab) {
-          const error = new Error("未找到标签页");
-          console.error(error.message);
-          reject(error);
-          return;
-        }
-        resolve(currentTab);
-      });
-    }),
+  getTabSnapshot = async (tabId: number): Promise<BrowserTab> => {
+    try {
+      const currentTab = await chrome.tabs.get(tabId);
+      if (!currentTab) {
+        throw new Error("未找到标签页");
+      }
+      return currentTab;
+    } catch (error) {
+      throw logAndNormalizeError(error, "无法获取标签页状态");
+    }
+  },
   ensureTabConnectable = async (tabId: number): Promise<BrowserTab> => {
     const tab = await getTabSnapshot(tabId);
     if (isInternalUrl(tab.url || "")) {
@@ -154,133 +171,105 @@ export const initTabListeners = (): void => {
   registerContentScriptListeners();
 };
 
-export const getActiveTab = (): Promise<BrowserTab> =>
-  new Promise((resolve, reject) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (chrome.runtime.lastError) {
-        const message = resolveRuntimeErrorMessage("无法查询活动标签页");
-        reject(new Error(message));
-        return;
-      }
-      if (!tabs.length) {
-        reject(new Error("未找到活动标签页"));
-        return;
-      }
-      resolve(tabs[0]);
-    });
-  });
+export const getActiveTab = async (): Promise<BrowserTab> => {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tabs.length) {
+      throw new Error("未找到活动标签页");
+    }
+    return tabs[0];
+  } catch (error) {
+    throw logAndNormalizeError(error, "无法查询活动标签页");
+  }
+};
 
-export const getAllTabs = (): Promise<BrowserTab[]> =>
-  new Promise((resolve, reject) => {
-    chrome.tabs.query({}, (tabs) => {
-      if (chrome.runtime.lastError) {
-        const message = resolveRuntimeErrorMessage("无法查询所有标签页");
-        reject(new Error(message));
-        return;
-      }
-      resolve(tabs);
-    });
-  });
+export const getAllTabs = async (): Promise<BrowserTab[]> => {
+  try {
+    return await chrome.tabs.query({});
+  } catch (error) {
+    throw logAndNormalizeError(error, "无法查询所有标签页");
+  }
+};
 
-export const createTab = (
+export const createTab = async (
   url: string,
   active: boolean,
-): Promise<CreatedBrowserTab> =>
-  new Promise((resolve, reject) => {
-    chrome.tabs.create({ url, active }, (tab) => {
-      if (chrome.runtime.lastError) {
-        const message = resolveRuntimeErrorMessage("无法创建标签页");
-        reject(new Error(message));
-        return;
-      }
-      if (!tab) {
-        reject(new Error("创建标签页失败"));
-        return;
-      }
-      if (typeof tab.id !== "number") {
-        reject(new Error("创建标签页失败：缺少 Tab ID"));
-        return;
-      }
-      resolve({ ...tab, id: tab.id });
-    });
-  });
-
-export const closeTab = (tabId: number): Promise<void> =>
-  new Promise((resolve, reject) => {
-    chrome.tabs.remove(tabId, () => {
-      if (chrome.runtime.lastError) {
-        const message = resolveRuntimeErrorMessage("无法关闭标签页");
-        reject(new Error(message));
-        return;
-      }
-      resolve();
-    });
-  });
-
-export const focusTab = (tabId: number): Promise<void> =>
-  new Promise((resolve, reject) => {
-    if (typeof tabId !== "number") {
-      reject(new Error("Tab ID 必须是数字"));
-      return;
+): Promise<CreatedBrowserTab> => {
+  try {
+    const tab = await chrome.tabs.create({ url, active });
+    if (!tab) {
+      throw new Error("创建标签页失败");
     }
-    chrome.tabs.get(tabId, (tab) => {
-      if (chrome.runtime.lastError) {
-        const message = resolveRuntimeErrorMessage("无法获取标签页");
-        reject(new Error(message));
-        return;
-      }
-      if (!tab) {
-        reject(new Error("未找到标签页"));
-        return;
-      }
-      if (typeof tab.windowId !== "number") {
-        reject(new Error("标签页缺少窗口 ID"));
-        return;
-      }
-      chrome.windows.update(tab.windowId, { focused: true }, () => {
-        if (chrome.runtime.lastError) {
-          const message = resolveRuntimeErrorMessage("无法聚焦标签页窗口");
-          reject(new Error(message));
-          return;
-        }
-        chrome.tabs.update(tabId, { active: true }, () => {
-          if (chrome.runtime.lastError) {
-            const message = resolveRuntimeErrorMessage("无法激活标签页");
-            reject(new Error(message));
-            return;
-          }
-          resolve();
-        });
-      });
-    });
-  });
+    if (typeof tab.id !== "number") {
+      throw new Error("创建标签页失败：缺少 Tab ID");
+    }
+    return { ...tab, id: tab.id };
+  } catch (error) {
+    throw logAndNormalizeError(error, "无法创建标签页");
+  }
+};
 
-export const sendMessageToTab = <TRequest extends ContentScriptRequest>(
+export const closeTab = async (tabId: number): Promise<void> => {
+  try {
+    await chrome.tabs.remove(tabId);
+  } catch (error) {
+    throw logAndNormalizeError(error, "无法关闭标签页");
+  }
+};
+
+export const focusTab = async (tabId: number): Promise<void> => {
+  if (typeof tabId !== "number") {
+    const error = new Error("Tab ID 必须是数字");
+    console.error(error.message);
+    throw error;
+  }
+  let tab: BrowserTab | undefined;
+  try {
+    tab = await chrome.tabs.get(tabId);
+  } catch (error) {
+    throw logAndNormalizeError(error, "无法获取标签页");
+  }
+  if (!tab) {
+    const error = new Error("未找到标签页");
+    console.error(error.message);
+    throw error;
+  }
+  if (typeof tab.windowId !== "number") {
+    const error = new Error("标签页缺少窗口 ID");
+    console.error(error.message);
+    throw error;
+  }
+  try {
+    await chrome.windows.update(tab.windowId, { focused: true });
+  } catch (error) {
+    throw logAndNormalizeError(error, "无法聚焦标签页窗口");
+  }
+  try {
+    await chrome.tabs.update(tabId, { active: true });
+  } catch (error) {
+    throw logAndNormalizeError(error, "无法激活标签页");
+  }
+};
+
+export const sendMessageToTab = async <TRequest extends ContentScriptRequest>(
   tabId: number,
   payload: TRequest,
-): Promise<ContentScriptResponseByRequest<TRequest>> =>
-  ensureTabConnectable(tabId).then(
-    () =>
-      new Promise((resolve, reject) => {
-        chrome.tabs.sendMessage(tabId, payload, (response) => {
-          if (chrome.runtime.lastError) {
-            const message = resolveRuntimeErrorMessage("无法发送消息到页面");
-            reject(new Error(message));
-            return;
-          }
-          if (response === null || response === undefined) {
-            reject(new Error("页面未返回结果"));
-            return;
-          }
-          const responseErrorMessage = resolveResponseErrorMessage(response);
-          if (responseErrorMessage !== null) {
-            reject(new Error(responseErrorMessage));
-            return;
-          }
-          resolve(response);
-        });
-      }),
-  );
+): Promise<ContentScriptResponseByRequest<TRequest>> => {
+  await ensureTabConnectable(tabId);
+  try {
+    const response = await chrome.tabs.sendMessage(tabId, payload);
+    if (response === null || response === undefined) {
+      throw new Error("页面未返回结果");
+    }
+    const responseErrorMessage = resolveResponseErrorMessage(response);
+    if (responseErrorMessage !== null) {
+      throw new Error(responseErrorMessage);
+    }
+    return response;
+  } catch (error) {
+    throw logAndNormalizeError(error, "无法发送消息到页面");
+  }
+};
 
 export const waitForContentScript = async (
   tabId: number,
@@ -349,10 +338,11 @@ export const waitForContentScript = async (
           }
         })
         .catch((error: unknown) => {
-          const failure =
-            error instanceof Error ? error : new Error("无法获取标签页状态");
-          console.error(failure.message);
-          waiter.reject(failure);
+          if (error instanceof Error) {
+            waiter.reject(error);
+            return;
+          }
+          waiter.reject(logAndNormalizeError(error, "无法获取标签页状态"));
         });
     });
   return waitForReady();

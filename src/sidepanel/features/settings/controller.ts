@@ -11,6 +11,7 @@ import {
   syncSettingsSnapshotState,
   validateRequiredSettings,
 } from "./model.ts";
+import { extractErrorMessage } from "../../../shared/index.ts";
 
 type SettingsControllerFailure = {
   success: false;
@@ -25,15 +26,6 @@ type SettingsControllerSuccess<TPayload> = {
 export type SettingsControllerResult<TPayload> =
   | SettingsControllerSuccess<TPayload>
   | SettingsControllerFailure;
-
-type ErrorLike =
-  | Error
-  | {
-      message?: string;
-    }
-  | string
-  | null
-  | undefined;
 
 type SaveButtonStatePayload = {
   saveButtonVisible: boolean;
@@ -78,23 +70,9 @@ const defaultLocale = "en",
     fallbackMessage: "语言设置失败，请稍后重试",
     logLabel: "更新语言失败",
   },
-  resolveErrorMessage = (error: ErrorLike, context: ErrorContext): string => {
+  resolveErrorMessage = (error: unknown, context: ErrorContext): string => {
     console.error(context.logLabel, error);
-    if (error instanceof Error && error.message) {
-      return error.message;
-    }
-    if (typeof error === "string" && error.trim()) {
-      return error;
-    }
-    if (
-      error &&
-      typeof error === "object" &&
-      typeof error.message === "string" &&
-      error.message.trim()
-    ) {
-      return error.message;
-    }
-    return context.fallbackMessage;
+    return extractErrorMessage(error, { fallback: context.fallbackMessage });
   },
   resolveSaveButtonVisible = (formValues: SettingsInput): boolean =>
     isSettingsDirty(formValues) && isSettingsComplete(formValues),
@@ -113,7 +91,7 @@ const defaultLocale = "en",
   ): SettingsControllerResult<SettingsPayload> =>
     createSuccessResult({ settings }),
   createFailureFromError = (
-    error: ErrorLike,
+    error: unknown,
     context: ErrorContext,
   ): SettingsControllerFailure =>
     createFailureResult(resolveErrorMessage(error, context)),
@@ -126,10 +104,7 @@ const defaultLocale = "en",
     try {
       return createSuccessResult(buildThemePayload(formValues));
     } catch (error) {
-      return createFailureFromError(
-        error as ErrorLike,
-        settingsActionErrorContext,
-      );
+      return createFailureFromError(error, settingsActionErrorContext);
     }
   },
   readSettingsAndSync = async (): Promise<Settings> => {
@@ -163,7 +138,7 @@ export const handleFollowModeChange = async ({
   try {
     return createSettingsResult(await updateSettings({ followMode }));
   } catch (error) {
-    return createFailureFromError(error as ErrorLike, followModeErrorContext);
+    return createFailureFromError(error, followModeErrorContext);
   }
 };
 
@@ -190,10 +165,7 @@ export const handleSaveSettings = async (
       ...themePayloadResult.payload,
     });
   } catch (error) {
-    return createFailureFromError(
-      error as ErrorLike,
-      settingsActionErrorContext,
-    );
+    return createFailureFromError(error, settingsActionErrorContext);
   }
 };
 
@@ -208,7 +180,7 @@ export const handleCancelSettings = async (): Promise<
       locale: resolveLocale(settings.language),
     });
   } catch (error) {
-    return createFailureFromError(error as ErrorLike, settingsReadErrorContext);
+    return createFailureFromError(error, settingsReadErrorContext);
   }
 };
 
@@ -219,7 +191,7 @@ export const handleOpenSettings = async (): Promise<
     const settings = await readSettingsAndSync();
     return createSettingsResult(settings);
   } catch (error) {
-    return createFailureFromError(error as ErrorLike, settingsReadErrorContext);
+    return createFailureFromError(error, settingsReadErrorContext);
   }
 };
 
@@ -234,10 +206,7 @@ export const handleThemeSettingsChange = async (
   try {
     return await updateSettingsAndSync(themePayloadResult.payload);
   } catch (error) {
-    return createFailureFromError(
-      error as ErrorLike,
-      settingsActionErrorContext,
-    );
+    return createFailureFromError(error, settingsActionErrorContext);
   }
 };
 
@@ -258,6 +227,6 @@ export const handleLanguageChange = async (
       locale: resolveLocale(settings.language),
     });
   } catch (error) {
-    return createFailureFromError(error as ErrorLike, languageErrorContext);
+    return createFailureFromError(error, languageErrorContext);
   }
 };

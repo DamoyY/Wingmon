@@ -1,5 +1,5 @@
 import DOMPurify from "dompurify";
-import { normalizeUrl } from "../utils/index.ts";
+import { isDataUrl, normalizeUrl } from "../../../shared/index.ts";
 
 export const isSafeUrl = (url: string | null | undefined): boolean => {
   const normalized = normalizeUrl(url);
@@ -20,8 +20,7 @@ export const isSafeUrl = (url: string | null | undefined): boolean => {
   );
 };
 
-export const isDataUrl = (url: string | null | undefined): boolean =>
-  normalizeUrl(url).startsWith("data:");
+export { isDataUrl };
 
 const anchorTagName = "A";
 const imageTagName = "IMG";

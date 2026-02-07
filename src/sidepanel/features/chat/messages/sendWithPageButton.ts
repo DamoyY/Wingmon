@@ -1,6 +1,7 @@
 import { updateSendWithPageButtonState } from "../../../ui/index.ts";
 import { getActiveTab } from "../../../core/services/index.ts";
 import { isInternalUrl } from "../../../lib/utils/index.ts";
+import { extractErrorMessage } from "../../../../shared/index.ts";
 
 const DEFAULT_PAGE_DISABLED_REASON = "当前标签页不支持携页面发送";
 
@@ -16,13 +17,6 @@ const enableSendWithPageButtonForPage = (): void => {
     pageAvailable: true,
     pageDisabledReason: "",
   });
-};
-
-const resolveErrorMessage = (error: Error | null): string => {
-  if (!error || !error.message.trim()) {
-    return "无法读取活动标签页";
-  }
-  return error.message;
 };
 
 export const setSendWithPagePromptReady = (hasContent: boolean): void => {
@@ -51,9 +45,10 @@ export const refreshSendWithPageButton = async (): Promise<void> => {
   try {
     await updateSendWithPageButtonAvailability();
   } catch (error) {
-    const resolvedError = error instanceof Error ? error : null;
-    const message = resolveErrorMessage(resolvedError);
+    const message = extractErrorMessage(error, {
+      fallback: "无法读取活动标签页",
+    });
     disableSendWithPageButtonForPage(message);
-    console.error(message, resolvedError);
+    console.error(message, error);
   }
 };

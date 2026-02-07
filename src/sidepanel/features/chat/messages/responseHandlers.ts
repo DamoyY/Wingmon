@@ -4,26 +4,11 @@ import {
   state,
   updateMessage,
 } from "../../../core/store/index.ts";
-import { attachToolCallsToAssistant as rawAttachToolCallsToAssistant } from "../../../core/agent/toolCallNormalization.js";
+import { attachToolCallsToAssistant } from "../../../core/agent/toolCallNormalization.ts";
 import type { ToolCall } from "../../../core/agent/definitions.ts";
 import { renderMessagesView } from "./presenter.ts";
 import { createRandomId } from "../../../lib/utils/index.ts";
-
-type AttachToolCallsToAssistant = (
-  toolCalls: ToolCall[],
-  assistantIndex?: number,
-) => void;
-
-const isAttachToolCallsToAssistant = (
-    value: unknown,
-  ): value is AttachToolCallsToAssistant => typeof value === "function",
-  attachToolCallsToAssistant = (() => {
-    if (!isAttachToolCallsToAssistant(rawAttachToolCallsToAssistant)) {
-      throw new Error("工具调用挂载函数无效");
-    }
-    return rawAttachToolCallsToAssistant;
-  })(),
-  normalizeToolCalls = (toolCalls: ToolCall[] | null): ToolCall[] =>
+const normalizeToolCalls = (toolCalls: ToolCall[] | null): ToolCall[] =>
     Array.isArray(toolCalls) ? toolCalls : [],
   attachToolCalls = (
     toolCalls: ToolCall[],

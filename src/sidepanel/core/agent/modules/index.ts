@@ -1,5 +1,10 @@
 import type { JsonValue } from "../../../lib/utils/index.ts";
-import type { ToolExecutionContext } from "../definitions.ts";
+import type {
+  ToolExecutionContext,
+  ToolMessageContext,
+  ToolNameKey,
+  ToolPageReadDedupeAction,
+} from "../definitions.ts";
 import clickButton from "./clickButton.ts";
 import closeBrowserPage from "./closeBrowserPage.ts";
 import enterText from "./enterText.ts";
@@ -12,8 +17,8 @@ import showHtml from "./showHtml.ts";
 
 type ToolParameterSchema = Record<string, JsonValue>;
 
-type ToolModuleEntry = {
-  key?: string;
+export type ToolModuleEntry = {
+  key?: ToolNameKey;
   name: string;
   description: string;
   parameters: ToolParameterSchema;
@@ -26,8 +31,8 @@ type ToolModuleEntry = {
   buildMessageContext?: (
     args: JsonValue,
     result: JsonValue,
-  ) => JsonValue | null;
-  pageReadDedupeAction?: "removeToolCall" | "trimToolResponse";
+  ) => ToolMessageContext | null;
+  pageReadDedupeAction?: ToolPageReadDedupeAction;
 };
 
 const toolModules: ToolModuleEntry[] = [

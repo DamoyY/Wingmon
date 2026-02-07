@@ -19,5 +19,11 @@ export {
   default as normalizeThemeVariant,
 } from "./themeVariant.ts";
 export type { ThemeVariant } from "./themeVariant.ts";
-export * from "./url.ts";
+export {
+  isDataUrl,
+  isInternalUrl,
+  isPdfUrl,
+  isSvgUrl,
+  normalizeUrl,
+} from "../../../shared/index.ts";
 export * from "./i18n.ts";

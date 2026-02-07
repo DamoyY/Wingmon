@@ -105,8 +105,46 @@ const hasPdfFromParsedUrl = (parsed: URL): boolean =>
   hasPdfMarker(parsed.pathname, "PDF 地址路径") ||
   hasPdfInSearchParams(parsed.search);
 
+const internalPrefixes = [
+  "chrome://",
+  "edge://",
+  "chrome-extension://",
+  "edge-extension://",
+  "devtools://",
+  "chrome-untrusted://",
+  "view-source:",
+  "about:",
+];
+
+const storePrefixes = [
+  "https://chromewebstore.google.com",
+  "http://chromewebstore.google.com",
+  "https://microsoftedge.microsoft.com",
+  "http://microsoftedge.microsoft.com",
+];
+
+const hasMatchingPrefix = (url: string, prefixes: string[]): boolean =>
+  prefixes.some((prefix) => url.startsWith(prefix));
+
 export const normalizeUrl = (url: string | null | undefined): string =>
   stripControlAndWhitespace(normalizeUrlBase(url));
+
+export const isInternalUrl = (url: string | null | undefined): boolean => {
+  const normalized = normalizeUrl(url);
+  if (!normalized) {
+    return false;
+  }
+  return (
+    hasMatchingPrefix(normalized, internalPrefixes) ||
+    hasMatchingPrefix(normalized, storePrefixes)
+  );
+};
+
+export const isDataUrl = (url: string | null | undefined): boolean =>
+  normalizeUrl(url).startsWith("data:");
+
+export const isSvgUrl = (url: string | null | undefined): boolean =>
+  /\.svg([?#]|$)/i.test(normalizeUrl(url));
 
 export const isPdfUrl = (url: string): boolean => {
   const sanitized = sanitizeUrlInput(url);

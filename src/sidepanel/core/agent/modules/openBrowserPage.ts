@@ -52,7 +52,7 @@ const parameters = {
   validateArgs = (args: JsonValue): OpenPageArgs => {
     const rawArgs = ensureObjectArgs(args);
     if (typeof rawArgs.url !== "string" || !rawArgs.url.trim()) {
-      throw new ToolInputError("url 必须是非空字符串");
+      throw new ToolInputError("URL 必须是非空字符串");
     }
     if (typeof rawArgs.focus !== "boolean") {
       throw new ToolInputError("focus 必须是布尔值");
@@ -61,11 +61,11 @@ const parameters = {
     try {
       parsedUrl = new URL(rawArgs.url);
     } catch (error) {
-      console.error("url 格式不正确", error);
-      throw new ToolInputError("url 格式不正确");
+      console.error("URL 格式不正确", error);
+      throw new ToolInputError("URL 格式不正确");
     }
     if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-      throw new ToolInputError("url 仅支持 http 或 https");
+      throw new ToolInputError("URL 仅支持 http 或 https");
     }
     const pageNumber = parsePageNumber(rawArgs.page_number);
     return { url: parsedUrl.toString(), focus: rawArgs.focus, pageNumber };

@@ -2,14 +2,24 @@ import {
   buildSystemPrompt,
   type Settings,
 } from "../../../core/services/index.ts";
-import rawApiToolAdapter from "../../../core/agent/api-adapter.js";
+import {
+  buildChatMessages,
+  buildResponsesInput,
+} from "../../../core/agent/message-builders.ts";
+import {
+  addChatToolCallDelta,
+  addResponsesToolCallEvent,
+  extractChatToolCalls,
+  extractResponsesToolCalls,
+  finalizeChatToolCalls,
+  finalizeResponsesToolCalls,
+} from "../../../core/agent/toolCallNormalization.ts";
 import {
   getToolDefinitions,
   type ToolCall,
-  type ToolDefinition,
 } from "../../../core/agent/definitions.ts";
 import { handleToolCalls } from "../../../core/agent/executor.ts";
-import rawRequestModel from "../../../core/api/client.js";
+import requestModel from "../../../core/api/client.js";
 import {
   addMessage,
   appendAssistantDelta,
@@ -18,46 +28,23 @@ import {
   type MessageRecord,
 } from "../../../core/store/index.ts";
 import { createRandomId, t } from "../../../lib/utils/index.ts";
-import { renderMessagesView } from "./presenter.ts";
 
 type StatusReporter = (status: string) => void;
 
-type ToolAdapterMethod = (...args: unknown[]) => unknown;
-
 type ApiToolAdapter = {
-  addChatToolCallDelta: ToolAdapterMethod;
-  addResponsesToolCallEvent: ToolAdapterMethod;
-  buildChatMessages: ToolAdapterMethod;
-  buildResponsesInput: ToolAdapterMethod;
-  extractChatToolCalls: ToolAdapterMethod;
-  extractResponsesToolCalls: ToolAdapterMethod;
-  finalizeChatToolCalls: ToolAdapterMethod;
-  finalizeResponsesToolCalls: ToolAdapterMethod;
+  addChatToolCallDelta: typeof addChatToolCallDelta;
+  addResponsesToolCallEvent: typeof addResponsesToolCallEvent;
+  buildChatMessages: typeof buildChatMessages;
+  buildResponsesInput: typeof buildResponsesInput;
+  extractChatToolCalls: typeof extractChatToolCalls;
+  extractResponsesToolCalls: typeof extractResponsesToolCalls;
+  finalizeChatToolCalls: typeof finalizeChatToolCalls;
+  finalizeResponsesToolCalls: typeof finalizeResponsesToolCalls;
 };
 
 type RequestChunk = {
-  delta?: string;
-  toolCalls?: ToolCall[];
-};
-
-type RequestModelPayload = {
-  settings: Settings;
-  systemPrompt: string;
-  tools: ToolDefinition[];
-  toolAdapter: ApiToolAdapter;
-  messages: MessageRecord[];
-  onDelta: (delta: string | null | undefined) => void;
-  onStreamStart: () => void;
-  onChunk: (chunk: RequestChunk) => void;
-  signal: AbortSignal;
-};
-
-type RawRequestModel = (payload: RequestModelPayload) => Promise<unknown>;
-
-type RequestModelResult = {
+  delta: string;
   toolCalls: ToolCall[];
-  reply: string;
-  streamed: boolean;
 };
 
 type CreateResponseStreamPayload = {
@@ -104,86 +91,18 @@ const STATUS_DOT_INTERVAL_MS = 360,
     close_page: STATUS_KEYS.operating,
     run_console: STATUS_KEYS.coding,
     show_html: STATUS_KEYS.coding,
-  },
-  isRecord = (value: unknown): value is Record<string, unknown> =>
-    typeof value === "object" && value !== null && !Array.isArray(value),
-  isToolAdapterMethod = (value: unknown): value is ToolAdapterMethod =>
-    typeof value === "function",
-  isToolCall = (value: unknown): value is ToolCall => isRecord(value),
-  isRawRequestModel = (value: unknown): value is RawRequestModel =>
-    typeof value === "function",
-  resolveToolAdapterMethod = (
-    value: Record<string, unknown>,
-    key: keyof ApiToolAdapter,
-  ): ToolAdapterMethod => {
-    const method = value[key];
-    if (!isToolAdapterMethod(method)) {
-      throw new Error(`工具适配器缺少方法：${key}`);
-    }
-    return method;
-  },
-  ensureApiToolAdapter = (value: unknown): ApiToolAdapter => {
-    if (!isRecord(value)) {
-      throw new Error("工具适配器无效");
-    }
-    return {
-      addChatToolCallDelta: resolveToolAdapterMethod(
-        value,
-        "addChatToolCallDelta",
-      ),
-      addResponsesToolCallEvent: resolveToolAdapterMethod(
-        value,
-        "addResponsesToolCallEvent",
-      ),
-      buildChatMessages: resolveToolAdapterMethod(value, "buildChatMessages"),
-      buildResponsesInput: resolveToolAdapterMethod(
-        value,
-        "buildResponsesInput",
-      ),
-      extractChatToolCalls: resolveToolAdapterMethod(
-        value,
-        "extractChatToolCalls",
-      ),
-      extractResponsesToolCalls: resolveToolAdapterMethod(
-        value,
-        "extractResponsesToolCalls",
-      ),
-      finalizeChatToolCalls: resolveToolAdapterMethod(
-        value,
-        "finalizeChatToolCalls",
-      ),
-      finalizeResponsesToolCalls: resolveToolAdapterMethod(
-        value,
-        "finalizeResponsesToolCalls",
-      ),
-    };
-  },
-  ensureRequestModel = (value: unknown): RawRequestModel => {
-    if (!isRawRequestModel(value)) {
-      throw new Error("模型请求函数无效");
-    }
-    return value;
-  },
-  normalizeToolCalls = (toolCalls: unknown): ToolCall[] => {
-    if (!Array.isArray(toolCalls)) {
-      return [];
-    }
-    return toolCalls.filter(isToolCall);
-  },
-  normalizeRequestModelResult = (value: unknown): RequestModelResult => {
-    if (!isRecord(value)) {
-      throw new Error("模型响应格式无效");
-    }
-    const reply = typeof value.reply === "string" ? value.reply : "";
-    return {
-      toolCalls: normalizeToolCalls(value.toolCalls),
-      reply,
-      streamed: value.streamed === true,
-    };
   };
 
-const apiToolAdapter = ensureApiToolAdapter(rawApiToolAdapter);
-const requestModel = ensureRequestModel(rawRequestModel);
+const apiToolAdapter: ApiToolAdapter = {
+  addChatToolCallDelta,
+  addResponsesToolCallEvent,
+  buildChatMessages,
+  buildResponsesInput,
+  extractChatToolCalls,
+  extractResponsesToolCalls,
+  finalizeChatToolCalls,
+  finalizeResponsesToolCalls,
+};
 
 const createAbortError = (): Error => {
     const error = new Error(t("requestStopped"));
@@ -244,13 +163,11 @@ const createAbortError = (): Error => {
     return STATUS_KEYS.idle;
   },
   resolveStatusFromChunk = ({ delta, toolCalls }: RequestChunk): StatusKey => {
-    const toolStatus = resolveStatusFromToolCalls(
-      normalizeToolCalls(toolCalls),
-    );
+    const toolStatus = resolveStatusFromToolCalls(toolCalls);
     if (toolStatus !== STATUS_KEYS.idle) {
       return toolStatus;
     }
-    if (typeof delta === "string" && delta.length > 0) {
+    if (delta.length > 0) {
       return STATUS_KEYS.speaking;
     }
     return STATUS_KEYS.idle;
@@ -353,12 +270,10 @@ const createAbortError = (): Error => {
     const requestNext = async function* requestNext({
       assistantIndex: overrideAssistantIndex,
     }: {
-      assistantIndex?: number | null;
-    } = {}): AsyncGenerator<ResponseStreamChunk> {
+      assistantIndex: number | null;
+    }): AsyncGenerator<ResponseStreamChunk> {
       ensureNotAborted(signal);
-      let assistantIndex = resolvePendingAssistantIndex(
-        overrideAssistantIndex ?? null,
-      );
+      let assistantIndex = resolvePendingAssistantIndex(overrideAssistantIndex);
       const ensurePendingAssistant = (): string => {
           const resolvedIndex = resolvePendingAssistantIndex(assistantIndex);
           if (resolvedIndex !== null) {
@@ -384,7 +299,6 @@ const createAbortError = (): Error => {
             pending: true,
             groupId: nextGroupId,
           });
-          renderMessagesView();
           return nextGroupId;
         },
         finalizeToolCallAssistant = (): void => {
@@ -420,19 +334,17 @@ const createAbortError = (): Error => {
       }
       const systemPrompt = await buildSystemPrompt(settings.language),
         tools = getToolDefinitions(settings.apiType),
-        requestResult = normalizeRequestModelResult(
-          await requestModel({
-            settings,
-            systemPrompt,
-            tools,
-            toolAdapter: apiToolAdapter,
-            messages: state.messages,
-            onDelta: appendAssistantDelta,
-            onStreamStart,
-            onChunk: statusTracker.updateFromChunk,
-            signal,
-          }),
-        ),
+        requestResult = await requestModel({
+          settings,
+          systemPrompt,
+          tools,
+          toolAdapter: apiToolAdapter,
+          messages: state.messages,
+          onDelta: appendAssistantDelta,
+          onStreamStart,
+          onChunk: statusTracker.updateFromChunk,
+          signal,
+        }),
         pendingToolCalls = requestResult.toolCalls;
       yield {
         toolCalls: pendingToolCalls,

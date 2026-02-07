@@ -6,6 +6,7 @@ import {
   handleSetPageHash,
 } from "../handlers/index.js";
 import {
+  extractErrorMessage,
   isContentScriptRequest,
   type ContentScriptRequestByType,
   type ContentScriptRequestType,
@@ -13,41 +14,31 @@ import {
   type ContentScriptResponseByRequest,
   type ContentScriptResponseByType,
 } from "../../shared/index.ts";
-
-const resolveErrorMessage = (error: unknown, fallback = "未知错误"): string => {
-    if (error instanceof Error && error.message) {
-      return error.message;
+const contentScriptHandlers: ContentScriptRpcHandlerMap = {
+  ping: (_message, sendResponse): void => {
+    const body = document.querySelector("body");
+    if (!body) {
+      sendResponse({ error: "页面没有可用的 body" });
+      return;
     }
-    if (typeof error === "string" && error.trim()) {
-      return error;
-    }
-    return fallback;
+    sendResponse({ ok: true });
   },
-  contentScriptHandlers: ContentScriptRpcHandlerMap = {
-    ping: (_message, sendResponse): void => {
-      const body = document.querySelector("body");
-      if (!body) {
-        sendResponse({ error: "页面没有可用的 body" });
-        return;
-      }
-      sendResponse({ ok: true });
-    },
-    getPageContent: (message, sendResponse) => {
-      return handleGetPageContent(message, sendResponse);
-    },
-    getAllPageContent: (message, sendResponse) => {
-      return handleGetAllPageContent(message, sendResponse);
-    },
-    setPageHash: (message, sendResponse): void => {
-      handleSetPageHash(message, sendResponse);
-    },
-    clickButton: (message, sendResponse): void => {
-      handleClickButton(message, sendResponse);
-    },
-    enterText: (message, sendResponse): void => {
-      handleEnterText(message, sendResponse);
-    },
-  };
+  getPageContent: (message, sendResponse) => {
+    return handleGetPageContent(message, sendResponse);
+  },
+  getAllPageContent: (message, sendResponse) => {
+    return handleGetAllPageContent(message, sendResponse);
+  },
+  setPageHash: (message, sendResponse): void => {
+    handleSetPageHash(message, sendResponse);
+  },
+  clickButton: (message, sendResponse): void => {
+    handleClickButton(message, sendResponse);
+  },
+  enterText: (message, sendResponse): void => {
+    handleEnterText(message, sendResponse);
+  },
+};
 
 const dispatchMessage = <TType extends ContentScriptRequestType>(
   message: ContentScriptRequestByType<TType>,
@@ -57,7 +48,7 @@ const dispatchMessage = <TType extends ContentScriptRequestType>(
     result = handler(message, sendResponse);
   if (result instanceof Promise) {
     void result.catch((error: unknown) => {
-      const messageText = resolveErrorMessage(error);
+      const messageText = extractErrorMessage(error);
       console.error(messageText);
       sendResponse({ error: messageText });
     });
@@ -80,7 +71,7 @@ const registerMessageListener = (): void => {
     try {
       return dispatchMessage(message, sendTypedResponse);
     } catch (error: unknown) {
-      const messageText = resolveErrorMessage(error);
+      const messageText = extractErrorMessage(error);
       console.error(messageText);
       sendTypedResponse({ error: messageText });
     }
