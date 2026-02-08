@@ -1,4 +1,4 @@
-import { type JsonValue, t } from "../../../lib/utils/index.ts";
+import { type JsonValue, isInternalUrl, t } from "../../../lib/utils/index.ts";
 import type { EnterTextRequest } from "../../../../shared/index.ts";
 import type { EnterTextToolResult } from "../toolResultTypes.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
@@ -56,6 +56,8 @@ const parameters = {
     }
     return tab.id;
   },
+  isTabConnectable = (tab: BrowserTab): boolean =>
+    typeof tab.url !== "string" || !isInternalUrl(tab.url),
   execute = async (
     { id, content, invalid }: EnterTextArgs,
     context: ToolExecutionContext,
@@ -76,6 +78,11 @@ const parameters = {
       console.error("未找到可用标签页");
       return { ok: false };
     }
+    const connectableTabs = tabs.filter(isTabConnectable);
+    if (!connectableTabs.length) {
+      console.error("当前仅有浏览器内置页面，无法输入");
+      return { ok: false };
+    }
     const finalState = await runTabAction({
       buildErrorMessage: (error) =>
         error instanceof Error ? error.message : "输入失败",
@@ -85,7 +92,7 @@ const parameters = {
         const message: EnterTextRequest = { content, id, type: "enterText" };
         return context.sendMessageToTab(tabId, message);
       },
-      tabs,
+      tabs: connectableTabs,
       waitForContentScript: context.waitForContentScript,
     });
     if (finalState.done) {

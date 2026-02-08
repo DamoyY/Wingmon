@@ -114,7 +114,7 @@ export const updateSettings = async (
 };
 
 export const buildEndpoint = (baseUrl: string, apiType: ApiType): string => {
-  const normalized = baseUrl.replace(/\/+$/, ""),
+  const normalized = baseUrl.replace(/\/+$/u, ""),
     chatPath = "/chat/completions",
     responsesPath = "/responses";
   if (normalized.endsWith(chatPath)) {

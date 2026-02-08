@@ -114,7 +114,7 @@ export const createTab = async (
   active: boolean,
 ): Promise<CreatedBrowserTab> => {
   try {
-    const tab = await chrome.tabs.create({ url, active });
+    const tab = await chrome.tabs.create({ active, url });
     if (typeof tab.id !== "number") {
       throw new Error("创建标签页失败：缺少 Tab ID");
     }

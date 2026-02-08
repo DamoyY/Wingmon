@@ -29,6 +29,8 @@ const clickPageReadDelayMs = 500,
     new Promise<void>((resolve) => {
       setTimeout(resolve, delayMs);
     }),
+  isTabConnectable = (tab: BrowserTab): boolean =>
+    typeof tab.url !== "string" || !isInternalUrl(tab.url),
   resolveClickButtonPageNumber = (
     response: ClickButtonResponse,
   ): number | undefined => {
@@ -67,6 +69,10 @@ const parameters = {
     if (!tabs.length) {
       throw new Error("未找到可用标签页");
     }
+    const connectableTabs = tabs.filter(isTabConnectable);
+    if (!connectableTabs.length) {
+      throw new Error("当前仅有浏览器内置页面，无法点击按钮");
+    }
     const finalState = await runTabAction({
       buildErrorMessage: (error) =>
         error instanceof Error ? error.message : "点击失败",
@@ -95,7 +101,7 @@ const parameters = {
           });
           pageData = await context.fetchPageMarkdownData(tabId);
         }
-        const matchedTab = tabs.find((tab) => tab.id === tabId),
+        const matchedTab = connectableTabs.find((tab) => tab.id === tabId),
           resolvedUrl = pageData.url || matchedTab?.url || "",
           internal = isInternalUrl(resolvedUrl),
           result: ClickButtonToolResult = {
@@ -126,7 +132,7 @@ const parameters = {
         };
         return context.sendMessageToTab(tabId, message);
       },
-      tabs,
+      tabs: connectableTabs,
       waitForContentScript: context.waitForContentScript,
     });
     if (finalState.done) {
