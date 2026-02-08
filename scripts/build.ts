@@ -1,4 +1,3 @@
-import { mkdir } from "node:fs/promises";
 import {
   buildBundles,
   buildManifest,
@@ -7,6 +6,7 @@ import {
   outputPublicDir,
   outputRoot,
 } from "./build/index.ts";
+import { mkdir } from "node:fs/promises";
 
 await mkdir(outputRoot, { recursive: true });
 await mkdir(outputPublicDir, { recursive: true });

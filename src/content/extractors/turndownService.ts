@@ -1,6 +1,6 @@
 import TurndownService, { type TurndownRule } from "turndown";
-import { tables } from "turndown-plugin-gfm";
 import { isDataUrl, isSvgUrl } from "../../shared/index.ts";
+import { tables } from "turndown-plugin-gfm";
 
 const ensureTurndownService = (): void => {
     if (typeof TurndownService !== "function") {

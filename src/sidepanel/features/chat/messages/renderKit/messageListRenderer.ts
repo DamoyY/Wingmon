@@ -1,17 +1,17 @@
-import { animateMessageRowEnter } from "./animations.ts";
 import {
   createMessageRow,
   getMessageRenderedText,
   setMessageContent,
   updateMessageStatusLine,
 } from "./components/index.ts";
-import { wrapTrailingText } from "../../../../lib/domTools/index.ts";
 import {
   requireElementById,
   resolveIndicesKey,
 } from "../../../../lib/utils/index.ts";
 import type { DisplayMessage } from "../displayMessages.ts";
 import type { MessageActionHandlers } from "../actions.ts";
+import { animateMessageRowEnter } from "./animations.ts";
+import { wrapTrailingText } from "../../../../lib/domTools/index.ts";
 
 export type RenderOptions = {
   animateIndices?: number[];
@@ -82,9 +82,9 @@ const resolveAnimationState = (
   }
   return {
     animateKey,
+    animateKeys,
     carryoverKey,
     shouldRefreshCarryover,
-    animateKeys,
   };
 };
 

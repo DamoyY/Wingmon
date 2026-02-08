@@ -1,5 +1,5 @@
-import path from "node:path";
 import { fileURLToPath } from "node:url";
+import path from "node:path";
 
 export const rootDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

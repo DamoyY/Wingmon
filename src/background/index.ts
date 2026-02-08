@@ -71,8 +71,8 @@ const logError = (
   injectContentScriptToTab = async (tabId: number): Promise<void> => {
     try {
       await chrome.scripting.executeScript({
-        target: { tabId },
         files: [contentScriptFilePath],
+        target: { tabId },
       });
     } catch (error) {
       if (error instanceof Error) {

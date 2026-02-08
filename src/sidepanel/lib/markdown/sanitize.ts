@@ -1,5 +1,5 @@
-import DOMPurify from "dompurify";
 import { isDataUrl, normalizeUrl } from "../../../shared/index.ts";
+import DOMPurify from "dompurify";
 
 export const isSafeUrl = (url: string | null | undefined): boolean => {
   const normalized = normalizeUrl(url);

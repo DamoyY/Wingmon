@@ -1,10 +1,10 @@
-import type { JsonValue } from "../../../lib/utils/index.ts";
 import type {
   ToolExecutionContext,
   ToolMessageContext,
   ToolNameKey,
   ToolPageReadDedupeAction,
 } from "../definitions.ts";
+import type { JsonValue } from "../../../lib/utils/index.ts";
 import clickButton from "./clickButtonTool.ts";
 import closeBrowserPage from "./closeBrowserPage.ts";
 import enterText from "./enterTextTool.ts";

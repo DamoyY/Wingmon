@@ -4,10 +4,10 @@ import {
   state,
   updateMessage,
 } from "../../../core/store/index.ts";
-import { attachToolCallsToAssistant } from "../../../core/agent/toolCallNormalization.ts";
 import type { ToolCall } from "../../../core/agent/definitions.ts";
-import { renderMessagesView } from "./presenter.ts";
+import { attachToolCallsToAssistant } from "../../../core/agent/toolCallNormalization.ts";
 import { createRandomId } from "../../../lib/utils/index.ts";
+import { renderMessagesView } from "./presenter.ts";
 const normalizeToolCalls = (toolCalls: ToolCall[] | null): ToolCall[] =>
     Array.isArray(toolCalls) ? toolCalls : [],
   attachToolCalls = (
@@ -76,9 +76,9 @@ export const applyNonStreamedResponse = (
       updateMessage(resolvedIndex, { content: reply, pending: false });
     } else {
       addMessage({
-        role: "assistant",
         content: reply,
         groupId: createRandomId("assistant"),
+        role: "assistant",
       });
     }
     renderMessagesView();

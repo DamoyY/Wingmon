@@ -42,10 +42,10 @@ export const animateMessageRowEnter = (row: HTMLElement): void => {
   row.animate(
     [
       {
-        transform: `translate3d(${String(offsetX)}px, 0, 0)`,
         opacity: 0,
+        transform: `translate3d(${String(offsetX)}px, 0, 0)`,
       },
-      { transform: "translate3d(0, 0, 0)", opacity: 1 },
+      { opacity: 1, transform: "translate3d(0, 0, 0)" },
     ],
     {
       duration: MESSAGE_ENTER_DURATION,
@@ -64,10 +64,10 @@ const animateMessageRowExit = async (row: HTMLElement): Promise<void> => {
   const offsetX = resolveMessageRowEdgeOffset(row, role, container);
   const animation = row.animate(
     [
-      { transform: "translate3d(0, 0, 0)", opacity: 1 },
+      { opacity: 1, transform: "translate3d(0, 0, 0)" },
       {
-        transform: `translate3d(${String(offsetX)}px, 0, 0)`,
         opacity: 0,
+        transform: `translate3d(${String(offsetX)}px, 0, 0)`,
       },
     ],
     {

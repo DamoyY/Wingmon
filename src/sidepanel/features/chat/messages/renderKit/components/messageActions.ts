@@ -1,6 +1,6 @@
+import type { MessageActionHandlers } from "../../actions.ts";
 import { createMaterialIconButton } from "../../../../../lib/domTools/index.ts";
 import { t } from "../../../../../lib/utils/index.ts";
-import type { MessageActionHandlers } from "../../actions.ts";
 
 type MessageActionHandler = (indices: number[]) => Promise<void> | void;
 
@@ -57,13 +57,13 @@ const createActionButton = ({
   onClick,
 }: ActionButtonConfig): HTMLElement =>
   createMaterialIconButton({
-    icon,
     className,
-    title,
+    icon,
     onClick: (event) => {
       event.stopPropagation();
       void onClick();
     },
+    title,
   });
 
 export const createMessageActions = (
@@ -79,16 +79,16 @@ export const createMessageActions = (
   const actions = document.createElement("div");
   actions.className = "message-actions";
   const copyButton = createActionButton({
-    icon: "content_copy",
     className: "message-action message-copy",
-    title: t("copy"),
+    icon: "content_copy",
     onClick: () => runAction(onCopy, indices, onError),
+    title: t("copy"),
   });
   const deleteButton = createActionButton({
-    icon: "delete",
     className: "message-action message-delete",
-    title: t("delete"),
+    icon: "delete",
     onClick: () => runAction(onDelete, indices, onError),
+    title: t("delete"),
   });
   actions.append(copyButton, deleteButton);
   return actions;

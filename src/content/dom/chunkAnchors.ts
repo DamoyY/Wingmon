@@ -1,11 +1,11 @@
 import {
+  type DomPathErrorMessages,
   buildDomPath,
   hashDomPath,
-  type DomPathErrorMessages,
 } from "./domPathHash.js";
 import {
-  isElementVisible,
   type ElementVisibilityOptions,
+  isElementVisible,
 } from "./visibility.js";
 
 const HASH_LENGTH = 8;
@@ -14,8 +14,8 @@ const chunkAnchorSuffix = "_LLMCHUNKANCHOREND";
 const maximumAnchorCount = 25;
 const minimumTextLength = 24;
 const anchorVisibilityOptions: ElementVisibilityOptions = {
-  minimumWidth: 8,
   minimumHeight: 8,
+  minimumWidth: 8,
   requirePointerEvents: false,
 };
 const excludedTagNames = new Set([
@@ -34,10 +34,10 @@ export const chunkAnchorAttribute = "data-llm-chunk-anchor-id";
 export const chunkAnchorMarkerPattern =
   /LLMCHUNKANCHORSTART\\?_([a-z0-9]+)\\?_LLMCHUNKANCHOREND/g;
 const chunkAnchorPathErrorMessages: DomPathErrorMessages = {
+  emptyPath: "无法生成锚点 DOM 路径",
   invalidElement: "锚点节点无效",
   invalidRoot: "根节点无效",
   outsideRoot: "锚点元素不在根节点内",
-  emptyPath: "无法生成锚点 DOM 路径",
 };
 
 const clearChunkAnchors = (root: HTMLElement): void => {

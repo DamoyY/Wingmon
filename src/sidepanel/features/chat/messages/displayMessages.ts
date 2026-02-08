@@ -84,9 +84,9 @@ export const buildDisplayMessages = (
       const content = combineMessageContents(assistantGroup.contents);
       if (content || assistantGroup.hasPending) {
         entries.push({
-          role: "assistant",
           content,
           indices: assistantGroup.indices,
+          role: "assistant",
           status: assistantGroup.status,
         });
       }
@@ -101,10 +101,10 @@ export const buildDisplayMessages = (
     ): void => {
       assistantGroup = {
         contents: [content],
-        indices: [index],
-        hasPending: pending,
-        status,
         groupId,
+        hasPending: pending,
+        indices: [index],
+        status,
       };
     };
   messages.forEach((msg, index) => {
@@ -126,8 +126,8 @@ export const buildDisplayMessages = (
       }
       if (assistantGroup.groupId === groupId) {
         assistantGroup.contents.push(content);
-        assistantGroup.indices.push(index);
         assistantGroup.hasPending = assistantGroup.hasPending || isPending;
+        assistantGroup.indices.push(index);
         assistantGroup.status = status;
         return;
       }
@@ -136,7 +136,7 @@ export const buildDisplayMessages = (
       return;
     }
     flushAssistantGroup();
-    entries.push({ role, content, indices: [index] });
+    entries.push({ content, indices: [index], role });
   });
   flushAssistantGroup();
   return entries;

@@ -1,5 +1,5 @@
-import { stat } from "node:fs/promises";
 import path from "node:path";
+import { stat } from "node:fs/promises";
 
 type PrimitiveValue = boolean | number | string | null;
 export type GuardValue = PrimitiveValue | object;

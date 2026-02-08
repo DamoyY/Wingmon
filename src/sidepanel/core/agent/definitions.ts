@@ -1,11 +1,11 @@
 import type { BrowserTab, CreatedBrowserTab } from "../services/index.ts";
-import { type JsonValue, parseJson } from "../../lib/utils/index.ts";
 import {
-  extractErrorMessage,
   type ChunkAnchorWeight,
   type ContentScriptRequest,
   type ContentScriptResponseByRequest,
+  extractErrorMessage,
 } from "../../../shared/index.ts";
+import { type JsonValue, parseJson } from "../../lib/utils/index.ts";
 import type { PageMarkdownData } from "./pageReadHelpers.ts";
 import ToolInputError from "./errors.ts";
 import toolModules from "./tools/index.ts";

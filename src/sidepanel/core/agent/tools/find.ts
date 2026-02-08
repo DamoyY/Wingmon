@@ -1,17 +1,17 @@
+import type { FindToolPageResult, FindToolResult } from "../toolResultTypes.ts";
 import type {
   GetAllPageContentRequest,
   GetAllPageContentResponse,
   PageContentChunk,
 } from "../../../../shared/index.ts";
-import { isInternalUrl, t, type JsonValue } from "../../../lib/utils/index.ts";
+import { type JsonValue, isInternalUrl, t } from "../../../lib/utils/index.ts";
+import {
+  type ToolArgObject,
+  ensureObjectArgs,
+} from "../validation/toolArgsValidation.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 import ToolInputError from "../errors.ts";
 import { formatFindResult } from "../toolResultFormatters.ts";
-import type { FindToolPageResult, FindToolResult } from "../toolResultTypes.ts";
-import {
-  ensureObjectArgs,
-  type ToolArgObject,
-} from "../validation/toolArgsValidation.ts";
 import { parseRequiredPositiveInteger } from "../validation/positiveInteger.js";
 
 type BrowserTab = Awaited<
@@ -89,8 +89,8 @@ const resolvePageContentItem = (
     throw new Error(`pages[${String(index)}].content 必须是字符串`);
   }
   return {
-    pageNumber,
     content: item.content,
+    pageNumber,
   };
 };
 
@@ -133,21 +133,21 @@ const buildFindPageResults = (
       return result;
     }
     result.push({
-      pageNumber: page.pageNumber,
       lines,
+      pageNumber: page.pageNumber,
     });
     return result;
   }, []);
 };
 
 const parameters = {
-    type: "object",
+    additionalProperties: false,
     properties: {
-      tabId: { type: "number", description: t("toolParamTabId") },
-      query: { type: "string", description: t("toolParamQuery") },
+      query: { description: t("toolParamQuery"), type: "string" },
+      tabId: { description: t("toolParamTabId"), type: "number" },
     },
     required: ["tabId", "query"],
-    additionalProperties: false,
+    type: "object",
   },
   validateArgs = (args: JsonValue): FindArgs => {
     const record = ensureObjectArgs(args),
@@ -155,8 +155,8 @@ const parameters = {
       query = resolveQuery(readArgValue(record, "query")),
       regex = resolveRegex(query);
     return {
-      tabId,
       regex,
+      tabId,
     };
   },
   execute = async (
@@ -186,11 +186,11 @@ const parameters = {
   };
 
 export default {
-  key: "find",
-  name: "find",
   description: t("toolFind"),
-  parameters,
-  validateArgs,
   execute,
   formatResult: formatFindResult,
+  key: "find",
+  name: "find",
+  parameters,
+  validateArgs,
 };

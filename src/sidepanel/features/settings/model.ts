@@ -56,9 +56,9 @@ const ensureSettingsInput = (settings: SettingsInputOrNull): SettingsInput =>
     typeof value === "string" ? value.trim() : "",
   normalizeSettings = (settings: SettingsInput): NormalizedSettings => ({
     apiKey: trimString(settings.apiKey),
+    apiType: settings.apiType === "responses" ? "responses" : "chat",
     baseUrl: trimString(settings.baseUrl),
     model: trimString(settings.model),
-    apiType: settings.apiType === "responses" ? "responses" : "chat",
     theme: normalizeTheme(settings.theme ?? "auto"),
     themeColor: normalizeThemeColorSafe(settings.themeColor ?? null),
     themeVariant: normalizeThemeVariant(settings.themeVariant ?? "neutral"),
@@ -98,9 +98,9 @@ const buildRequiredSettingsPayload = (
   formValues: SettingsInput,
 ): RequiredSettingsPayload => ({
   apiKey: trimString(formValues.apiKey),
+  apiType: formValues.apiType === "responses" ? "responses" : "chat",
   baseUrl: trimString(formValues.baseUrl),
   model: trimString(formValues.model),
-  apiType: formValues.apiType === "responses" ? "responses" : "chat",
 });
 
 export const validateRequiredSettings = (
@@ -109,12 +109,12 @@ export const validateRequiredSettings = (
   const payload = buildRequiredSettingsPayload(formValues);
   if (!payload.apiKey || !payload.baseUrl || !payload.model) {
     return {
-      valid: false,
       message: "API Key、Base URL 和模型不能为空",
       payload,
+      valid: false,
     };
   }
-  return { valid: true, payload };
+  return { payload, valid: true };
 };
 
 export const buildThemePayload = (formValues: SettingsInput) => ({

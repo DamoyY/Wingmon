@@ -144,10 +144,10 @@ const splitMarkdownByTokens = (
     totalPages = Math.max(1, Math.round(totalTokens / options.tokensPerPage));
   if (totalPages === 1) {
     return {
-      chunks: [content],
       boundaries: [0, content.length],
-      totalTokens,
+      chunks: [content],
       totalPages,
+      totalTokens,
     };
   }
   const getPrefixTokenCount = createPrefixTokenCounter(
@@ -189,10 +189,10 @@ const splitMarkdownByTokens = (
     .slice(0, -1)
     .map((start, index) => content.slice(start, boundaries[index + 1]));
   return {
-    chunks,
     boundaries,
-    totalTokens,
+    chunks,
     totalPages,
+    totalTokens,
   };
 };
 

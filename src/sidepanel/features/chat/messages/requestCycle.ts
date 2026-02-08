@@ -1,11 +1,18 @@
 import {
-  buildSystemPrompt,
+  type MessageRecord,
+  addMessage,
+  appendAssistantDelta,
+  state,
+  updateMessage,
+} from "../../../core/store/index.ts";
+import {
   type Settings,
+  buildSystemPrompt,
 } from "../../../core/services/index.ts";
 import {
-  buildChatMessages,
-  buildResponsesInput,
-} from "../../../core/agent/message-builders.ts";
+  type ToolCall,
+  getToolDefinitions,
+} from "../../../core/agent/definitions.ts";
 import {
   addChatToolCallDelta,
   addResponsesToolCallEvent,
@@ -15,19 +22,12 @@ import {
   finalizeResponsesToolCalls,
 } from "../../../core/agent/toolCallNormalization.ts";
 import {
-  getToolDefinitions,
-  type ToolCall,
-} from "../../../core/agent/definitions.ts";
+  buildChatMessages,
+  buildResponsesInput,
+} from "../../../core/agent/message-builders.ts";
+import { createRandomId, t } from "../../../lib/utils/index.ts";
 import { handleToolCalls } from "../../../core/agent/executor.ts";
 import requestModel from "../../../core/api/client.ts";
-import {
-  addMessage,
-  appendAssistantDelta,
-  state,
-  updateMessage,
-  type MessageRecord,
-} from "../../../core/store/index.ts";
-import { createRandomId, t } from "../../../lib/utils/index.ts";
 
 type StatusReporter = (status: string) => void;
 
@@ -69,13 +69,13 @@ type StatusTracker = {
 };
 
 const STATUS_KEYS = {
-  thinking: "statusThinking",
-  searching: "statusSearching",
   browsing: "statusBrowsing",
-  operating: "statusOperating",
   coding: "statusCoding",
-  speaking: "statusSpeaking",
   idle: "",
+  operating: "statusOperating",
+  searching: "statusSearching",
+  speaking: "statusSpeaking",
+  thinking: "statusThinking",
 } as const;
 
 type StatusKey = (typeof STATUS_KEYS)[keyof typeof STATUS_KEYS];
@@ -83,12 +83,12 @@ type StatusKey = (typeof STATUS_KEYS)[keyof typeof STATUS_KEYS];
 const STATUS_DOT_INTERVAL_MS = 360,
   STATUS_DOT_COUNT_MAX = 3,
   TOOL_STATUS_MAP: Record<string, StatusKey> = {
-    get_page: STATUS_KEYS.browsing,
-    find: STATUS_KEYS.searching,
-    list_tabs: STATUS_KEYS.browsing,
     click_button: STATUS_KEYS.operating,
-    enter_text: STATUS_KEYS.operating,
     close_page: STATUS_KEYS.operating,
+    enter_text: STATUS_KEYS.operating,
+    find: STATUS_KEYS.searching,
+    get_page: STATUS_KEYS.browsing,
+    list_tabs: STATUS_KEYS.browsing,
     run_console: STATUS_KEYS.coding,
     show_html: STATUS_KEYS.coding,
   };
@@ -234,6 +234,12 @@ const createAbortError = (): Error => {
         startDotTimer();
       };
     return {
+      dispose: (): void => {
+        stopDotTimer();
+        activeStatusKey = STATUS_KEYS.idle;
+        dotCount = 0;
+        lastRenderedStatus = "";
+      },
       reset: (): void => {
         stopDotTimer();
         activeStatusKey = STATUS_KEYS.idle;
@@ -249,12 +255,6 @@ const createAbortError = (): Error => {
           return;
         }
         setStatusKey(resolved);
-      },
-      dispose: (): void => {
-        stopDotTimer();
-        activeStatusKey = STATUS_KEYS.idle;
-        dotCount = 0;
-        lastRenderedStatus = "";
       },
     };
   },
@@ -294,10 +294,10 @@ const createAbortError = (): Error => {
           assistantIndex = state.messages.length;
           const nextGroupId = createRandomId("assistant");
           addMessage({
-            role: "assistant",
             content: "",
-            pending: true,
             groupId: nextGroupId,
+            pending: true,
+            role: "assistant",
           });
           return nextGroupId;
         },

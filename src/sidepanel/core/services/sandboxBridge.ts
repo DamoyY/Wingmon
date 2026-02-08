@@ -1,5 +1,5 @@
-import { createRandomId } from "../../lib/utils/index.ts";
 import type { JsonValue } from "../../lib/utils/index.ts";
+import { createRandomId } from "../../lib/utils/index.ts";
 
 const SANDBOX_REQUEST_TYPE = "runConsoleCommand";
 const SANDBOX_RESPONSE_TYPE = "runConsoleResult";

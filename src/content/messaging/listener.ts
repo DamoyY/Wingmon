@@ -1,21 +1,33 @@
 import {
+  type ContentScriptRequestByType,
+  type ContentScriptRequestType,
+  type ContentScriptResponseByRequest,
+  type ContentScriptResponseByType,
+  type ContentScriptRpcHandlerMap,
+  extractErrorMessage,
+  isContentScriptRequest,
+} from "../../shared/index.ts";
+import {
   handleClickButton,
   handleEnterText,
   handleGetAllPageContent,
   handleGetPageContent,
   handleSetPageHash,
 } from "../handlers/index.js";
-import {
-  extractErrorMessage,
-  isContentScriptRequest,
-  type ContentScriptRequestByType,
-  type ContentScriptRequestType,
-  type ContentScriptRpcHandlerMap,
-  type ContentScriptResponseByRequest,
-  type ContentScriptResponseByType,
-} from "../../shared/index.ts";
 
 const contentScriptHandlers: ContentScriptRpcHandlerMap = {
+  clickButton: (message, sendResponse): void => {
+    handleClickButton(message, sendResponse);
+  },
+  enterText: (message, sendResponse): void => {
+    handleEnterText(message, sendResponse);
+  },
+  getAllPageContent: (message, sendResponse) => {
+    return handleGetAllPageContent(message, sendResponse);
+  },
+  getPageContent: (message, sendResponse) => {
+    return handleGetPageContent(message, sendResponse);
+  },
   ping: (_message, sendResponse): void => {
     const body = document.querySelector("body");
     if (!body) {
@@ -24,20 +36,8 @@ const contentScriptHandlers: ContentScriptRpcHandlerMap = {
     }
     sendResponse({ ok: true });
   },
-  getPageContent: (message, sendResponse) => {
-    return handleGetPageContent(message, sendResponse);
-  },
-  getAllPageContent: (message, sendResponse) => {
-    return handleGetAllPageContent(message, sendResponse);
-  },
   setPageHash: (message, sendResponse): void => {
     handleSetPageHash(message, sendResponse);
-  },
-  clickButton: (message, sendResponse): void => {
-    handleClickButton(message, sendResponse);
-  },
-  enterText: (message, sendResponse): void => {
-    handleEnterText(message, sendResponse);
   },
 };
 

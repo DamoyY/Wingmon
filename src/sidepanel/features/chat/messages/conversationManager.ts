@@ -1,4 +1,9 @@
 import {
+  type Settings,
+  getSettings,
+  saveConversation,
+} from "../../../core/services/index.ts";
+import {
   addMessage,
   removeMessage,
   setStateValue,
@@ -6,20 +11,15 @@ import {
   touchUpdatedAt,
 } from "../../../core/store/index.ts";
 import {
-  getSettings,
-  saveConversation,
-  type Settings,
-} from "../../../core/services/index.ts";
-import { ensureSettingsReady } from "../../settings/model.ts";
-import appendSharedPageContext from "./pageContext.ts";
-import createResponseStream, {
-  type ResponseStreamChunk,
-} from "./requestCycle.ts";
-import { createRandomId } from "../../../lib/utils/index.ts";
-import {
   applyNonStreamedResponse,
   applyStreamedResponse,
 } from "./responseHandlers.ts";
+import createResponseStream, {
+  type ResponseStreamChunk,
+} from "./requestCycle.ts";
+import appendSharedPageContext from "./pageContext.ts";
+import { createRandomId } from "../../../lib/utils/index.ts";
+import { ensureSettingsReady } from "../../settings/model.ts";
 
 type ConversationManagerEvent =
   | { type: "sending-change"; sending: boolean }
@@ -70,19 +70,19 @@ const ensureNotAborted = (signal: AbortSignal): void => {
   resolveErrorDescriptor = (error: unknown): ErrorDescriptor => {
     if (error instanceof Error) {
       return {
-        name: error.name,
         message: error.message,
+        name: error.name,
       };
     }
     if (typeof error === "string" && error.trim()) {
       return {
-        name: "Error",
         message: error,
+        name: "Error",
       };
     }
     return {
-      name: "Error",
       message: "",
+      name: "Error",
     };
   },
   isAbortError = (error: ErrorDescriptor): boolean => {
@@ -167,11 +167,11 @@ export class ConversationManager {
   }
 
   #emitStatus(status: string): void {
-    this.#emit({ type: "status-change", status });
+    this.#emit({ status, type: "status-change" });
   }
 
   stopSending(): Promise<void> {
-    this.#emit({ type: "sending-change", sending: false });
+    this.#emit({ sending: false, type: "sending-change" });
     const abortController = this.#activeAbortController;
     if (!abortController) {
       return Promise.resolve();
@@ -194,15 +194,15 @@ export class ConversationManager {
     }
     const settings = await getSettings();
     if (!ensureSettingsReady(settings)) {
-      this.#emit({ type: "settings-required", settings });
+      this.#emit({ settings, type: "settings-required" });
       return;
     }
-    addMessage({ role: "user", content: normalizedContent });
-    this.#emit({ type: "message-accepted", content: normalizedContent });
+    addMessage({ content: normalizedContent, role: "user" });
+    this.#emit({ content: normalizedContent, type: "message-accepted" });
     setStateValue("sending", true);
     const abortController = new AbortController();
     this.#activeAbortController = abortController;
-    this.#emit({ type: "sending-change", sending: true });
+    this.#emit({ sending: true, type: "sending-change" });
     this.#emitStatus("");
     let pendingAssistantIndex: number | null = null;
     try {
@@ -213,19 +213,19 @@ export class ConversationManager {
       }
       ensureNotAborted(abortController.signal);
       addMessage({
-        role: "assistant",
         content: "",
-        pending: true,
         groupId: createRandomId("assistant"),
+        pending: true,
+        role: "assistant",
       });
       pendingAssistantIndex = state.messages.length - 1;
       const responseStream = createResponseStream({
-        settings,
-        signal: abortController.signal,
+        assistantIndex: pendingAssistantIndex,
         onStatus: (status: string) => {
           this.#emitStatus(status);
         },
-        assistantIndex: pendingAssistantIndex,
+        settings,
+        signal: abortController.signal,
       });
       let response = await responseStream.next();
       while (!response.done) {
@@ -274,7 +274,7 @@ export class ConversationManager {
       if (this.#activeAbortController === abortController) {
         this.#activeAbortController = null;
       }
-      this.#emit({ type: "sending-change", sending: false });
+      this.#emit({ sending: false, type: "sending-change" });
     }
   }
 }

@@ -25,29 +25,37 @@ type SettingsPatch = Partial<Settings>;
 
 const settingsKeys = {
     apiKey: "api_key",
-    baseUrl: "base_url",
-    model: "model",
     apiType: "api_type",
+    baseUrl: "base_url",
+    followMode: "follow_mode",
+    language: "language",
+    model: "model",
     theme: "theme",
     themeColor: "theme_color",
     themeVariant: "theme_variant",
-    followMode: "follow_mode",
-    language: "language",
   },
   toSettings = (data: StoredSettings): Settings => ({
     apiKey:
       typeof data[settingsKeys.apiKey] === "string"
         ? data[settingsKeys.apiKey]
         : "",
+    apiType: data[settingsKeys.apiType] === "responses" ? "responses" : "chat",
     baseUrl:
       typeof data[settingsKeys.baseUrl] === "string"
         ? data[settingsKeys.baseUrl]
         : "",
+    followMode:
+      data[settingsKeys.followMode] === undefined
+        ? true
+        : Boolean(data[settingsKeys.followMode]),
+    language:
+      typeof data[settingsKeys.language] === "string"
+        ? data[settingsKeys.language]
+        : "en",
     model:
       typeof data[settingsKeys.model] === "string"
         ? data[settingsKeys.model]
         : "",
-    apiType: data[settingsKeys.apiType] === "responses" ? "responses" : "chat",
     theme: normalizeTheme(
       typeof data[settingsKeys.theme] === "string"
         ? data[settingsKeys.theme]
@@ -63,14 +71,6 @@ const settingsKeys = {
         ? data[settingsKeys.themeVariant]
         : null,
     ),
-    followMode:
-      data[settingsKeys.followMode] === undefined
-        ? true
-        : Boolean(data[settingsKeys.followMode]),
-    language:
-      typeof data[settingsKeys.language] === "string"
-        ? data[settingsKeys.language]
-        : "en",
   });
 
 export const getSettings = async (): Promise<Settings> => {
@@ -102,12 +102,12 @@ export const updateSettings = async (
       ...current,
       ...patch,
       apiType: patch.apiType ?? current.apiType,
+      language: patch.language ?? current.language,
       theme: normalizeTheme(patch.theme ?? current.theme),
       themeColor: normalizeThemeColor(patch.themeColor ?? current.themeColor),
       themeVariant: normalizeThemeVariant(
         patch.themeVariant ?? current.themeVariant,
       ),
-      language: patch.language ?? current.language,
     };
   await setSettings(next);
   return next;

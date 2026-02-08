@@ -123,8 +123,8 @@ export const setStateValue = <K extends StateKey>(
   }
   state[resolvedKey] = value;
   notifyStateChange(resolvedKey, {
-    type: "set",
     previous,
+    type: "set",
     value,
     ...detail,
   });
@@ -168,9 +168,9 @@ export const addMessage = <TMessage extends MessageRecord>(
   const normalized = normalizeMessage(message);
   state.messages.push(normalized);
   notifyStateChange("messages", {
-    type: "add",
     index: state.messages.length - 1,
     message: normalized,
+    type: "add",
   });
   return normalized;
 };
@@ -188,10 +188,10 @@ export const updateMessage = <TMessage extends MessageRecord = MessageRecord>(
   const normalized = normalizeMessage(next);
   state.messages[index] = normalized;
   notifyStateChange("messages", {
-    type: "update",
     index,
     message: normalized,
     previous: current,
+    type: "update",
   });
   return normalized;
 };
@@ -204,9 +204,9 @@ export const removeMessage = (index: number): MessageRecord => {
   }
   const removed = removedList[0];
   notifyStateChange("messages", {
-    type: "remove",
     index,
     message: removed,
+    type: "remove",
   });
   return removed;
 };
@@ -218,8 +218,8 @@ export const setMessages = (messages: MessageRecord[]): void => {
   const normalized = messages.map((message) => normalizeMessage(message));
   state.messages = normalized;
   notifyStateChange("messages", {
-    type: "set",
     messages: normalized,
+    type: "set",
   });
 };
 
@@ -242,8 +242,8 @@ export const loadConversationState = (
   const normalized = messages.map((message) => normalizeMessage(message));
   state.messages = normalized;
   notifyStateChange("messages", {
-    type: "load",
     messages: normalized,
+    type: "load",
   });
   setStateValue("updatedAt", updatedAt, { type: "load" });
 };

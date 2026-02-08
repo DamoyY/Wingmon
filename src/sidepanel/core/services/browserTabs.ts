@@ -1,8 +1,8 @@
-import { isInternalUrl } from "../../lib/utils/index.ts";
 import type {
   ContentScriptRequest,
   ContentScriptResponseByRequest,
 } from "../../../shared/index.ts";
+import { isInternalUrl } from "../../lib/utils/index.ts";
 
 export type BrowserTab = chrome.tabs.Tab;
 
@@ -223,13 +223,13 @@ export const waitForContentScript = async (
           }
         },
         waiter: PendingWaiter = {
-          resolve: (isComplete: boolean) => {
-            cleanup();
-            resolve(isComplete);
-          },
           reject: (error: Error) => {
             cleanup();
             reject(error);
+          },
+          resolve: (isComplete: boolean) => {
+            cleanup();
+            resolve(isComplete);
           },
           timeoutId: 0,
         };

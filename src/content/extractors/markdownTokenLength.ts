@@ -1,7 +1,7 @@
 import { Tiktoken as JsTiktoken } from "js-tiktoken/lite";
-import o200kBase from "js-tiktoken/ranks/o200k_base";
 import type { TokenLengthResolver } from "../../shared/index.ts";
 import { createO200kBaseEncoding } from "./tiktokenEncoding.ts";
+import o200kBase from "js-tiktoken/ranks/o200k_base";
 
 type MarkdownEncoding = {
   encode: (text: string) => ArrayLike<number>;
@@ -54,11 +54,11 @@ const resolveTokenBytes = (
     return specialTokenBytes;
   }
   console.error("无法解析 token 字节", {
-    token,
     hasDecodeSingleTokenBytes:
       typeof encoding.decode_single_token_bytes === "function",
-    hasTextMap: encoding.textMap instanceof Map,
     hasInverseSpecialTokens: typeof encoding.inverseSpecialTokens === "object",
+    hasTextMap: encoding.textMap instanceof Map,
+    token,
   });
   throw new Error(`Unknown token id: ${String(token)}`);
 };
@@ -73,8 +73,8 @@ const resolveMarkdownTokenByteBoundaries = (
     const token = encodedTokens[index];
     if (!Number.isInteger(token) || token < 0) {
       console.error("token id 非法", {
-        token,
         index,
+        token,
       });
       throw new Error("token id 非法");
     }
@@ -92,8 +92,8 @@ const resolveMarkdownTokenByteBoundaries = (
   }
   return {
     tokenByteBoundaries,
-    totalTokens: encodedTokens.length,
     totalBytes,
+    totalTokens: encodedTokens.length,
   };
 };
 

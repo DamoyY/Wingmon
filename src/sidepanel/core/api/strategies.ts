@@ -1,3 +1,14 @@
+import {
+  type ApiRequestChunk,
+  extractResponsesText,
+  getChatDeltaText,
+  getChatToolCallDeltas,
+  getResponsesDeltaText,
+  getResponsesToolCallEventPayload,
+  getToolCallsFromChatDeltas,
+  getToolCallsFromResponsesEvent,
+} from "./sse.ts";
+import type { ApiType, Settings } from "../services/index.ts";
 import type {
   ChatCompletion,
   ChatCompletionAssistantMessageParam,
@@ -17,21 +28,7 @@ import type {
   ResponseStreamEvent,
   Tool as ResponsesTool,
 } from "openai/resources/responses/responses";
-import {
-  extractResponsesText,
-  getChatDeltaText,
-  getChatToolCallDeltas,
-  getResponsesDeltaText,
-  getResponsesToolCallEventPayload,
-  getToolCallsFromChatDeltas,
-  getToolCallsFromResponsesEvent,
-  type ApiRequestChunk,
-} from "./sse.ts";
 import type { ToolCall, ToolDefinition } from "../agent/definitions.ts";
-import type {
-  buildChatMessages,
-  buildResponsesInput,
-} from "../agent/message-builders.ts";
 import type {
   addChatToolCallDelta,
   addResponsesToolCallEvent,
@@ -40,8 +37,11 @@ import type {
   finalizeChatToolCalls,
   finalizeResponsesToolCalls,
 } from "../agent/toolCallNormalization.ts";
+import type {
+  buildChatMessages,
+  buildResponsesInput,
+} from "../agent/message-builders.ts";
 import type { MessageRecord } from "../store/index.ts";
-import type { ApiType, Settings } from "../services/index.ts";
 
 export type { ApiRequestChunk } from "./sse.ts";
 
@@ -234,12 +234,12 @@ const isPresent = <T>(value: T | null): value is T => value !== null,
       throw new Error("助手工具调用缺少函数名");
     }
     return {
+      function: {
+        arguments: normalizeToolArguments(functionValue.arguments),
+        name: functionValue.name,
+      },
       id: idValue,
       type: "function",
-      function: {
-        name: functionValue.name,
-        arguments: normalizeToolArguments(functionValue.arguments),
-      },
     };
   },
   normalizeChatToolCallList = (
@@ -269,8 +269,8 @@ const isPresent = <T>(value: T | null): value is T => value !== null,
         throw new Error("tool 消息缺少 tool_call_id");
       }
       return {
-        role: "tool",
         content: message.content,
+        role: "tool",
         tool_call_id: toolCallId,
       };
     }

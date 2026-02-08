@@ -1,10 +1,10 @@
-import type { ChatCompletionChunk } from "openai/resources/chat/completions";
 import type {
   Response,
   ResponseOutputItem,
   ResponseOutputMessage,
   ResponseStreamEvent,
 } from "openai/resources/responses/responses";
+import type { ChatCompletionChunk } from "openai/resources/chat/completions";
 import type { ToolCall } from "../agent/definitions.ts";
 
 type StreamChatToolCall = NonNullable<
@@ -172,24 +172,24 @@ export const getResponsesToolCallEventPayload = (
       return null;
     }
     return {
-      type: event.type,
-      output_index: event.output_index,
       item: toResponsesFunctionCallItem(event.item),
+      output_index: event.output_index,
+      type: event.type,
     };
   }
   if (event.type === "response.function_call_arguments.delta") {
     return {
-      type: event.type,
-      output_index: event.output_index,
       delta: event.delta,
+      output_index: event.output_index,
+      type: event.type,
     };
   }
   if (event.type === "response.function_call_arguments.done") {
     return {
-      type: event.type,
-      output_index: event.output_index,
       arguments: event.arguments,
       name: event.name,
+      output_index: event.output_index,
+      type: event.type,
     };
   }
   return null;
@@ -223,8 +223,8 @@ export const getToolCallsFromResponsesEvent = (
     if (item?.type === "function_call") {
       return [
         {
-          name: item.name,
           arguments: typeof item.arguments === "string" ? item.arguments : "",
+          name: item.name,
         },
       ];
     }
@@ -233,8 +233,8 @@ export const getToolCallsFromResponsesEvent = (
     if (typeof payload.name === "string" && payload.name.length > 0) {
       return [
         {
-          name: payload.name,
           arguments: typeof payload.delta === "string" ? payload.delta : "",
+          name: payload.name,
         },
       ];
     }
@@ -243,9 +243,9 @@ export const getToolCallsFromResponsesEvent = (
     if (typeof payload.name === "string" && payload.name.length > 0) {
       return [
         {
-          name: payload.name,
           arguments:
             typeof payload.arguments === "string" ? payload.arguments : "",
+          name: payload.name,
         },
       ];
     }

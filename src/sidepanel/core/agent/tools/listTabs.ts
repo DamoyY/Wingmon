@@ -1,4 +1,4 @@
-import { t, type JsonValue } from "../../../lib/utils/index.ts";
+import { type JsonValue, t } from "../../../lib/utils/index.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 import { ensureObjectArgs } from "../validation/index.js";
 
@@ -9,9 +9,9 @@ type BrowserTab = Awaited<
 >[number];
 
 const parameters = {
-    type: "object",
-    properties: {},
     additionalProperties: false,
+    properties: {},
+    type: "object",
   },
   buildListTabsOutput = (tabs: BrowserTab[]): string =>
     tabs
@@ -35,10 +35,10 @@ const parameters = {
   };
 
 export default {
+  description: t("toolListTabs"),
+  execute,
   key: "listTabs",
   name: "list_tabs",
-  description: t("toolListTabs"),
   parameters,
   validateArgs,
-  execute,
 };

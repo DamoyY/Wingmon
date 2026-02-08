@@ -1,10 +1,10 @@
-import type { ChunkAnchorWeight } from "../../shared/index.ts";
-import { resolvePageNumberInput } from "../common/index.ts";
 import {
-  prepareMarkdownPageContent,
   type PageContentData,
+  prepareMarkdownPageContent,
 } from "./pageMarkdownPreparation.ts";
+import type { ChunkAnchorWeight } from "../../shared/index.ts";
 import { resolveChunkAnchorWeightsOrThrow } from "./chunkAnchorWeights.ts";
+import { resolvePageNumberInput } from "../common/index.ts";
 
 type MarkdownPageContent = {
   title: string;
@@ -36,15 +36,15 @@ export const convertPageContentToMarkdownPages = (
 ): MarkdownPageContentCollection => {
   const prepared = prepareMarkdownPageContent(pageData);
   return {
-    title: prepared.title,
-    url: prepared.url,
-    totalPages: prepared.chunked.totalPages,
-    viewportPage: prepared.viewportPage,
     pages: prepared.chunked.chunks.map((content, index) => ({
-      pageNumber: index + 1,
       content,
+      pageNumber: index + 1,
     })),
+    title: prepared.title,
+    totalPages: prepared.chunked.totalPages,
     totalTokens: prepared.chunked.totalTokens,
+    url: prepared.url,
+    viewportPage: prepared.viewportPage,
   };
 };
 
@@ -69,14 +69,14 @@ const convertPageContentToMarkdown = (
     throw new Error("分片内容缺失");
   }
   return {
-    title: prepared.title,
-    url: prepared.url,
-    content: pageChunk,
-    totalPages: prepared.chunked.totalPages,
-    pageNumber,
-    viewportPage: prepared.viewportPage,
     chunkAnchorWeights,
+    content: pageChunk,
+    pageNumber,
+    title: prepared.title,
+    totalPages: prepared.chunked.totalPages,
     totalTokens: prepared.chunked.totalTokens,
+    url: prepared.url,
+    viewportPage: prepared.viewportPage,
   };
 };
 

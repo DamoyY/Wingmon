@@ -1,7 +1,7 @@
 import { assignLlmIds, insertViewportMarker } from "../dom/index.js";
+import type { HtmlFallbackScrollMetrics } from "./setPageHashTypes.js";
 import convertPageContentToMarkdown from "../extractors/converter.js";
 import { resolvePageNumberInput } from "../common/index.ts";
-import type { HtmlFallbackScrollMetrics } from "./setPageHashTypes.js";
 
 const resolveScrollBehavior = (): ScrollBehavior => {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -11,8 +11,8 @@ const resolveScrollBehavior = (): ScrollBehavior => {
 
 export const scrollWindowTo = (top: number): void => {
   window.scrollTo({
-    top,
     behavior: resolveScrollBehavior(),
+    top,
   });
 };
 
@@ -37,11 +37,11 @@ const resolveHtmlFallbackScrollMetrics = (
     maxScrollTop = Math.max(documentHeight, bodyHeight) - window.innerHeight,
     targetTop = Math.max(0, maxScrollTop) * ratio;
   return {
-    ratio,
-    maxScrollTop,
-    targetTop,
-    documentHeight,
     bodyHeight,
+    documentHeight,
+    maxScrollTop,
+    ratio,
+    targetTop,
   };
 };
 
@@ -65,9 +65,9 @@ export const resolveHtmlTotalPages = (): number => {
     assignLlmIds(body);
     const markdown = convertPageContentToMarkdown({
       body,
+      pageNumber: 1,
       title: document.title || "",
       url: window.location.href || "",
-      pageNumber: 1,
     });
     return markdown.totalPages;
   } finally {

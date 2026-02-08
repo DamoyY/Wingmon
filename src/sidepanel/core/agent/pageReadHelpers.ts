@@ -1,4 +1,3 @@
-import { t } from "../../lib/utils/index.ts";
 import {
   type ChunkAnchorWeight,
   type GetPageContentRequest,
@@ -15,6 +14,7 @@ import {
   parseOptionalPositiveInteger,
   parseOptionalPositiveNumber,
 } from "./validation/index.js";
+import { t } from "../../lib/utils/index.ts";
 
 type PageReadResultArgs = {
   headerLines: string[];
@@ -164,10 +164,10 @@ const parseChunkAnchorWeightItem = (
         "chunkAnchorWeights",
       );
     return {
+      chunkAnchorWeights,
       pageNumber,
       totalPages,
       viewportPage,
-      chunkAnchorWeights,
     };
   };
 
@@ -189,8 +189,8 @@ const buildPageContentMessage = (
 ): GetPageContentRequest => {
   if (pageNumber !== undefined) {
     return {
-      type: "getPageContent",
       pageNumber: resolvePageNumber(pageNumber),
+      type: "getPageContent",
     };
   }
   return { type: "getPageContent" };
@@ -221,9 +221,9 @@ export const fetchPageMarkdownData = async (
       }
       const metadata = resolvePageMetadata(pageData, pageNumber);
       return {
+        content: pageData.content,
         title: pageData.title || "",
         url: pageData.url || "",
-        content: pageData.content,
         ...metadata,
       };
     },

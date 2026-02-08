@@ -1,9 +1,9 @@
-import type { MessageActionHandlers } from "../../actions.ts";
 import type { DisplayMessage } from "../../displayMessages.ts";
-import { resolveIndicesKey } from "../../../../../lib/utils/index.ts";
+import type { MessageActionHandlers } from "../../actions.ts";
 import { createMessageActions } from "./messageActions.ts";
 import { createMessageContent } from "./messageContent.ts";
 import { createMessageStatusLine } from "./messageStatus.ts";
+import { resolveIndicesKey } from "../../../../../lib/utils/index.ts";
 
 const createMessageNode = (message: DisplayMessage): HTMLDivElement => {
   const node = document.createElement("div");

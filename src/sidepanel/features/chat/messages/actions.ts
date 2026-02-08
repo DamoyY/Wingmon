@@ -4,12 +4,12 @@ import {
   state,
   touchUpdatedAt,
 } from "../../../core/store/index.ts";
-import { persistConversation } from "../../../core/services/index.ts";
 import {
   combineMessageContents,
   normalizeIndices,
   t,
 } from "../../../lib/utils/index.ts";
+import { persistConversation } from "../../../core/services/index.ts";
 
 export type ActionIndices = number | readonly number[];
 type RefreshMessages = () => void;

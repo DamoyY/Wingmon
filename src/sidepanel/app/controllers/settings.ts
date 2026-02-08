@@ -10,7 +10,6 @@ import {
   showKeyView,
   updateSettingsFormValues,
 } from "../../ui/index.ts";
-import { setLocale, translateDOM } from "../../lib/utils/index.ts";
 import {
   handleCancelSettings,
   handleFollowModeChange,
@@ -20,6 +19,7 @@ import {
   handleSettingsFieldChange,
   handleThemeSettingsChange,
 } from "../../features/settings/index.ts";
+import { setLocale, translateDOM } from "../../lib/utils/index.ts";
 
 const syncSaveButtonVisibility = (): void => {
   const result = handleSettingsFieldChange(readSettingsFormValues());
@@ -71,7 +71,7 @@ const handleOpenSettingsClick = async (): Promise<void> => {
     applyControllerMessage(result.message);
     return;
   }
-  await showKeyView({ isFirstUse: false, animate: true });
+  await showKeyView({ animate: true, isFirstUse: false });
   fillSettingsForm(result.payload.settings);
   syncSaveButtonVisibility();
 };

@@ -24,10 +24,10 @@ const handleGetAllPageContent = async (
     if (isPdfDocument()) {
       const markdown = await convertPdfToMarkdownPages({ title, url });
       sendResponse({
-        title: markdown.title,
-        url: markdown.url,
-        totalPages: markdown.totalPages,
         pages: markdown.pages,
+        title: markdown.title,
+        totalPages: markdown.totalPages,
+        url: markdown.url,
       });
       return;
     }
@@ -39,10 +39,10 @@ const handleGetAllPageContent = async (
       });
     });
     sendResponse({
-      title: markdown.title,
-      url: markdown.url,
-      totalPages: markdown.totalPages,
       pages: markdown.pages,
+      title: markdown.title,
+      totalPages: markdown.totalPages,
+      url: markdown.url,
     });
   } catch (error) {
     sendError(

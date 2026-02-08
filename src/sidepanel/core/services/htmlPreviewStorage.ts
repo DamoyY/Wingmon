@@ -67,8 +67,8 @@ const pruneEntries = (entries: HtmlPreviewEntries): HtmlPreviewEntries => {
       (entry): entry is [string, HtmlPreviewEntry] => entry[1] !== undefined,
     )
     .map(([id, entry]) => ({
-      id,
       createdAt: entry.createdAt,
+      id,
     }));
   items.sort((a, b) => b.createdAt - a.createdAt);
   const keepIds = new Set(items.slice(0, MAX_PREVIEWS).map((item) => item.id));

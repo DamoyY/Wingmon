@@ -1,10 +1,4 @@
 import {
-  getSettings,
-  initTabListeners,
-  registerSandboxWindowProvider,
-} from "../../core/services/index.ts";
-import { initMarkdownRenderer } from "../../lib/markdown/index.ts";
-import {
   applyTheme,
   applyTypography,
   elements,
@@ -15,14 +9,20 @@ import {
   showChatView,
   showKeyView,
 } from "../../ui/index.ts";
-import { updateComposerButtonsState } from "../../features/chat/index.ts";
+import {
+  getSettings,
+  initTabListeners,
+  registerSandboxWindowProvider,
+} from "../../core/services/index.ts";
 import {
   refreshSendWithPageButton,
   renderMessagesView,
 } from "../../features/chat/messages/index.ts";
-import { syncSettingsSnapshot } from "../../features/settings/index.ts";
 import { setLocale, translateDOM } from "../../lib/utils/index.ts";
 import { bindPanelEvents } from "../controllers/index.ts";
+import { initMarkdownRenderer } from "../../lib/markdown/index.ts";
+import { syncSettingsSnapshot } from "../../features/settings/index.ts";
+import { updateComposerButtonsState } from "../../features/chat/index.ts";
 
 const initPanel = async () => {
   initTabListeners();

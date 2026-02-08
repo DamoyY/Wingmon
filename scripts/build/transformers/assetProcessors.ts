@@ -1,7 +1,7 @@
-import { readFile } from "node:fs/promises";
+import { isNodeModulesPath } from "../basekit/index.ts";
 import { minifyHtmlContent } from "./minify.ts";
 import { obfuscateCode } from "./obfuscate.ts";
-import { isNodeModulesPath } from "../basekit/index.ts";
+import { readFile } from "node:fs/promises";
 
 export type FlatCopyContext = Readonly<{
   sourcePath: string;
@@ -36,7 +36,7 @@ const htmlProcessor: FlatCopyProcessor = async (context) => {
   const html = await readFile(context.sourcePath, "utf8");
   const rewrittenHtml = rewritePublicHtml(context.fileName, html);
   const minifiedHtml = await minifyHtmlContent(rewrittenHtml, context.fileName);
-  return { type: "write", content: minifiedHtml };
+  return { content: minifiedHtml, type: "write" };
 };
 
 const javaScriptProcessor: FlatCopyProcessor = async (context) => {
@@ -48,7 +48,7 @@ const javaScriptProcessor: FlatCopyProcessor = async (context) => {
   }
   const source = await readFile(context.sourcePath, "utf8");
   const obfuscated = obfuscateCode(source);
-  return { type: "write", content: obfuscated };
+  return { content: obfuscated, type: "write" };
 };
 
 export const publicAssetProcessors: readonly FlatCopyProcessor[] = [

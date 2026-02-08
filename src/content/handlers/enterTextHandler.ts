@@ -1,9 +1,9 @@
-import { isEditableElement } from "../dom/editableElements.js";
-import { normalizeLlmId } from "../common/index.ts";
 import type {
   EnterTextRequest,
   EnterTextResponse,
 } from "../../shared/index.ts";
+import { isEditableElement } from "../dom/editableElements.js";
+import { normalizeLlmId } from "../common/index.ts";
 
 const normalizeInputContent = (message: EnterTextRequest | null): string => {
   if (typeof message?.content !== "string") {

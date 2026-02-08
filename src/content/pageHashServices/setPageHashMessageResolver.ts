@@ -90,11 +90,11 @@ export const resolveSetPageHashPageNumber = (
 ): number => {
   return resolveAliasedPageNumberInput({
     camelProvided: "pageNumber" in message,
-    snakeProvided: "page_number" in message,
     camelValue: message.pageNumber ?? null,
-    snakeValue: message.page_number ?? null,
-    mismatchMessage: "pageNumber 与 page_number 不一致",
     defaultValue: 1,
+    mismatchMessage: "pageNumber 与 page_number 不一致",
+    snakeProvided: "page_number" in message,
+    snakeValue: message.page_number ?? null,
   });
 };
 
@@ -103,11 +103,11 @@ export const resolveSetPageHashTotalPages = (
 ): number | null => {
   return resolveAliasedPageNumberInput({
     camelProvided: "totalPages" in message,
-    snakeProvided: "total_pages" in message,
     camelValue: message.totalPages ?? null,
-    snakeValue: message.total_pages ?? null,
-    mismatchMessage: "totalPages 与 total_pages 不一致",
     defaultValue: null,
+    mismatchMessage: "totalPages 与 total_pages 不一致",
+    snakeProvided: "total_pages" in message,
+    snakeValue: message.total_pages ?? null,
   });
 };
 
@@ -119,12 +119,12 @@ export const resolveSetPageHashChunkAnchorWeights = (
     ChunkAnchorWeight[] | null
   >({
     camelProvided: "chunkAnchorWeights" in message,
-    snakeProvided: "chunk_anchor_weights" in message,
     camelValue: message.chunkAnchorWeights ?? null,
-    snakeValue: message.chunk_anchor_weights ?? null,
-    mismatchMessage: "chunkAnchorWeights 与 chunk_anchor_weights 不一致",
     defaultValue: null,
-    resolve: resolveChunkAnchorWeights,
     equals: areChunkAnchorWeightsEqual,
+    mismatchMessage: "chunkAnchorWeights 与 chunk_anchor_weights 不一致",
+    resolve: resolveChunkAnchorWeights,
+    snakeProvided: "chunk_anchor_weights" in message,
+    snakeValue: message.chunk_anchor_weights ?? null,
   });
 };

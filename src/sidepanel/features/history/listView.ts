@@ -96,9 +96,9 @@ const formatDateTime = (timestamp: number): string => {
     listItem.appendChild(createHeadline(item.updatedAt));
     listItem.appendChild(
       createDeleteButton({
+        id: item.id,
         label: deleteLabel,
         onDeleteRequest,
-        id: item.id,
       }),
     );
     listItem.dataset.id = item.id;
@@ -124,11 +124,11 @@ const formatDateTime = (timestamp: number): string => {
     for (const item of history) {
       historyList.appendChild(
         createHistoryItem({
-          item,
           activeId,
-          onSelect,
-          onDeleteRequest,
           deleteLabel,
+          item,
+          onDeleteRequest,
+          onSelect,
         }),
       );
     }

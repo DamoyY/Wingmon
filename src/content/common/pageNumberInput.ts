@@ -44,11 +44,11 @@ export function resolveAliasedPageNumberInput({
 }: ResolveAliasedPageNumberOptions<number | null>): number | null {
   return resolveAliasedInput<PageNumberInput, number | null>({
     camelProvided,
-    snakeProvided,
     camelValue,
-    snakeValue,
-    mismatchMessage,
     defaultValue,
+    mismatchMessage,
     resolve: (value) => resolvePageNumberInput(value, fieldName),
+    snakeProvided,
+    snakeValue,
   });
 }

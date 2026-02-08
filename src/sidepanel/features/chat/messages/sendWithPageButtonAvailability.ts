@@ -1,7 +1,7 @@
-import { updateSendWithPageButtonState } from "../../../ui/index.ts";
+import { extractErrorMessage } from "../../../../shared/index.ts";
 import { getActiveTab } from "../../../core/services/index.ts";
 import { isInternalUrl } from "../../../lib/utils/index.ts";
-import { extractErrorMessage } from "../../../../shared/index.ts";
+import { updateSendWithPageButtonState } from "../../../ui/index.ts";
 
 const DEFAULT_PAGE_DISABLED_REASON = "当前标签页不支持携页面发送";
 

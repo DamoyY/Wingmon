@@ -1,9 +1,9 @@
 import OpenAI from "openai";
+import type { ToolCall, ToolDefinition } from "../agent/definitions.ts";
 import getApiStrategy, {
   type ApiRequestChunk,
   type ApiToolAdapter,
 } from "./strategies.ts";
-import type { ToolCall, ToolDefinition } from "../agent/definitions.ts";
 import type { MessageRecord } from "../store/index.ts";
 import type { Settings } from "../services/index.ts";
 
@@ -100,9 +100,9 @@ const apiRetryTimeoutMs = 60000,
     new OpenAI({
       apiKey: settings.apiKey,
       baseURL: normalizeClientBaseUrl(settings.baseUrl),
-      timeout: apiRetryTimeoutMs,
-      maxRetries: 0,
       dangerouslyAllowBrowser: true,
+      maxRetries: 0,
+      timeout: apiRetryTimeoutMs,
     }),
   requestWithRetry = async <TResult>({
     requestTag,
@@ -125,22 +125,22 @@ const apiRetryTimeoutMs = 60000,
           attemptsMade = attemptIndex + 1;
         if (remainingMs <= 0) {
           console.error("API 请求失败，已达到重试时限", {
-            requestTag,
             attemptsMade,
             elapsedMs,
-            statusCode,
             message: failure.message,
+            requestTag,
+            statusCode,
           });
           throw failure;
         }
         const delayMs = Math.min(resolveRetryDelay(attemptIndex), remainingMs);
         console.warn("API 请求失败，准备指数退避重试", {
-          requestTag,
           attemptsMade,
           delayMs,
           elapsedMs,
-          statusCode,
           message: failure.message,
+          requestTag,
+          statusCode,
         });
         await waitForDelay(delayMs, signal);
         attemptIndex += 1;
@@ -170,24 +170,24 @@ const apiRetryTimeoutMs = 60000,
     const streamState = { chunkCount: 0 };
     try {
       const stream = await requestWithRetry({
-        requestTag: "chat.stream",
         request: () =>
           client.chat.completions.create(streamRequestBody, { signal }),
+        requestTag: "chat.stream",
         signal,
       });
       onStreamStart();
       streamStarted = true;
       const toolCalls = await strategy.stream(stream, {
-        onDelta,
         onChunk: (chunk) => {
           streamState.chunkCount += 1;
           onChunk(chunk);
         },
+        onDelta,
       });
       if (streamState.chunkCount === 0) {
         throw createEmptyStreamError();
       }
-      return { toolCalls, reply: "", streamed: true };
+      return { reply: "", streamed: true, toolCalls };
     } catch (error) {
       if (isAbortError(error)) {
         throw error;
@@ -207,15 +207,15 @@ const apiRetryTimeoutMs = 60000,
         messages,
       ),
       response = await requestWithRetry({
-        requestTag: "chat.non_stream",
         request: () =>
           client.chat.completions.create(nonStreamRequestBody, { signal }),
+        requestTag: "chat.non_stream",
         signal,
       });
     return {
-      toolCalls: strategy.extractToolCalls(response),
       reply: strategy.extractReply(response),
       streamed: false,
+      toolCalls: strategy.extractToolCalls(response),
     };
   },
   requestResponses = async ({
@@ -241,23 +241,23 @@ const apiRetryTimeoutMs = 60000,
     const streamState = { chunkCount: 0 };
     try {
       const stream = await requestWithRetry({
-        requestTag: "responses.stream",
         request: () => client.responses.create(streamRequestBody, { signal }),
+        requestTag: "responses.stream",
         signal,
       });
       onStreamStart();
       streamStarted = true;
       const toolCalls = await strategy.stream(stream, {
-        onDelta,
         onChunk: (chunk) => {
           streamState.chunkCount += 1;
           onChunk(chunk);
         },
+        onDelta,
       });
       if (streamState.chunkCount === 0) {
         throw createEmptyStreamError();
       }
-      return { toolCalls, reply: "", streamed: true };
+      return { reply: "", streamed: true, toolCalls };
     } catch (error) {
       if (isAbortError(error)) {
         throw error;
@@ -277,15 +277,15 @@ const apiRetryTimeoutMs = 60000,
         messages,
       ),
       response = await requestWithRetry({
-        requestTag: "responses.non_stream",
         request: () =>
           client.responses.create(nonStreamRequestBody, { signal }),
+        requestTag: "responses.non_stream",
         signal,
       });
     return {
-      toolCalls: strategy.extractToolCalls(response),
       reply: strategy.extractReply(response),
       streamed: false,
+      toolCalls: strategy.extractToolCalls(response),
     };
   };
 

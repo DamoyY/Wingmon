@@ -78,8 +78,8 @@ const resetViewStyles = (view: HTMLElement): void => {
     outgoingView.style.pointerEvents = "none";
     const incomingAnimation = incomingView.animate(
         [
-          { transform: `translateX(${incomingFrom})`, opacity: 0 },
-          { transform: "translateX(0)", opacity: 1 },
+          { opacity: 0, transform: `translateX(${incomingFrom})` },
+          { opacity: 1, transform: "translateX(0)" },
         ],
         {
           duration: ANIMATION_DURATION,
@@ -89,8 +89,8 @@ const resetViewStyles = (view: HTMLElement): void => {
       ),
       outgoingAnimation = outgoingView.animate(
         [
-          { transform: "translateX(0)", opacity: 1 },
-          { transform: `translateX(${outgoingTo})`, opacity: 0 },
+          { opacity: 1, transform: "translateX(0)" },
+          { opacity: 0, transform: `translateX(${outgoingTo})` },
         ],
         {
           duration: ANIMATION_DURATION,
@@ -104,13 +104,13 @@ const resetViewStyles = (view: HTMLElement): void => {
         outgoingAnimation.finished,
       ]);
     } finally {
+      incomingAnimation.cancel();
+      isAnimating = false;
+      onComplete?.();
+      outgoingAnimation.cancel();
       outgoingView.classList.add("hidden");
       resetViewStyles(outgoingView);
       resetViewStyles(incomingView);
-      incomingAnimation.cancel();
-      outgoingAnimation.cancel();
-      isAnimating = false;
-      onComplete?.();
     }
   };
 
@@ -137,8 +137,8 @@ export const showKeyView = ({
   if (animate) {
     return animateSwap({
       incoming: keyView,
-      outgoing: chatView,
       incomingFrom: "100%",
+      outgoing: chatView,
       outgoingTo: "-100%",
     });
   }
@@ -158,12 +158,12 @@ export const showChatView = ({
     const outgoingView = resolveActiveView();
     return animateSwap({
       incoming: chatView,
-      outgoing: outgoingView,
       incomingFrom: "-100%",
-      outgoingTo: "100%",
       onComplete: () => {
         promptEl.focus();
       },
+      outgoing: outgoingView,
+      outgoingTo: "100%",
     });
   }
   keyView.classList.add("hidden");
@@ -196,8 +196,8 @@ export const showHistoryView = ({
   }
   return animateSwap({
     incoming: historyView,
-    outgoing: chatView,
     incomingFrom: "100%",
+    outgoing: chatView,
     outgoingTo: "-100%",
   });
 };

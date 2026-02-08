@@ -1,4 +1,8 @@
 import {
+  type DisplayMessage,
+  buildDisplayMessages,
+} from "./displayMessages.ts";
+import {
   type MessageRecord,
   type StateChangePayload,
   state,
@@ -12,10 +16,6 @@ import {
 import createMessageActionHandlers, {
   type MessageActionHandlers,
 } from "./actions.ts";
-import {
-  buildDisplayMessages,
-  type DisplayMessage,
-} from "./displayMessages.ts";
 
 type RenderMessagesOptions = {
   animateIndices?: number[];

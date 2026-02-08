@@ -1,5 +1,5 @@
-import renderMathInElement from "katex/contrib/auto-render/auto-render.js";
 import { ensureElement } from "../utils/index.ts";
+import renderMathInElement from "katex/contrib/auto-render/auto-render.js";
 
 const renderMath = (container) => {
   const target = ensureElement(container, "消息内容容器");
@@ -10,13 +10,13 @@ const renderMath = (container) => {
       { left: "\\(", right: "\\)", display: false },
       { left: "\\[", right: "\\]", display: true },
     ],
-    output: "html",
-    throwOnError: true,
-    ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
     errorCallback: (message, error) => {
       const detail = error?.message ? `：${error.message}` : "";
       throw new Error(`${message}${detail}`);
     },
+    ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
+    output: "html",
+    throwOnError: true,
   });
 };
 

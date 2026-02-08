@@ -1,5 +1,5 @@
-import { updateComposerButtonsState } from "./composerView.ts";
 import { setPromptContent } from "./composerState.ts";
+import { updateComposerButtonsState } from "./composerView.ts";
 
 type PromptValueTarget = {
   value: string;

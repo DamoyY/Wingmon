@@ -37,7 +37,7 @@ const parseIncomingConsoleMessage = (
     data: MessageEvent["data"],
   ): IncomingConsoleMessage => {
     if (typeof data !== "object" || data === null) {
-      return { type: null, command: null, requestId: null };
+      return { command: null, requestId: null, type: null };
     }
     const candidate = data as Record<string, string | number | null>,
       type = typeof candidate.type === "string" ? candidate.type : null,
@@ -48,7 +48,7 @@ const parseIncomingConsoleMessage = (
         typeof candidate.requestId === "number"
           ? candidate.requestId
           : null;
-    return { type, command, requestId };
+    return { command, requestId, type };
   },
   hasValidRequestId = (
     requestId: ConsoleRequestId | null,
@@ -59,7 +59,7 @@ const parseIncomingConsoleMessage = (
     if (typeof result === "string") {
       return result;
     }
-    if (result == null) {
+    if (result === null) {
       return String(result);
     }
     if (typeof result === "symbol" || typeof result === "function") {
@@ -102,7 +102,7 @@ const parseIncomingConsoleMessage = (
       }
       const { requestId } = data,
         reply: ConsoleReply = (payload) => {
-          const message = { type: RESPONSE_TYPE, requestId, ...payload };
+          const message = { requestId, type: RESPONSE_TYPE, ...payload };
           if (!event.source) {
             window.console.error("消息来源缺失");
             return;

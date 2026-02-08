@@ -1,4 +1,4 @@
-import { t, type JsonValue } from "../../../lib/utils/index.ts";
+import { type JsonValue, t } from "../../../lib/utils/index.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 import ToolInputError from "../errors.ts";
 import { ensureObjectArgs } from "../validation/index.js";
@@ -8,10 +8,10 @@ type ShowHtmlArgs = {
 };
 
 const parameters = {
-    type: "object",
+    additionalProperties: false,
     properties: { code: { type: "string" } },
     required: ["code"],
-    additionalProperties: false,
+    type: "object",
   },
   validateArgs = (args: JsonValue): ShowHtmlArgs => {
     const record = ensureObjectArgs(args);
@@ -34,10 +34,10 @@ const parameters = {
   };
 
 export default {
+  description: t("toolShowHtml"),
+  execute,
   key: "showHtml",
   name: "show_html",
-  description: t("toolShowHtml"),
   parameters,
   validateArgs,
-  execute,
 };

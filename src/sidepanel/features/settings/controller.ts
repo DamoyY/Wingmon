@@ -77,14 +77,14 @@ const defaultLocale = "en",
   resolveSaveButtonVisible = (formValues: SettingsInput): boolean =>
     isSettingsDirty(formValues) && isSettingsComplete(formValues),
   createFailureResult = (message: string): SettingsControllerFailure => ({
-    success: false,
     message,
+    success: false,
   }),
   createSuccessResult = <TPayload>(
     payload: TPayload,
   ): SettingsControllerResult<TPayload> => ({
-    success: true,
     payload,
+    success: true,
   }),
   createSettingsResult = (
     settings: Settings,
@@ -175,9 +175,9 @@ export const handleCancelSettings = async (): Promise<
   try {
     const settings = await readSettingsAndSync();
     return createSuccessResult({
+      locale: resolveLocale(settings.language),
       settings,
       shouldShowChatView: resolveShouldShowChatView(settings),
-      locale: resolveLocale(settings.language),
     });
   } catch (error) {
     return createFailureFromError(error, settingsReadErrorContext);
@@ -223,8 +223,8 @@ export const handleLanguageChange = async (
     const settings = await updateSettings({ language });
     syncSettingsSnapshot(settings);
     return createSuccessResult({
-      settings,
       locale: resolveLocale(settings.language),
+      settings,
     });
   } catch (error) {
     return createFailureFromError(error, languageErrorContext);

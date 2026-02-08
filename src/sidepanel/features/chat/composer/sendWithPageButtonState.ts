@@ -27,8 +27,8 @@ const readSendWithPageState = (): SendWithPageButtonState => {
   const { dataset } = ensureSendWithPageButton();
   return {
     pageAvailable: dataset.pageAvailable === "true",
-    promptHasContent: dataset.promptHasContent === "true",
     pageDisabledReason: resolvePageDisabledReason(dataset.pageDisabledReason),
+    promptHasContent: dataset.promptHasContent === "true",
   };
 };
 

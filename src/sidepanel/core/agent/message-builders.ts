@@ -1,9 +1,9 @@
 import {
+  type ToolCall,
+  type ToolCallArguments,
   getToolCallArguments,
   getToolCallId,
   getToolCallName,
-  type ToolCall,
-  type ToolCallArguments,
 } from "./definitions.ts";
 import {
   collectPageReadDedupeSets,
@@ -164,12 +164,12 @@ const isRecord = (
   toChatToolCallForRequest = (
     entry: ToolCallEntry,
   ): ChatToolCallForRequest => ({
+    function: {
+      arguments: entry.arguments,
+      name: entry.name,
+    },
     id: entry.callId,
     type: "function",
-    function: {
-      name: entry.name,
-      arguments: entry.arguments,
-    },
   }),
   collectToolCallEntries = (
     toolCalls: ToolCall[] | undefined,
@@ -186,9 +186,9 @@ const isRecord = (
         return;
       }
       entries.push({
+        arguments: getToolCallArguments(call),
         callId,
         name,
-        arguments: getToolCallArguments(call),
       });
     });
     return entries;
@@ -232,12 +232,12 @@ const isRecord = (
     for (let i = 0; i < endIndex; i += 1) {
       const message = messages[i];
       if (message.role === "user") {
-        plan.push({ index: i, includeToolCalls: true });
+        plan.push({ includeToolCalls: true, index: i });
         hasUser = true;
         continue;
       }
       if (hasUser && message.role === "assistant" && hasTextContent(message)) {
-        plan.push({ index: i, includeToolCalls: false });
+        plan.push({ includeToolCalls: false, index: i });
       }
     }
     return plan;
@@ -249,7 +249,7 @@ const isRecord = (
     }
     const plan = buildHistoryPlan(messages, boundaryUserIndex);
     for (let i = boundaryUserIndex; i < messages.length; i += 1) {
-      plan.push({ index: i, includeToolCalls: true });
+      plan.push({ includeToolCalls: true, index: i });
     }
     return plan;
   },
@@ -268,7 +268,7 @@ export const buildChatMessages = (
 ): ChatRequestMessage[] => {
   const output: ChatRequestMessage[] = [];
   if (systemPrompt) {
-    output.push({ role: "system", content: systemPrompt });
+    output.push({ content: systemPrompt, role: "system" });
   }
   const contextMessages = buildContextMessages(normalizeMessages(messages)),
     { removeToolCallIds, trimToolResponseIds } =
@@ -283,8 +283,8 @@ export const buildChatMessages = (
         return;
       }
       output.push({
-        role: "tool",
         content: getToolOutputContent(message, trimToolResponseIds),
+        role: "tool",
         tool_call_id: callId,
       });
       return;
@@ -328,9 +328,9 @@ export const buildResponsesInput = (
         return;
       }
       output.push({
-        type: "function_call_output",
         call_id: callId,
         output: getToolOutputContent(message, trimToolResponseIds),
+        type: "function_call_output",
       });
       return;
     }
@@ -339,8 +339,8 @@ export const buildResponsesInput = (
     }
     if (typeof message.content === "string" && message.content.length > 0) {
       output.push({
-        role: message.role,
         content: message.content,
+        role: message.role,
       });
     }
     const toolCallEntries = collectToolCallEntries(
@@ -349,10 +349,10 @@ export const buildResponsesInput = (
     );
     toolCallEntries.forEach((entry) => {
       output.push({
-        type: "function_call",
+        arguments: entry.arguments,
         call_id: entry.callId,
         name: entry.name,
-        arguments: entry.arguments,
+        type: "function_call",
       });
     });
   });

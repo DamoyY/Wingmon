@@ -1,6 +1,6 @@
 import { setStateValue, state } from "../store/index.ts";
-import { resolveSystemPromptContent } from "./systemPromptContent.ts";
 import { getActiveTab } from "./browserTabs.ts";
+import { resolveSystemPromptContent } from "./systemPromptContent.ts";
 
 const loadSystemPrompt = (language: string): string => {
     const content = resolveSystemPromptContent(language) || "";

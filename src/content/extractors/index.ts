@@ -1,10 +1,10 @@
 import convertPageContentToMarkdown, {
-  convertPageContentToMarkdownPages,
   type MarkdownPageContentCollection,
+  convertPageContentToMarkdownPages,
 } from "./converter.js";
 import convertPdfToMarkdown, {
-  convertPdfToMarkdownPages,
   type MarkdownPdfPageCollection,
+  convertPdfToMarkdownPages,
 } from "./pdfConverter.js";
 
 export { default as replaceButtons } from "./buttons.js";

@@ -1,5 +1,5 @@
-import hljs from "highlight.js";
 import { ensureElement } from "../utils/index.ts";
+import hljs from "highlight.js";
 
 const highlightBlock = (block) => {
     const target = ensureElement(block, "代码块");

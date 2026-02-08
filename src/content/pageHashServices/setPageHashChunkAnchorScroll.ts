@@ -1,10 +1,10 @@
-import type { ChunkAnchorWeight } from "../../shared/index.ts";
-import { chunkAnchorAttribute } from "../dom/chunkAnchors.js";
-import { scrollWindowTo } from "./setPageHashHtmlScroll.js";
 import type {
   ChunkAnchorCenterPoint,
   ChunkAnchorScrollResult,
 } from "./setPageHashTypes.js";
+import type { ChunkAnchorWeight } from "../../shared/index.ts";
+import { chunkAnchorAttribute } from "../dom/chunkAnchors.js";
+import { scrollWindowTo } from "./setPageHashHtmlScroll.js";
 
 const resolveWeightedMedianCenterY = (
   anchors: ChunkAnchorCenterPoint[],
@@ -28,15 +28,15 @@ const resolveWeightedMedianCenterY = (
     cumulativeWeight += anchor.weight;
     if (cumulativeWeight >= medianThreshold) {
       return {
-        weightedMedianCenterY: anchor.anchorAbsoluteCenterY,
         totalWeight,
+        weightedMedianCenterY: anchor.anchorAbsoluteCenterY,
       };
     }
   }
   const fallbackAnchor = sortedAnchors[sortedAnchors.length - 1];
   return {
-    weightedMedianCenterY: fallbackAnchor.anchorAbsoluteCenterY,
     totalWeight,
+    weightedMedianCenterY: fallbackAnchor.anchorAbsoluteCenterY,
   };
 };
 
@@ -56,27 +56,27 @@ export const scrollHtmlByChunkAnchors = (
       anchorAbsoluteCenterY = window.scrollY + rect.top + rect.height / 2;
     if (!Number.isFinite(anchorAbsoluteCenterY)) {
       return {
-        ok: false,
-        reason: "chunk_anchor_not_scrollable",
         anchors,
         missingAnchorIds,
+        ok: false,
+        reason: "chunk_anchor_not_scrollable",
       };
     }
     anchors.push({
+      anchorAbsoluteCenterY,
+      anchorRectHeight: rect.height,
+      anchorRectTop: rect.top,
+      anchorSelector,
       id: chunkAnchorWeight.id,
       weight: chunkAnchorWeight.weight,
-      anchorSelector,
-      anchorRectTop: rect.top,
-      anchorRectHeight: rect.height,
-      anchorAbsoluteCenterY,
     });
   }
   if (!anchors.length) {
     return {
-      ok: false,
-      reason: "chunk_anchor_not_found",
       anchors,
       missingAnchorIds,
+      ok: false,
+      reason: "chunk_anchor_not_found",
     };
   }
   const { weightedMedianCenterY, totalWeight } =
@@ -84,19 +84,19 @@ export const scrollHtmlByChunkAnchors = (
     targetTop = Math.max(0, weightedMedianCenterY - window.innerHeight / 2);
   if (!Number.isFinite(targetTop)) {
     return {
-      ok: false,
-      reason: "chunk_anchor_not_scrollable",
       anchors,
       missingAnchorIds,
+      ok: false,
+      reason: "chunk_anchor_not_scrollable",
     };
   }
   scrollWindowTo(targetTop);
   return {
-    ok: true,
     anchors,
     missingAnchorIds,
-    weightedMedianCenterY,
-    totalWeight,
+    ok: true,
     targetTop,
+    totalWeight,
+    weightedMedianCenterY,
   };
 };

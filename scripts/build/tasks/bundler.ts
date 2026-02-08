@@ -1,5 +1,3 @@
-import { build } from "esbuild";
-import path from "node:path";
 import {
   ensureFlattenTarget,
   outputPublicDir,
@@ -8,7 +6,9 @@ import {
   rootDir,
 } from "../basekit/index.ts";
 import { obfuscateFile, shouldObfuscateBuild } from "../transformers/index.ts";
+import { build } from "esbuild";
 import { getToolIndexPlugin } from "../plugins/index.ts";
+import path from "node:path";
 
 export const buildBundles = async (): Promise<void> => {
   const toolIndexPlugin = await getToolIndexPlugin();
@@ -33,15 +33,15 @@ export const buildBundles = async (): Promise<void> => {
   const panelBundlePath = path.join(outputPublicDir, "panel.bundle.js");
   ensureFlattenTarget(panelBundlePath, "build:panel.bundle.js");
   const panelBuildResult = await build({
-    entryPoints: [panelEntryPoint],
     bundle: true,
+    entryPoints: [panelEntryPoint],
     format: "iife",
-    minify: true,
-    platform: "browser",
-    target: "esnext",
-    outfile: panelBundlePath,
     legalComments: "none",
     metafile: true,
+    minify: true,
+    outfile: panelBundlePath,
+    platform: "browser",
+    target: "esnext",
     loader,
     plugins: [toolIndexPlugin],
   });
@@ -55,15 +55,15 @@ export const buildBundles = async (): Promise<void> => {
   const showHtmlBundlePath = path.join(outputPublicDir, "show-html.bundle.js");
   ensureFlattenTarget(showHtmlBundlePath, "build:show-html.bundle.js");
   const showHtmlBuildResult = await build({
-    entryPoints: [showHtmlEntryPoint],
     bundle: true,
+    entryPoints: [showHtmlEntryPoint],
     format: "iife",
-    minify: true,
-    platform: "browser",
-    target: "esnext",
-    outfile: showHtmlBundlePath,
     legalComments: "none",
     metafile: true,
+    minify: true,
+    outfile: showHtmlBundlePath,
+    platform: "browser",
+    target: "esnext",
     loader,
     plugins: [toolIndexPlugin],
   });
@@ -77,15 +77,15 @@ export const buildBundles = async (): Promise<void> => {
   const contentBundlePath = path.join(outputPublicDir, "content.bundle.js");
   ensureFlattenTarget(contentBundlePath, "build:content.bundle.js");
   const contentBuildResult = await build({
-    entryPoints: [contentEntryPoint],
     bundle: true,
+    entryPoints: [contentEntryPoint],
     format: "iife",
-    minify: true,
-    platform: "browser",
-    target: "esnext",
-    outfile: contentBundlePath,
     legalComments: "none",
     metafile: true,
+    minify: true,
+    outfile: contentBundlePath,
+    platform: "browser",
+    target: "esnext",
     loader,
     plugins: [toolIndexPlugin],
   });
@@ -99,15 +99,15 @@ export const buildBundles = async (): Promise<void> => {
   const sandboxBundlePath = path.join(outputPublicDir, "sandbox.bundle.js");
   ensureFlattenTarget(sandboxBundlePath, "build:sandbox.bundle.js");
   const sandboxBuildResult = await build({
-    entryPoints: [sandboxEntryPoint],
     bundle: true,
+    entryPoints: [sandboxEntryPoint],
     format: "iife",
-    minify: true,
-    platform: "browser",
-    target: "esnext",
-    outfile: sandboxBundlePath,
     legalComments: "none",
     metafile: true,
+    minify: true,
+    outfile: sandboxBundlePath,
+    platform: "browser",
+    target: "esnext",
     loader,
   });
   if (!sandboxBuildResult.metafile) {
@@ -119,15 +119,15 @@ export const buildBundles = async (): Promise<void> => {
 
   const backgroundBundlePath = path.join(outputRoot, "background.js");
   const backgroundBuildResult = await build({
-    entryPoints: [backgroundEntryPoint],
     bundle: true,
+    entryPoints: [backgroundEntryPoint],
     format: "esm",
-    minify: true,
-    platform: "browser",
-    target: "esnext",
-    outfile: backgroundBundlePath,
     legalComments: "none",
     metafile: true,
+    minify: true,
+    outfile: backgroundBundlePath,
+    platform: "browser",
+    target: "esnext",
     loader,
   });
   if (!backgroundBuildResult.metafile) {

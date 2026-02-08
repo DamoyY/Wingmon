@@ -2,12 +2,12 @@ import {
   type GetPageContentRequest,
   type GetPageContentResponse,
 } from "../../shared/index.ts";
-import convertPageContentToMarkdown from "../extractors/converter.js";
-import convertPdfToMarkdown from "../extractors/pdfConverter.js";
 import {
   isPdfDocument,
   resolveAliasedPageNumberInput,
 } from "../common/index.ts";
+import convertPageContentToMarkdown from "../extractors/converter.js";
+import convertPdfToMarkdown from "../extractors/pdfConverter.js";
 import withPreparedBody from "./withPreparedBody.js";
 
 type SendResponse = (response: GetPageContentResponse) => void;
@@ -20,11 +20,11 @@ const sendError = (sendResponse: SendResponse, message: string): void => {
 const resolveMessagePageNumber = (message: GetPageContentRequest): number => {
   return resolveAliasedPageNumberInput({
     camelProvided: "pageNumber" in message,
-    snakeProvided: "page_number" in message,
     camelValue: message.pageNumber ?? null,
-    snakeValue: message.page_number ?? null,
-    mismatchMessage: "pageNumber 与 page_number 不一致",
     defaultValue: 1,
+    mismatchMessage: "pageNumber 与 page_number 不一致",
+    snakeProvided: "page_number" in message,
+    snakeValue: message.page_number ?? null,
   });
 };
 
@@ -37,16 +37,16 @@ const handleGetPageContent = async (
       url = window.location.href || "",
       pageNumber = resolveMessagePageNumber(message);
     if (isPdfDocument()) {
-      const markdown = await convertPdfToMarkdown({ title, url, pageNumber });
+      const markdown = await convertPdfToMarkdown({ pageNumber, title, url });
       sendResponse(markdown);
       return;
     }
     const markdown = withPreparedBody((body) => {
       return convertPageContentToMarkdown({
         body,
+        pageNumber,
         title,
         url,
-        pageNumber,
       });
     });
     sendResponse(markdown);

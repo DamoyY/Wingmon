@@ -1,11 +1,11 @@
-import { getPromptContent } from "../composerState.ts";
 import {
-  requestSettingsCompletion,
   reportSendStatus,
+  requestSettingsCompletion,
   setSendUiState,
   syncComposerAfterSend,
 } from "./sendUi.ts";
 import { ConversationManager } from "./conversationManager.ts";
+import { getPromptContent } from "../composerState.ts";
 
 type SendMessageOptions = {
   includePage?: boolean;

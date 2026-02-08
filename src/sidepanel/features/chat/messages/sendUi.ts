@@ -1,18 +1,17 @@
 import {
+  clearPromptInput,
+  setComposerSending,
+  updateComposerButtonsState,
+} from "../composerView.ts";
+import {
   elements,
   fillSettingsForm,
   setText,
   showKeyView,
 } from "../../../ui/index.ts";
 import { state, updateMessage } from "../../../core/store/index.ts";
-import { renderMessagesView } from "./presenter.ts";
 import { clearPromptContent } from "../composerState.ts";
-import {
-  clearPromptInput,
-  setComposerSending,
-  updateComposerButtonsState,
-} from "../composerView.ts";
-
+import { renderMessagesView } from "./presenter.ts";
 type SettingsFormValues = Parameters<typeof fillSettingsForm>[0];
 
 const normalizeStatusMessage = (message: string | null | undefined): string => {

@@ -1,9 +1,8 @@
 import {
-  extractErrorMessage,
   type SetPageHashRequest,
   type SetPageHashResponse,
+  extractErrorMessage,
 } from "../../shared/index.ts";
-import { scrollHtmlByChunkAnchors } from "./setPageHashChunkAnchorScroll.js";
 import {
   isHtmlDocument,
   resolveHtmlTotalPages,
@@ -15,6 +14,7 @@ import {
   resolveSetPageHashTotalPages,
 } from "./setPageHashMessageResolver.js";
 import type { WarnFallbackToPageRatioScrollInput } from "./setPageHashTypes.js";
+import { scrollHtmlByChunkAnchors } from "./setPageHashChunkAnchorScroll.js";
 
 const warnFallbackToPageRatioScroll = ({
   reason,
@@ -25,19 +25,19 @@ const warnFallbackToPageRatioScroll = ({
   anchorResult,
 }: WarnFallbackToPageRatioScrollInput): void => {
   console.warn("chunk anchor 滚动失败，已回退为比例滚动", {
-    reason,
-    pageNumber,
-    totalPages,
+    anchor: anchorResult,
     chunkAnchorWeights,
-    url: window.location.href || "",
+    fallback: fallbackMetrics,
+    pageNumber,
+    reason,
     title: document.title || "",
+    totalPages,
+    url: window.location.href || "",
     viewport: {
-      innerWidth: window.innerWidth,
       innerHeight: window.innerHeight,
+      innerWidth: window.innerWidth,
       scrollYBeforeFallback: window.scrollY,
     },
-    fallback: fallbackMetrics,
-    anchor: anchorResult,
   });
 };
 
@@ -59,46 +59,46 @@ const setPageHash = (message: SetPageHashRequest): SetPageHashResponse => {
       if (!chunkAnchorWeights) {
         const fallbackMetrics = scrollHtmlByPage(pageNumber, totalPages);
         warnFallbackToPageRatioScroll({
-          reason: "chunk_anchor_weights_missing",
-          pageNumber,
-          totalPages,
+          anchorResult: null,
           chunkAnchorWeights: null,
           fallbackMetrics,
-          anchorResult: null,
+          pageNumber,
+          reason: "chunk_anchor_weights_missing",
+          totalPages,
         });
       } else if (!chunkAnchorWeights.length) {
         const fallbackMetrics = scrollHtmlByPage(pageNumber, totalPages);
         warnFallbackToPageRatioScroll({
-          reason: "chunk_anchor_weights_empty",
-          pageNumber,
-          totalPages,
+          anchorResult: null,
           chunkAnchorWeights,
           fallbackMetrics,
-          anchorResult: null,
+          pageNumber,
+          reason: "chunk_anchor_weights_empty",
+          totalPages,
         });
       } else {
         const anchorResult = scrollHtmlByChunkAnchors(chunkAnchorWeights);
         if (!anchorResult.ok) {
           const fallbackMetrics = scrollHtmlByPage(pageNumber, totalPages);
           warnFallbackToPageRatioScroll({
-            reason: anchorResult.reason,
-            pageNumber,
-            totalPages,
+            anchorResult,
             chunkAnchorWeights,
             fallbackMetrics,
-            anchorResult,
+            pageNumber,
+            reason: anchorResult.reason,
+            totalPages,
           });
         }
       }
       return {
         ok: true,
-        shouldReload: false,
         pageNumber,
+        shouldReload: false,
         totalPages,
       };
     }
     window.location.hash = `page=${String(pageNumber)}`;
-    return { ok: true, shouldReload: true, pageNumber };
+    return { ok: true, pageNumber, shouldReload: true };
   } catch (error) {
     return createSetPageHashErrorResponse(error);
   }

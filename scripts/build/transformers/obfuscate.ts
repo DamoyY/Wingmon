@@ -1,16 +1,16 @@
-import JavaScriptObfuscator from "javascript-obfuscator";
 import { readFile, writeFile } from "node:fs/promises";
+import JavaScriptObfuscator from "javascript-obfuscator";
 import type { Metafile } from "esbuild";
 import { isNodeModulesPath } from "../basekit/index.ts";
 
 type ObfuscatorOptions = Parameters<typeof JavaScriptObfuscator.obfuscate>[1];
 
 export const obfuscatorOptions: ObfuscatorOptions = {
+  compact: true,
   controlFlowFlattening: false,
   deadCodeInjection: true,
   deadCodeInjectionThreshold: 1,
   debugProtection: false,
-  compact: true,
   identifierNamesGenerator: "hexadecimal",
   numbersToExpressions: false,
   renameGlobals: false,
@@ -21,8 +21,8 @@ export const obfuscatorOptions: ObfuscatorOptions = {
   stringArray: true,
   stringArrayCallsTransform: false,
   stringArrayEncoding: ["base64"],
-  stringArrayRotate: true,
   stringArrayIndexShift: true,
+  stringArrayRotate: true,
   stringArrayShuffle: true,
   stringArrayThreshold: 0.75,
   stringArrayWrappersChainedCalls: true,

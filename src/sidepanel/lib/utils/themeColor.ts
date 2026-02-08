@@ -10,7 +10,7 @@ type ThemeColorParseResult =
 const parseThemeColorInput = (
   value: ThemeColorInput,
 ): ThemeColorParseResult => {
-  if (value == null) {
+  if (value === null) {
     return { status: "missing" };
   }
   const trimmed = value.trim();

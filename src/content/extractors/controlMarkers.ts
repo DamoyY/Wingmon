@@ -96,8 +96,8 @@ export const extractControlMarkers = (
     throw new Error("视口中心标记丢失，无法计算分片");
   }
   return {
+    anchors,
     content: cleanSegments.join(""),
     viewportIndex,
-    anchors,
   };
 };

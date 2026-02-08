@@ -1,14 +1,14 @@
+import { type JsonValue, isInternalUrl, t } from "../../../lib/utils/index.ts";
 import { MARKDOWN_CHUNK_TOKENS, isPdfUrl } from "../../../../shared/index.ts";
-import { isInternalUrl, t, type JsonValue } from "../../../lib/utils/index.ts";
-import type { ToolExecutionContext } from "../definitions.ts";
-import ToolInputError from "../errors.ts";
-import { parsePageNumber } from "../validation/parsePageNumber.ts";
-import { ensureObjectArgs } from "../validation/toolArgsValidation.ts";
 import {
   buildOpenBrowserPageMessageContext,
   formatOpenBrowserPageResult,
 } from "../toolResultFormatters.ts";
 import type { OpenBrowserPageToolResult } from "../toolResultTypes.ts";
+import type { ToolExecutionContext } from "../definitions.ts";
+import ToolInputError from "../errors.ts";
+import { ensureObjectArgs } from "../validation/toolArgsValidation.ts";
+import { parsePageNumber } from "../validation/parsePageNumber.ts";
 
 type OpenPageArgs = {
   url: string;
@@ -25,17 +25,17 @@ type NormalizedTab = BrowserTab & {
 };
 
 const parameters = {
-    type: "object",
+    additionalProperties: false,
     properties: {
-      url: { type: "string" },
-      focus: { type: "boolean", description: t("toolParamFocus") },
+      focus: { description: t("toolParamFocus"), type: "boolean" },
       page_number: {
-        type: "number",
         description: t("toolParamPageNumber", String(MARKDOWN_CHUNK_TOKENS)),
+        type: "number",
       },
+      url: { type: "string" },
     },
     required: ["url", "focus", "page_number"],
-    additionalProperties: false,
+    type: "object",
   },
   normalizeTab = (tab: BrowserTab): NormalizedTab | null => {
     if (typeof tab.url !== "string" || !tab.url.trim()) {
@@ -68,7 +68,7 @@ const parameters = {
       throw new ToolInputError("URL 仅支持 http 或 https");
     }
     const pageNumber = parsePageNumber(rawArgs.page_number);
-    return { url: parsedUrl.toString(), focus: rawArgs.focus, pageNumber };
+    return { focus: rawArgs.focus, pageNumber, url: parsedUrl.toString() };
   },
   execute = async (
     { url, focus, pageNumber }: OpenPageArgs,
@@ -93,11 +93,11 @@ const parameters = {
         isPdfDocument = isPdfUrl(matchedUrl);
       if (isInternal) {
         return {
+          content: "",
+          isInternal: true,
           tabId: matchedTab.id,
           title: matchedTab.title || "",
           url: matchedUrl,
-          content: "",
-          isInternal: true,
         };
       }
       const readPageNumber = isPdfDocument ? pageNumber : 1;
@@ -109,13 +109,13 @@ const parameters = {
         await context.syncPageHash(matchedTab.id, pageData);
       }
       return {
-        title: pageData.title,
-        tabId: matchedTab.id,
-        url: pageData.url || matchedUrl,
         content: pageData.content,
         isInternal: isInternalUrl(pageData.url || matchedUrl),
         pageNumber: pageData.pageNumber,
+        tabId: matchedTab.id,
+        title: pageData.title,
         totalPages: pageData.totalPages,
+        url: pageData.url || matchedUrl,
       };
     }
     const tab = await context.createTab(url, shouldFocus);
@@ -125,11 +125,11 @@ const parameters = {
     const initialInternal = isInternalUrl(url);
     if (initialInternal) {
       return {
+        content: "",
+        isInternal: true,
         tabId: tab.id,
         title: tab.title || "",
         url,
-        content: "",
-        isInternal: true,
       };
     }
     const readPageNumber = isPdfUrl(url) ? pageNumber : 1,
@@ -138,24 +138,24 @@ const parameters = {
       await context.syncPageHash(tab.id, pageData);
     }
     return {
-      title: pageData.title,
-      tabId: tab.id,
-      url: pageData.url || url,
       content: pageData.content,
       isInternal: isInternalUrl(pageData.url || url),
       pageNumber: pageData.pageNumber,
+      tabId: tab.id,
+      title: pageData.title,
       totalPages: pageData.totalPages,
+      url: pageData.url || url,
     };
   };
 
 export default {
-  key: "openBrowserPage",
-  name: "open_page",
+  buildMessageContext: buildOpenBrowserPageMessageContext,
   description: t("toolOpenPage"),
-  parameters,
-  validateArgs,
   execute,
   formatResult: formatOpenBrowserPageResult,
-  buildMessageContext: buildOpenBrowserPageMessageContext,
+  key: "openBrowserPage",
+  name: "open_page",
   pageReadDedupeAction: "trimToolResponse",
+  parameters,
+  validateArgs,
 };

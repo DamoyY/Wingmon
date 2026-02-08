@@ -1,20 +1,20 @@
-import replaceButtons from "./buttons.js";
-import replaceInputs from "./inputs.js";
 import {
-  chunkMarkdownContent,
-  type PrefixTokenCounter,
-} from "./markdownChunking.ts";
-import { cloneBodyWithShadowDom, resolveRenderedText } from "./shadowDom.ts";
-import {
+  type ChunkAnchorPoint,
   extractControlMarkers,
   insertChunkAnchorMarkers,
   markViewportCenter,
-  type ChunkAnchorPoint,
 } from "./controlMarkers.ts";
-import createTurndownService from "./turndownService.ts";
-import { resolveViewportPage } from "./viewportPage.ts";
-import type { PageNumberInput } from "../common/index.ts";
+import {
+  type PrefixTokenCounter,
+  chunkMarkdownContent,
+} from "./markdownChunking.ts";
+import { cloneBodyWithShadowDom, resolveRenderedText } from "./shadowDom.ts";
 import type { MarkdownChunkResult } from "../../shared/index.ts";
+import type { PageNumberInput } from "../common/index.ts";
+import createTurndownService from "./turndownService.ts";
+import replaceButtons from "./buttons.js";
+import replaceInputs from "./inputs.js";
+import { resolveViewportPage } from "./viewportPage.ts";
 
 export type PageContentData = {
   body?: HTMLElement | null;
@@ -105,12 +105,12 @@ const prepareMarkdownPageContent = (
       prefixTokenCounter,
     );
   return {
+    anchors,
+    chunked,
+    prefixTokenCounter,
     title: pageData.title ?? "",
     url: pageData.url ?? "",
-    chunked,
     viewportPage,
-    anchors,
-    prefixTokenCounter,
   };
 };
 

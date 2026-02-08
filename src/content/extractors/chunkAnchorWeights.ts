@@ -1,5 +1,5 @@
-import type { ChunkAnchorWeight } from "../../shared/index.ts";
 import type { ChunkAnchorPoint } from "./controlMarkers.ts";
+import type { ChunkAnchorWeight } from "../../shared/index.ts";
 import type { PrefixTokenCounter } from "./markdownChunking.ts";
 
 const MINIMUM_CHUNK_ANCHOR_WEIGHT = 1;

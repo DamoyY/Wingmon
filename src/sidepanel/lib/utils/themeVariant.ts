@@ -25,7 +25,7 @@ const allowedVariants = new Set<ThemeVariant>([
 ]);
 
 const normalizeThemeVariant = (value: ThemeVariantInput): ThemeVariant => {
-  if (value == null) {
+  if (value === null) {
     return DEFAULT_THEME_VARIANT;
   }
   const normalized = value.trim().toLowerCase() as ThemeVariant;

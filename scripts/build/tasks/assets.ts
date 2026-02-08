@@ -1,6 +1,9 @@
+import {
+  type FlatCopyProcessor,
+  publicAssetProcessors,
+  resolveFlatCopyAction,
+} from "../transformers/index.ts";
 import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-import type { Dirent } from "node:fs";
 import {
   ensureFlattenTarget,
   outputPublicDir,
@@ -8,11 +11,8 @@ import {
   rootDir,
   shouldCopyFile,
 } from "../basekit/index.ts";
-import {
-  publicAssetProcessors,
-  resolveFlatCopyAction,
-  type FlatCopyProcessor,
-} from "../transformers/index.ts";
+import type { Dirent } from "node:fs";
+import path from "node:path";
 
 const nonCopyExtensions = new Set([".ts", ".tsx", ".md"]);
 
@@ -69,10 +69,10 @@ export const copyDirFlat = async (
       ensureFlattenTarget(targetPath, sourcePath);
       const action = await resolveFlatCopyAction(
         {
+          extension: ext,
+          fileName: entry.name,
           sourcePath,
           targetPath,
-          fileName: entry.name,
-          extension: ext,
         },
         processors,
       );

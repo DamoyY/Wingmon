@@ -1,7 +1,7 @@
-import { addMessage, state, updateMessage } from "../store/index.ts";
-import { createRandomId } from "../../lib/utils/index.ts";
 import type { MessageRecord } from "../store/index.ts";
+import { addMessage, state, updateMessage } from "../store/index.ts";
 import type { ToolCall } from "./definitions.ts";
+import { createRandomId } from "../../lib/utils/index.ts";
 
 type RawChatToolCallDelta = {
   index?: number;
@@ -125,12 +125,12 @@ const normalizeToolCall = ({
     const resolvedArguments =
       typeof argumentsText === "string" ? argumentsText : defaultArguments;
     return {
-      id: resolvedId,
       call_id: resolvedId,
       function: {
-        name,
         arguments: resolvedArguments,
+        name,
       },
+      id: resolvedId,
     };
   },
   isNormalizedToolCall = (
@@ -181,12 +181,12 @@ export const addChatToolCallDelta = (
   deltas.forEach((delta) => {
     const index = typeof delta.index === "number" ? delta.index : 0,
       existing = next[index] || {
+        function: {
+          arguments: "",
+          name: delta.function?.name || "",
+        },
         id: delta.id,
         type: delta.type || "function",
-        function: {
-          name: delta.function?.name || "",
-          arguments: "",
-        },
       },
       updated: ChatToolCallCollectorItem = {
         ...existing,
@@ -213,10 +213,10 @@ export const finalizeChatToolCalls = (
   collector: ChatToolCallCollector,
 ): NormalizedToolCall[] =>
   normalizeToolCallList(Object.values(collector), (call) => ({
-    id: call.id,
-    callId: call.call_id,
-    name: call.function.name,
     argumentsText: call.function.arguments,
+    callId: call.call_id,
+    id: call.id,
+    name: call.function.name,
   }));
 
 export const addResponsesToolCallEvent = (
@@ -302,11 +302,11 @@ export const extractChatToolCalls = (
     const call = message.function_call,
       resolvedId = message.id || call.name;
     return normalizeToolCallList([call], () => ({
-      id: resolvedId,
-      callId: resolvedId,
-      name: call.name,
       argumentsText: call.arguments,
+      callId: resolvedId,
       defaultArguments: "",
+      id: resolvedId,
+      name: call.name,
     }));
   }
   return [];
@@ -319,11 +319,11 @@ export const extractResponsesToolCalls = (
   return normalizeToolCallList(
     output.filter((item) => item.type === "function_call"),
     (item) => ({
-      id: item.id,
-      callId: item.call_id,
-      name: item.name,
       argumentsText: item.arguments,
+      callId: item.call_id,
       defaultArguments: "",
+      id: item.id,
+      name: item.name,
     }),
   );
 };
@@ -346,9 +346,9 @@ export const attachToolCallsToAssistant = (
     return;
   }
   addMessage({
-    role: "assistant",
     content: "",
-    tool_calls: normalizedToolCalls,
     groupId: createRandomId("assistant"),
+    role: "assistant",
+    tool_calls: normalizedToolCalls,
   });
 };

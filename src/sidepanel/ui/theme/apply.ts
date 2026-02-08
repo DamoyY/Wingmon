@@ -1,4 +1,13 @@
 import {
+  DEFAULT_THEME_COLOR,
+  DEFAULT_THEME_VARIANT,
+  type ThemeMode,
+  type ThemeVariant,
+  normalizeTheme,
+  normalizeThemeColor,
+  normalizeThemeVariant,
+} from "../../lib/utils/index.ts";
+import {
   DynamicScheme,
   Hct,
   MaterialDynamicColors,
@@ -6,15 +15,6 @@ import {
   argbFromHex,
   hexFromArgb,
 } from "@material/material-color-utilities";
-import {
-  DEFAULT_THEME_COLOR,
-  DEFAULT_THEME_VARIANT,
-  normalizeTheme,
-  normalizeThemeColor,
-  normalizeThemeVariant,
-  type ThemeMode,
-  type ThemeVariant,
-} from "../../lib/utils/index.ts";
 import { prefersReducedMotion } from "../foundation/index.ts";
 
 type ApplyCallback = () => void;
@@ -27,15 +27,15 @@ type DocumentWithViewTransition = Document & {
 type DynamicColorItem = ReturnType<MaterialDynamicColors["surfaceVariant"]>;
 
 const variantMap = {
-  monochrome: Variant.MONOCHROME,
-  neutral: Variant.NEUTRAL,
-  tonal_spot: Variant.TONAL_SPOT,
-  vibrant: Variant.VIBRANT,
+  content: Variant.CONTENT,
   expressive: Variant.EXPRESSIVE,
   fidelity: Variant.FIDELITY,
-  content: Variant.CONTENT,
-  rainbow: Variant.RAINBOW,
   fruit_salad: Variant.FRUIT_SALAD,
+  monochrome: Variant.MONOCHROME,
+  neutral: Variant.NEUTRAL,
+  rainbow: Variant.RAINBOW,
+  tonal_spot: Variant.TONAL_SPOT,
+  vibrant: Variant.VIBRANT,
 } as const;
 
 const defaultThemeColor = DEFAULT_THEME_COLOR;
@@ -81,11 +81,11 @@ const runThemeTransition = (apply: ApplyCallback): void => {
   },
   buildDynamicScheme = (isDark: boolean): DynamicScheme =>
     new DynamicScheme({
-      sourceColorHct: Hct.fromInt(argbFromHex(currentThemeColor)),
-      variant: variantMap[currentThemeVariant],
-      isDark,
       contrastLevel: 0,
+      isDark,
+      sourceColorHct: Hct.fromInt(argbFromHex(currentThemeColor)),
       specVersion: "2025",
+      variant: variantMap[currentThemeVariant],
     }),
   applyDynamicTokens = (scheme: DynamicScheme): void => {
     const root = document.documentElement,

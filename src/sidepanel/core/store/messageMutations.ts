@@ -1,8 +1,8 @@
 import {
+  type MessageRecord,
   addMessage,
   state,
   updateMessage,
-  type MessageRecord,
 } from "./store.ts";
 import { createRandomId } from "../../lib/utils/index.ts";
 
@@ -34,9 +34,9 @@ export const appendAssistantDelta = (
     const last = state.messages.at(-1);
     if (!last || last.role !== "assistant") {
       addMessage({
-        role: "assistant",
         content: delta,
         groupId: createRandomId("assistant"),
+        role: "assistant",
       });
       return;
     }

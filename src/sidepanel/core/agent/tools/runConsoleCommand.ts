@@ -1,4 +1,4 @@
-import { t, type JsonValue } from "../../../lib/utils/index.ts";
+import { type JsonValue, t } from "../../../lib/utils/index.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 import ToolInputError from "../errors.ts";
 import { ensureObjectArgs } from "../validation/index.js";
@@ -42,17 +42,17 @@ const parseSandboxCommandResult = (value: JsonValue): SandboxCommandResult => {
     error = value.error;
   }
   return {
+    error,
     ok: value.ok,
     output,
-    error,
   };
 };
 
 const parameters = {
-    type: "object",
+    additionalProperties: false,
     properties: { command: { type: "string" } },
     required: ["command"],
-    additionalProperties: false,
+    type: "object",
   },
   validateArgs = (args: JsonValue): RunConsoleCommandArgs => {
     const record = ensureObjectArgs(args);
@@ -79,10 +79,10 @@ const parameters = {
   };
 
 export default {
+  description: t("toolRunConsole"),
+  execute,
   key: "runConsoleCommand",
   name: "run_console",
-  description: t("toolRunConsole"),
   parameters,
   validateArgs,
-  execute,
 };

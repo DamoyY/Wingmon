@@ -1,16 +1,17 @@
 import {
+  type JsonValue,
+  type ToolCall,
+  type ToolExecutionContext,
+  type ToolMessageContext,
+  type ToolModule,
   getToolCallArguments,
   getToolCallId,
   getToolCallName,
   getToolModule,
   parseToolArguments,
   toolNames,
-  type JsonValue,
-  type ToolCall,
-  type ToolExecutionContext,
-  type ToolMessageContext,
-  type ToolModule,
 } from "./definitions.ts";
+import { buildToolErrorOutput, defaultToolSuccessOutput } from "./output.ts";
 import {
   closeTab,
   createTab,
@@ -26,7 +27,6 @@ import {
   shouldFollowMode,
   syncPageHash,
 } from "./pageReadHelpers.ts";
-import { buildToolErrorOutput, defaultToolSuccessOutput } from "./output.ts";
 import ToolInputError from "./errors.ts";
 import { extractErrorMessage } from "../../../shared/index.ts";
 
@@ -60,18 +60,18 @@ const sendMessageToSandboxWithType: ToolExecutionContext["sendMessageToSandbox"]
     chrome.runtime.getURL(path);
 
 export const defaultToolExecutionContext: ToolExecutionContext = {
-  getAllTabs,
-  waitForContentScript,
-  sendMessageToTab,
   closeTab,
-  focusTab,
   createTab,
   fetchPageMarkdownData,
+  focusTab,
+  getAllTabs,
+  getRuntimeUrl,
+  saveHtmlPreview: saveHtmlPreviewWithType,
+  sendMessageToSandbox: sendMessageToSandboxWithType,
+  sendMessageToTab,
   shouldFollowMode,
   syncPageHash,
-  sendMessageToSandbox: sendMessageToSandboxWithType,
-  saveHtmlPreview: saveHtmlPreviewWithType,
-  getRuntimeUrl,
+  waitForContentScript,
 };
 
 const resolveToolArguments = (rawArgs: string | JsonValue): JsonValue =>
@@ -149,7 +149,7 @@ const resolveToolArguments = (rawArgs: string | JsonValue): JsonValue =>
       parsedArgs = resolveToolArguments(rawArgs),
       validatedArgs = tool.validateArgs(parsedArgs),
       output = await Promise.resolve(tool.execute(validatedArgs, context));
-    return { tool, args: validatedArgs, output };
+    return { args: validatedArgs, output, tool };
   },
   resolveToolOutput = ({
     tool,
@@ -172,8 +172,8 @@ export const buildPageMarkdownToolOutput = async (
   context: ToolExecutionContext = defaultToolExecutionContext,
 ): Promise<string> => {
   const args: { tabId: number; page_number: number } = {
-      tabId,
       page_number: pageNumber,
+      tabId,
     },
     { tool, output } = await executeTool(
       toolNames.getPageMarkdown,
@@ -195,10 +195,10 @@ const buildToolMessage = ({
     toolContext: ToolMessageContext | null;
   }): ToolMessage => {
     const message: ToolMessage = {
-      role: "tool",
       content,
-      tool_call_id: callId,
       name,
+      role: "tool",
+      tool_call_id: callId,
     };
     if (toolContext !== null) {
       message.toolContext = toolContext;
@@ -230,10 +230,10 @@ const buildToolMessage = ({
         });
       console.error(`工具执行失败: ${name || "未知工具"}`, errorMessage);
       output = buildToolErrorOutput({
-        message: errorMessage,
-        isInputError,
         isCloseTool: name === toolNames.closeBrowserPage,
         isFindTool: name === toolNames.find,
+        isInputError,
+        message: errorMessage,
       });
     }
     if (!callId || !name) {
@@ -241,8 +241,8 @@ const buildToolMessage = ({
     }
     return buildToolMessage({
       callId,
-      name,
       content: output,
+      name,
       toolContext,
     });
   };

@@ -1,6 +1,6 @@
+import type { JsonValue } from "../../../lib/utils/index.ts";
 import ToolInputError from "../errors.ts";
 import { parseRequiredPositiveInteger } from "./positiveInteger.js";
-import type { JsonValue } from "../../../lib/utils/index.ts";
 
 type ToolPrimitive = string | number | boolean | null;
 

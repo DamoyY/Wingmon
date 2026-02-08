@@ -1,10 +1,10 @@
+import { fetchConversationById, removeConversationById } from "./data.ts";
 import {
   loadConversationState,
   resetConversation,
   state,
 } from "../../core/store/index.ts";
 import { renderMessagesView } from "../chat/messages/index.ts";
-import { fetchConversationById, removeConversationById } from "./data.ts";
 
 export const loadConversationIntoState = async (id: string): Promise<void> => {
   const conversation = await fetchConversationById(id);

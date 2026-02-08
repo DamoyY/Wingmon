@@ -1,8 +1,8 @@
-import { t } from "../../../lib/utils/index.ts";
+import type { CloseBrowserPageToolResult } from "../toolResultTypes.ts";
 import type { JsonValue } from "../../../lib/utils/index.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 import { formatCloseBrowserPageResult } from "../toolResultFormatters.ts";
-import type { CloseBrowserPageToolResult } from "../toolResultTypes.ts";
+import { t } from "../../../lib/utils/index.ts";
 import { validateTabIdListArgs } from "../validation/toolArgsValidation.ts";
 
 type ClosePageArgs = {
@@ -13,17 +13,17 @@ const validateArgs = (args: JsonValue): ClosePageArgs =>
   validateTabIdListArgs(args);
 
 const parameters = {
-    type: "object",
+    additionalProperties: false,
     properties: {
       tabIds: {
-        type: "array",
+        description: t("toolParamTabIdList"),
         items: { type: "number" },
         minItems: 1,
-        description: t("toolParamTabIdList"),
+        type: "array",
       },
     },
     required: ["tabIds"],
-    additionalProperties: false,
+    type: "object",
   },
   execute = async (
     { tabIds }: ClosePageArgs,
@@ -33,21 +33,21 @@ const parameters = {
     for (const tabId of tabIds) {
       try {
         await context.closeTab(tabId);
-        items.push({ tabId, ok: true });
+        items.push({ ok: true, tabId });
       } catch (error) {
         console.error(`关闭 Tab ID 为 ${String(tabId)} 的标签页失败`, error);
-        items.push({ tabId, ok: false });
+        items.push({ ok: false, tabId });
       }
     }
     return { items };
   };
 
 export default {
-  key: "closeBrowserPage",
-  name: "close_page",
   description: t("toolClosePage"),
-  parameters,
-  validateArgs,
   execute,
   formatResult: formatCloseBrowserPageResult,
+  key: "closeBrowserPage",
+  name: "close_page",
+  parameters,
+  validateArgs,
 };

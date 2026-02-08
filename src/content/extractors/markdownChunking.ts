@@ -1,14 +1,14 @@
 import {
   MARKDOWN_CHUNK_TOKENS,
+  type MarkdownChunkResult,
   createPrefixTokenCounter,
   splitMarkdownByTokens,
-  type MarkdownChunkResult,
 } from "../../shared/index.ts";
-import { CONTROL_MARKER_PREFIXES } from "./controlMarkers.ts";
 import {
   resolveMarkdownTokenByteBoundaries,
   resolveMarkdownTokenLength,
 } from "./markdownTokenLength.ts";
+import { CONTROL_MARKER_PREFIXES } from "./controlMarkers.ts";
 
 type PrefixTokenCounter = (boundary: number) => number;
 
@@ -214,10 +214,10 @@ const splitMarkdownByTokenBoundaries = (
     );
   if (totalPages === 1) {
     return {
-      chunks: [content],
       boundaries: [0, content.length],
-      totalTokens: tokenBoundaries.totalTokens,
+      chunks: [content],
       totalPages,
+      totalTokens: tokenBoundaries.totalTokens,
     };
   }
   const byteToCodeUnit = buildByteToCodeUnitMap(
@@ -265,10 +265,10 @@ const splitMarkdownByTokenBoundaries = (
     .slice(0, -1)
     .map((start, index) => content.slice(start, boundaries[index + 1]));
   return {
-    chunks,
     boundaries,
-    totalTokens: tokenBoundaries.totalTokens,
+    chunks,
     totalPages,
+    totalTokens: tokenBoundaries.totalTokens,
   };
 };
 
@@ -278,8 +278,8 @@ const resolveChunkedResult = (content: string): MarkdownChunkResult => {
   } catch (error) {
     console.error("基于 token 字节映射的分片失败，已回退二分分片", error);
     return splitMarkdownByTokens(content, resolveMarkdownTokenLength, {
-      tokensPerPage: MARKDOWN_CHUNK_TOKENS,
       controlMarkerPrefixes: CONTROL_MARKER_PREFIXES,
+      tokensPerPage: MARKDOWN_CHUNK_TOKENS,
     });
   }
 };

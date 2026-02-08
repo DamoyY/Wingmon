@@ -58,8 +58,8 @@ const CDN_BASE_URL = "https://esm.sh/",
     for (let i = 0; i < pluginSets.length; i += 1) {
       try {
         ast = parse(code, {
-          sourceType: "module",
           plugins: pluginSets[i],
+          sourceType: "module",
         });
         break;
       } catch (error) {

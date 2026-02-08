@@ -1,33 +1,29 @@
-import { t, type JsonValue } from "../../../lib/utils/index.ts";
+import { type JsonValue, t } from "../../../lib/utils/index.ts";
 import type { EnterTextRequest } from "../../../../shared/index.ts";
-import type { ToolExecutionContext } from "../definitions.ts";
-import { formatEnterTextResult } from "../toolResultFormatters.ts";
 import type { EnterTextToolResult } from "../toolResultTypes.ts";
+import type { ToolExecutionContext } from "../definitions.ts";
 import { ensureObjectArgs } from "../validation/toolArgsValidation.ts";
+import { formatEnterTextResult } from "../toolResultFormatters.ts";
 import { runTabAction } from "./tabActionRunner.ts";
 
 type BrowserTab = Awaited<
   ReturnType<ToolExecutionContext["getAllTabs"]>
 >[number];
 
-type EnterTextArgs = {
-  id: string;
-  content: string;
-  invalid?: boolean;
-};
+type EnterTextArgs = { id: string; content: string; invalid?: boolean };
 
 const parameters = {
-    type: "object",
+    additionalProperties: false,
     properties: {
-      id: { type: "string", description: t("toolParamInputId") },
-      content: { type: "string", description: t("toolParamContent") },
+      content: { description: t("toolParamContent"), type: "string" },
+      id: { description: t("toolParamInputId"), type: "string" },
     },
     required: ["id", "content"],
-    additionalProperties: false,
+    type: "object",
   },
   buildInvalidArgs = (message: string): EnterTextArgs => {
     console.error(message);
-    return { id: "", content: "", invalid: true };
+    return { content: "", id: "", invalid: true };
   },
   validateArgs = (args: JsonValue): EnterTextArgs => {
     let record: ReturnType<typeof ensureObjectArgs>;
@@ -48,7 +44,7 @@ const parameters = {
     if (typeof record.content !== "string") {
       return buildInvalidArgs("content 必须是字符串");
     }
-    return { id, content: record.content };
+    return { content: record.content, id };
   },
   resolveTabId = (tab: BrowserTab): number | null => {
     if (
@@ -81,20 +77,16 @@ const parameters = {
       return { ok: false };
     }
     const finalState = await runTabAction({
-      tabs,
-      waitForContentScript: context.waitForContentScript,
-      sendMessage: (tabId) => {
-        const message: EnterTextRequest = {
-          type: "enterText",
-          id,
-          content,
-        };
-        return context.sendMessageToTab(tabId, message);
-      },
-      invalidResultMessage: "输入返回结果异常",
       buildErrorMessage: (error) =>
         error instanceof Error ? error.message : "输入失败",
+      invalidResultMessage: "输入返回结果异常",
       resolveTabId,
+      sendMessage: (tabId) => {
+        const message: EnterTextRequest = { content, id, type: "enterText" };
+        return context.sendMessageToTab(tabId, message);
+      },
+      tabs,
+      waitForContentScript: context.waitForContentScript,
     });
     if (finalState.done) {
       return { ok: true };
@@ -109,11 +101,11 @@ const parameters = {
   };
 
 export default {
-  key: "enterText",
-  name: "enter_text",
   description: t("toolEnterText"),
-  parameters,
-  validateArgs,
   execute,
   formatResult: formatEnterTextResult,
+  key: "enterText",
+  name: "enter_text",
+  parameters,
+  validateArgs,
 };

@@ -1,12 +1,12 @@
-import { addMessage } from "../../../core/store/index.ts";
-import { getActiveTab, type BrowserTab } from "../../../core/services/index.ts";
-import { handleToolCalls } from "../../../core/agent/executor.ts";
-import { toolNames, type ToolCall } from "../../../core/agent/definitions.ts";
+import { type BrowserTab, getActiveTab } from "../../../core/services/index.ts";
 import {
-  fetchPageMarkdownData,
   type PageMarkdownData,
+  fetchPageMarkdownData,
 } from "../../../core/agent/pageReadHelpers.ts";
+import { type ToolCall, toolNames } from "../../../core/agent/definitions.ts";
+import { addMessage } from "../../../core/store/index.ts";
 import { createRandomId } from "../../../lib/utils/index.ts";
+import { handleToolCalls } from "../../../core/agent/executor.ts";
 
 type GetPageArguments = {
   tabId: number;
@@ -89,22 +89,22 @@ const resolveTabId = (activeTab: BrowserTab): number => {
     tabId: number,
     pageNumber: number,
   ): GetPageArguments => ({
-    tabId,
     page_number: resolvePageNumber(pageNumber),
     preserve_viewport: true,
+    tabId,
   }),
   buildGetPageToolCall = (
     tabId: number,
     callId: string,
     pageNumber: number,
   ): GetPageToolCall => ({
+    call_id: callId,
+    function: {
+      arguments: JSON.stringify(buildGetPageArguments(tabId, pageNumber)),
+      name: toolNames.getPageMarkdown,
+    },
     id: callId,
     type: "function",
-    function: {
-      name: toolNames.getPageMarkdown,
-      arguments: JSON.stringify(buildGetPageArguments(tabId, pageNumber)),
-    },
-    call_id: callId,
   }),
   executeGetPageToolCall = async ({
     tabId,
@@ -133,10 +133,10 @@ const resolveTabId = (activeTab: BrowserTab): number => {
     toolMessage: ToolMessage;
   }): void => {
     addMessage({
-      role: "assistant",
       content: "",
-      tool_calls: [buildGetPageToolCall(tabId, callId, pageNumber)],
       groupId: createRandomId("assistant"),
+      role: "assistant",
+      tool_calls: [buildGetPageToolCall(tabId, callId, pageNumber)],
     });
     addMessage(toolMessage);
   },
@@ -160,15 +160,15 @@ const resolveTabId = (activeTab: BrowserTab): number => {
       ensureNotAborted(signal);
       const callId = createRandomId("local"),
         toolMessage = await executeGetPageToolCall({
-          tabId,
           callId,
           pageNumber,
           signal,
+          tabId,
         });
       appendToolCallMessages({
-        tabId,
         callId,
         pageNumber,
+        tabId,
         toolMessage,
       });
     }

@@ -43,11 +43,11 @@ const parseRequiredBy = <TValue>({
   ErrorClass: ErrorCtor;
 }): TValue => {
   const parsedValue = parseOptionalBy({
-    value,
-    fieldName,
-    parser,
-    invalidMessage,
     ErrorClass,
+    fieldName,
+    invalidMessage,
+    parser,
+    value,
   });
   if (parsedValue !== undefined) {
     return parsedValue;
@@ -61,11 +61,11 @@ export const parseOptionalPositiveInteger = (
   ErrorClass: ErrorCtor = Error,
 ): number | undefined => {
   return parseOptionalBy({
-    value,
-    fieldName,
-    parser: tryParsePositiveInteger,
-    invalidMessage: "必须是正整数",
     ErrorClass,
+    fieldName,
+    invalidMessage: "必须是正整数",
+    parser: tryParsePositiveInteger,
+    value,
   });
 };
 
@@ -75,11 +75,11 @@ export const parseRequiredPositiveInteger = (
   ErrorClass: ErrorCtor = Error,
 ): number => {
   return parseRequiredBy({
-    value,
-    fieldName,
-    parser: tryParsePositiveInteger,
-    invalidMessage: "必须是正整数",
     ErrorClass,
+    fieldName,
+    invalidMessage: "必须是正整数",
+    parser: tryParsePositiveInteger,
+    value,
   });
 };
 
@@ -89,11 +89,11 @@ export const parseOptionalPositiveNumber = (
   ErrorClass: ErrorCtor = Error,
 ): number | undefined => {
   return parseOptionalBy({
-    value,
-    fieldName,
-    parser: tryParsePositiveNumber,
-    invalidMessage: "必须是正数",
     ErrorClass,
+    fieldName,
+    invalidMessage: "必须是正数",
+    parser: tryParsePositiveNumber,
+    value,
   });
 };
 
@@ -103,10 +103,10 @@ export const parseRequiredPositiveNumber = (
   ErrorClass: ErrorCtor = Error,
 ): number => {
   return parseRequiredBy({
-    value,
-    fieldName,
-    parser: tryParsePositiveNumber,
-    invalidMessage: "必须是正数",
     ErrorClass,
+    fieldName,
+    invalidMessage: "必须是正数",
+    parser: tryParsePositiveNumber,
+    value,
   });
 };

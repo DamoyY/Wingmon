@@ -1,5 +1,5 @@
-import renderMessageContent from "../contentRenderer.ts";
 import { applyMessageHeadingTypography } from "../../../../../ui/theme/typography.ts";
+import renderMessageContent from "../contentRenderer.ts";
 
 const resolveMessageContentTypescaleClass = (role: string): string =>
   role === "user" ? "md-typescale-body-large" : "md-typescale-body-medium";

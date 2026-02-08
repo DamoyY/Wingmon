@@ -1,6 +1,6 @@
 import { elements } from "../foundation/elements.ts";
-import setText from "../foundation/text.ts";
 import { ensureElement } from "../../lib/utils/index.ts";
+import setText from "../foundation/text.ts";
 
 export const setSettingsStatus = (message: string): void => {
   const status = ensureElement(

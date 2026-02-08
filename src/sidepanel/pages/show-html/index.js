@@ -23,8 +23,8 @@ const loadPreview = async () => {
     iframe.onload = () => {
       iframe.contentWindow.postMessage(
         {
-          type: "renderHtml",
           html: normalizedCode,
+          type: "renderHtml",
         },
         "*",
       );

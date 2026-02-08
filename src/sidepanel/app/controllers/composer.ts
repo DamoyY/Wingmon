@@ -1,4 +1,3 @@
-import { elements } from "../../ui/index.ts";
 import {
   createPromptKeydownHandler,
   focusPromptInput,
@@ -10,6 +9,7 @@ import {
   sendMessageWithPage,
   stopSending,
 } from "../../features/chat/messages/index.ts";
+import { elements } from "../../ui/index.ts";
 
 const bindComposerEvents = (): void => {
   const {

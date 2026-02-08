@@ -1,6 +1,6 @@
+import type { Plugin, PluginBuild } from "esbuild";
 import path from "node:path";
 import { readdir } from "node:fs/promises";
-import type { Plugin, PluginBuild } from "esbuild";
 import { rootDir } from "../basekit/index.ts";
 
 type ToolEntry = { file: string; name: string };
@@ -60,7 +60,7 @@ export const getToolIndexPlugin = async (): Promise<Plugin> => {
       buildContext.onResolve({ filter: /index\.(js|ts)$/ }, (args) => {
         const resolvedPath = path.resolve(args.resolveDir, args.path);
         if (resolvedPath === toolsIndexPath) {
-          return { path: resolvedPath, namespace: toolIndexNamespace };
+          return { namespace: toolIndexNamespace, path: resolvedPath };
         }
         return null;
       });

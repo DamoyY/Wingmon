@@ -1,8 +1,8 @@
-import { parse } from "@opendocsg/pdf2md/lib/util/pdf";
 import {
   makeTransformations,
   transform,
 } from "@opendocsg/pdf2md/lib/util/transformations";
+import { parse } from "@opendocsg/pdf2md/lib/util/pdf";
 
 type PageContentData = {
   title?: string | null;
@@ -150,13 +150,13 @@ export const convertPdfToMarkdownPages = async (
     pdfDocument = parsed.pdfDocument ?? null;
     const pageContents = buildMarkdownPages(parsed);
     return {
-      title,
-      url,
-      totalPages: pageContents.length,
       pages: pageContents.map((content, index) => ({
-        pageNumber: index + 1,
         content,
+        pageNumber: index + 1,
       })),
+      title,
+      totalPages: pageContents.length,
+      url,
     };
   } finally {
     await cleanupPdfDocument(pdfDocument);
@@ -174,11 +174,11 @@ const convertPdfToMarkdown = async (
     throw new Error(`PDF 页码超出范围：${String(pageNumber)}`);
   }
   return {
-    title: pageCollection.title,
-    url: pageCollection.url,
     content: targetPage.content,
-    totalPages: pageCollection.totalPages,
     pageNumber: targetPage.pageNumber,
+    title: pageCollection.title,
+    totalPages: pageCollection.totalPages,
+    url: pageCollection.url,
     viewportPage: targetPage.pageNumber,
   };
 };

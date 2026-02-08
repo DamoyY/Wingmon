@@ -1,10 +1,10 @@
-import { elements } from "../foundation/elements.ts";
 import {
   ensureElement,
   normalizeTheme,
   normalizeThemeColor,
   normalizeThemeVariant,
 } from "../../lib/utils/index.ts";
+import { elements } from "../foundation/elements.ts";
 
 type TextInputElement = HTMLElement & { value: string };
 type SelectElement = HTMLElement & {
@@ -47,13 +47,13 @@ const selectValue = (selectEl: SelectElement, value: string) => {
 
 export const readSettingsFormValues = (): SettingsFormValues => ({
   apiKey: readInputValue(elements.keyInput as TextInputElement, "API Key"),
+  apiType: readSelectValue(elements.apiTypeSelect as SelectElement, "API 类型"),
   baseUrl: readInputValue(
     elements.baseUrlInput as TextInputElement,
     "Base URL",
   ),
-  model: readInputValue(elements.modelInput as TextInputElement, "模型"),
-  apiType: readSelectValue(elements.apiTypeSelect as SelectElement, "API 类型"),
   language: readSelectValue(elements.languageSelect as SelectElement, "语言"),
+  model: readInputValue(elements.modelInput as TextInputElement, "模型"),
   theme: readSelectValue(elements.themeSelect as SelectElement, "主题"),
   themeColor: readInputValue(
     elements.themeColorInput as TextInputElement,

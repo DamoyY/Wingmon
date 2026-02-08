@@ -1,11 +1,11 @@
-import zhCnContent from "../../../../public/system-prompt_zh-CN.md";
 import enContent from "../../../../public/system-prompt_en.md";
+import zhCnContent from "../../../../public/system-prompt_zh-CN.md";
 
 type SupportedPromptLanguage = "zh_CN" | "en";
 
 const promptContents: Record<SupportedPromptLanguage, string> = {
-    zh_CN: zhCnContent,
     en: enContent,
+    zh_CN: zhCnContent,
   },
   normalizeLanguage = (language: string): string =>
     language.trim().toLowerCase().replaceAll("-", "_"),

@@ -1,16 +1,16 @@
-import { MARKDOWN_CHUNK_TOKENS } from "../../../../shared/index.ts";
-import { isInternalUrl, t, type JsonValue } from "../../../lib/utils/index.ts";
-import type { ToolExecutionContext } from "../definitions.ts";
-import { parsePageNumber } from "../validation/parsePageNumber.ts";
-import {
-  ensureObjectArgs,
-  validateTabIdArgs,
-} from "../validation/toolArgsValidation.ts";
+import { type JsonValue, isInternalUrl, t } from "../../../lib/utils/index.ts";
 import {
   buildGetPageMarkdownMessageContext,
   formatGetPageMarkdownResult,
 } from "../toolResultFormatters.ts";
+import {
+  ensureObjectArgs,
+  validateTabIdArgs,
+} from "../validation/toolArgsValidation.ts";
 import type { GetPageMarkdownToolResult } from "../toolResultTypes.ts";
+import { MARKDOWN_CHUNK_TOKENS } from "../../../../shared/index.ts";
+import type { ToolExecutionContext } from "../definitions.ts";
+import { parsePageNumber } from "../validation/parsePageNumber.ts";
 
 type BrowserTab = Awaited<
   ReturnType<ToolExecutionContext["getAllTabs"]>
@@ -41,16 +41,16 @@ const parsePreserveViewport = (value: JsonValue): boolean => {
 };
 
 const parameters = {
-    type: "object",
+    additionalProperties: false,
     properties: {
-      tabId: { type: "number" },
       page_number: {
-        type: "number",
         description: t("toolParamPageNumber", String(MARKDOWN_CHUNK_TOKENS)),
+        type: "number",
       },
+      tabId: { type: "number" },
     },
     required: ["tabId", "page_number"],
-    additionalProperties: false,
+    type: "object",
   },
   validateArgs = (args: JsonValue): GetPageArgs => {
     const argsRecord = ensureObjectArgs(args),
@@ -59,7 +59,7 @@ const parameters = {
         argsRecord.preserve_viewport ?? null,
       );
     const pageNumber = parsePageNumber(argsRecord.page_number ?? null);
-    return { tabId, pageNumber, preserveViewport };
+    return { pageNumber, preserveViewport, tabId };
   },
   execute = async (
     { tabId, pageNumber, preserveViewport = false }: GetPageArgs,
@@ -80,11 +80,11 @@ const parameters = {
     const internalUrl = isInternalUrl(targetTab.url);
     if (internalUrl) {
       return {
+        content: "",
+        isInternal: true,
         tabId,
         title: targetTab.title || "",
         url: targetTab.url,
-        content: "",
-        isInternal: true,
       };
     }
     const pageData = await context.fetchPageMarkdownData(tabId, pageNumber);
@@ -92,24 +92,24 @@ const parameters = {
       await context.syncPageHash(tabId, pageData);
     }
     return {
-      tabId,
-      title: pageData.title,
-      url: pageData.url || targetTab.url,
       content: pageData.content,
       isInternal: false,
       pageNumber: pageData.pageNumber,
+      tabId,
+      title: pageData.title,
       totalPages: pageData.totalPages,
+      url: pageData.url || targetTab.url,
     };
   };
 
 export default {
-  key: "getPageMarkdown",
-  name: "get_page",
+  buildMessageContext: buildGetPageMarkdownMessageContext,
   description: t("toolGetPage"),
-  parameters,
-  validateArgs,
   execute,
   formatResult: formatGetPageMarkdownResult,
-  buildMessageContext: buildGetPageMarkdownMessageContext,
+  key: "getPageMarkdown",
+  name: "get_page",
   pageReadDedupeAction: "removeToolCall",
+  parameters,
+  validateArgs,
 };

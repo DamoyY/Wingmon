@@ -1,27 +1,27 @@
-import { resolveButtonLabel } from "../extractors/buttons.js";
-import { isEditableElement } from "./editableElements.js";
-import { resolveInputLabel } from "../extractors/inputs.js";
-import { buildIdMap } from "../extractors/labels.js";
 import {
+  type DomPathErrorMessages,
   buildDomPath,
   hashDomPath,
-  type DomPathErrorMessages,
 } from "./domPathHash.js";
 import {
-  isElementVisible,
   type ElementVisibilityOptions,
+  isElementVisible,
 } from "./visibility.js";
+import { buildIdMap } from "../extractors/labels.js";
+import { isEditableElement } from "./editableElements.js";
+import { resolveButtonLabel } from "../extractors/buttons.js";
+import { resolveInputLabel } from "../extractors/inputs.js";
 
 const HASH_LENGTH = 6;
 const llmIdPathErrorMessages: DomPathErrorMessages = {
+  emptyPath: "无法生成控件的 DOM 路径",
   invalidElement: "控件节点无效",
   invalidRoot: "根节点无效",
   outsideRoot: "控件不在根节点之内",
-  emptyPath: "无法生成控件的 DOM 路径",
 };
 const llmInputVisibilityOptions: ElementVisibilityOptions = {
-  minimumWidth: 4,
   minimumHeight: 4,
+  minimumWidth: 4,
   requirePointerEvents: true,
 };
 

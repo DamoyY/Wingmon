@@ -1,17 +1,17 @@
 import {
+  deleteConversationById,
+  loadConversationIntoState,
+} from "./conversation.ts";
+import {
   renderHistoryListView,
   showChatView,
   showConfirmDialog,
   showHistoryView,
 } from "../../ui/index.ts";
+import type { HistoryActionHandler } from "./listView.ts";
+import { fetchSortedHistory } from "./data.ts";
 import { state } from "../../core/store/index.ts";
 import { t } from "../../lib/utils/index.ts";
-import { fetchSortedHistory } from "./data.ts";
-import type { HistoryActionHandler } from "./listView.ts";
-import {
-  deleteConversationById,
-  loadConversationIntoState,
-} from "./conversation.ts";
 
 type RefreshHistoryListOptions = {
   onSelect?: HistoryActionHandler;
@@ -24,12 +24,12 @@ const refreshHistoryList = async ({
   }: RefreshHistoryListOptions = {}): Promise<void> => {
     const history = await fetchSortedHistory();
     renderHistoryListView({
-      history,
       activeId: state.conversationId,
-      onSelect,
-      onDeleteRequest,
-      emptyText: t("historyEmpty"),
       deleteLabel: t("delete"),
+      emptyText: t("historyEmpty"),
+      history,
+      onDeleteRequest,
+      onSelect,
     });
   },
   handleSelectConversation = async (id: string): Promise<void> => {
@@ -48,15 +48,15 @@ const refreshHistoryList = async ({
     }
     await deleteConversationById(id);
     await refreshHistoryList({
-      onSelect: handleSelectConversation,
       onDeleteRequest: handleDeleteRequest,
+      onSelect: handleSelectConversation,
     });
   };
 
 export const handleOpenHistory = async (): Promise<void> => {
   await refreshHistoryList({
-    onSelect: handleSelectConversation,
     onDeleteRequest: handleDeleteRequest,
+    onSelect: handleSelectConversation,
   });
   await showHistoryView({ animate: true });
 };
