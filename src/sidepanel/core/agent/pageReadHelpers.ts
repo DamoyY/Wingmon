@@ -39,7 +39,7 @@ export type PageMarkdownData = PageReadMetadata & {
 const pageContentRetryBaseDelayMs = 200,
   pageContentRetryMaxDelayMs = 2000,
   pageContentRetryTimeoutMs = 10000,
-  chunkAnchorIdPattern = /^[a-z0-9]+$/i,
+  chunkAnchorIdPattern = /^[a-z0-9]+$/u,
   resolvePageContentRetryDelay = (attempt: number) =>
     Math.min(
       pageContentRetryBaseDelayMs * 2 ** attempt,

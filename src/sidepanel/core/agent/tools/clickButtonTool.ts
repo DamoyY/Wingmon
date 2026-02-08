@@ -54,7 +54,7 @@ const parameters = {
     if (!id) {
       throw new ToolInputError("id 必须是非空字符串");
     }
-    if (!/^[0-9a-z]+$/i.test(id)) {
+    if (!/^[0-9a-z]+$/u.test(id)) {
       throw new ToolInputError("id 仅支持字母数字");
     }
     return { id };

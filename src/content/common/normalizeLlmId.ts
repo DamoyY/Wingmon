@@ -1,4 +1,4 @@
-const llmIdPattern = /^[0-9a-z]+$/i;
+const llmIdPattern = /^[0-9a-z]+$/u;
 
 export const normalizeLlmId = (id: string | null): string => {
   const normalizedId = id?.trim() ?? "";

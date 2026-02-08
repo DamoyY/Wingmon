@@ -337,16 +337,11 @@ export const formatFindResult = (result: FindToolResult): string => {
       throw new Error(`pages[${String(pageIndex)}].lines 必须是非空数组`);
     }
     const lines = page.lines.map((line, lineIndex) => {
-      const normalizedLine = resolveString(
+      const text = resolveString(
         line,
         `pages[${String(pageIndex)}].lines[${String(lineIndex)}]`,
-      ).trim();
-      if (!normalizedLine) {
-        throw new Error(
-          `pages[${String(pageIndex)}].lines[${String(lineIndex)}] 不能为空`,
-        );
-      }
-      return t("statusFindMatchedLine", [normalizedLine]);
+      );
+      return t("statusFindMatchedLine", [text]);
     });
     return `${t("statusFindPageNumberLine", [String(pageNumber)])}\n${lines.join("\n")}`;
   });

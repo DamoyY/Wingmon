@@ -144,7 +144,7 @@ export const isDataUrl = (url: string | null | undefined): boolean =>
   normalizeUrl(url).startsWith("data:");
 
 export const isSvgUrl = (url: string | null | undefined): boolean =>
-  /\.svg([?#]|$)/i.test(normalizeUrl(url));
+  /\.svg([?#]|$)/u.test(normalizeUrl(url));
 
 export const isPdfUrl = (url: string): boolean => {
   const sanitized = sanitizeUrlInput(url);

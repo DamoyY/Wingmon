@@ -9,7 +9,7 @@ import {
 
 type ChunkAnchorWeightsInput = ChunkAnchorWeight[] | null;
 
-const chunkAnchorIdPattern = /^[a-z0-9]+$/i;
+const chunkAnchorIdPattern = /^[a-z0-9]+$/u;
 
 const normalizeChunkAnchorId = (value: string, fieldName: string): string => {
   const normalized = value.trim().toLowerCase();

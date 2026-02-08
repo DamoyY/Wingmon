@@ -108,13 +108,9 @@ const resolvePageContentItems = (
 const findMatchedLines = (content: string, regex: RegExp): string[] => {
   const lines = content.split(/\r?\n/);
   return lines.reduce<string[]>((result, line) => {
-    const normalizedLine = line.trim();
-    if (!normalizedLine) {
-      return result;
-    }
     regex.lastIndex = 0;
-    if (regex.test(normalizedLine)) {
-      result.push(normalizedLine);
+    if (regex.test(line)) {
+      result.push(line);
     }
     return result;
   }, []);
