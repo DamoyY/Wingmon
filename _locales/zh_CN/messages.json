@@ -102,7 +102,7 @@
     "message": "URL："
   },
   "statusAlreadyExists": {
-    "message": "失败，浏览器中已存在相同页面，Tab ID：\"$1\"，如需访问请使用 `get_page`。"
+    "message": "**打开失败**\n当前已存在 URL 相同页面，Tab ID：\"$1\"，如需访问请使用 `get_page` 工具。"
   },
   "statusSuccess": {
     "message": "成功"
@@ -111,10 +111,10 @@
     "message": "失败"
   },
   "statusCloseTabSuccess": {
-    "message": "已成功将 Tab ID 为“$1”的标签页关闭；"
+    "message": "已成功将 Tab ID 为 \"$1\" 的标签页关闭；"
   },
   "statusCloseTabFailed": {
-    "message": "关闭 Tab ID 为“$1”的标签页失败；"
+    "message": "关闭 Tab ID 为 \"$1\" 的标签页失败；"
   },
   "statusNoTitle": {
     "message": "无标题"

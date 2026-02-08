@@ -1,6 +1,7 @@
 type TabActionResult = {
   ok?: boolean;
   reason?: string;
+  pageNumber?: number;
 };
 
 type TabDescriptor = {
@@ -58,6 +59,12 @@ const defaultResolveResult = (
   if (typeof candidate.reason === "string") {
     result.reason = candidate.reason;
   }
+  if (candidate.pageNumber !== undefined) {
+    if (!Number.isInteger(candidate.pageNumber) || candidate.pageNumber <= 0) {
+      throw new Error("pageNumber 必须是正整数");
+    }
+    result.pageNumber = candidate.pageNumber;
+  }
   return result;
 };
 
@@ -85,9 +92,9 @@ export const runTabAction = async <
       ((candidate: TMessage) =>
         defaultResolveResult(candidate as TabActionResult));
   const initialState: TabActionState<TResult> = {
+    done: false,
     errors: [],
     notFoundCount: 0,
-    done: false,
   };
   return await tabs.reduce<Promise<TabActionState<TResult>>>(
     async (promise, tab) => {

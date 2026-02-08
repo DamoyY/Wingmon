@@ -92,6 +92,7 @@ export type ClickButtonRequest = {
 
 export type ClickButtonResponse = {
   ok?: boolean;
+  pageNumber?: number;
   error?: string;
 };
 
@@ -137,12 +138,12 @@ export type ContentScriptResponseByRequest<
 export type ContentScriptRpcHandlerMap = RpcHandlerMap<ContentScriptRpcSchema>;
 
 const contentScriptRequestTypeMap: Record<ContentScriptRequestType, true> = {
-  ping: true,
-  getPageContent: true,
-  getAllPageContent: true,
-  setPageHash: true,
   clickButton: true,
   enterText: true,
+  getAllPageContent: true,
+  getPageContent: true,
+  ping: true,
+  setPageHash: true,
 };
 
 type MessageLike = {

@@ -1,14 +1,14 @@
 import type { BrowserTab, CreatedBrowserTab } from "../services/index.ts";
-import { parseJson, type JsonValue } from "../../lib/utils/index.ts";
+import { type JsonValue, parseJson } from "../../lib/utils/index.ts";
 import {
   extractErrorMessage,
   type ChunkAnchorWeight,
   type ContentScriptRequest,
   type ContentScriptResponseByRequest,
 } from "../../../shared/index.ts";
-import toolModules from "./tools/index.ts";
 import type { PageMarkdownData } from "./pageReadHelpers.ts";
 import ToolInputError from "./errors.ts";
+import toolModules from "./tools/index.ts";
 
 const TOOL_STRICT = true;
 
@@ -37,6 +37,7 @@ export type ToolPageReadEvent = {
 
 export type ToolMessageContext = {
   pageReadEvent?: ToolPageReadEvent;
+  outputWithoutContent?: string;
 };
 
 export type ToolPageHashData = {
@@ -180,15 +181,15 @@ toolModules.forEach((tool) => {
     resolvedToolNames[key] = name;
   }
   const normalized: ToolModule = {
+    buildMessageContext: tool.buildMessageContext,
+    description,
+    execute: tool.execute,
+    formatResult: tool.formatResult,
     key,
     name,
-    description,
-    parameters: tool.parameters,
-    execute: tool.execute,
-    validateArgs: tool.validateArgs,
-    formatResult: tool.formatResult,
-    buildMessageContext: tool.buildMessageContext,
     pageReadDedupeAction: tool.pageReadDedupeAction,
+    parameters: tool.parameters,
+    validateArgs: tool.validateArgs,
   };
   toolModuleByName.set(name, normalized);
   validatedTools.push(normalized);
@@ -202,21 +203,21 @@ const buildToolDefinition = (
 ): ToolDefinition => {
   if (useResponsesFormat) {
     return {
-      type: "function",
-      name: tool.name,
       description: tool.description,
+      name: tool.name,
       parameters: tool.parameters,
       strict: TOOL_STRICT,
+      type: "function",
     };
   }
   return {
-    type: "function",
     function: {
-      name: tool.name,
       description: tool.description,
+      name: tool.name,
       parameters: tool.parameters,
       strict: TOOL_STRICT,
     },
+    type: "function",
   };
 };
 

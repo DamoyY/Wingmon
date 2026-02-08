@@ -25,18 +25,23 @@ export default defineConfig(
       ]),
     ),
   },
-  { name: "js/recommended-as-error", extends: [js.configs.recommended] },
+  { extends: [js.configs.recommended], name: "js/recommended-as-error" },
   {
     name: "custom-rules",
     rules: {
-      "no-console": "off",
       "import/extensions": "off",
+      "max-lines-per-function": "off",
+      "max-statements": "off",
+      "no-console": "off",
       "no-magic-numbers": "off",
+      "no-ternary": "off",
+      "one-var": "off",
+      "sort-vars": "off",
     },
   },
   {
-    files: ["**/*.ts"],
     extends: [...tseslint.configs.strictTypeChecked],
+    files: ["**/*.ts"],
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: __dirname },
     },

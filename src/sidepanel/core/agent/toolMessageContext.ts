@@ -1,11 +1,10 @@
-import { t } from "../../lib/utils/index.ts";
 import {
-  getToolCallId,
-  getToolCallName,
-  getToolModule,
   type ToolCall,
   type ToolMessageContext,
   type ToolPageReadDedupeAction,
+  getToolCallId,
+  getToolCallName,
+  getToolModule,
 } from "./definitions.ts";
 import { parseRequiredPositiveInteger } from "./validation/index.js";
 
@@ -38,6 +37,24 @@ type PageReadEvent = PageReadEventBase & {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value),
+  resolveOptionalOutputWithoutContent = (
+    toolContext: unknown,
+  ): string | null => {
+    if (!isRecord(toolContext)) {
+      return null;
+    }
+    const { outputWithoutContent } = toolContext as ToolMessageContext;
+    if (outputWithoutContent === undefined) {
+      return null;
+    }
+    if (typeof outputWithoutContent !== "string") {
+      throw new Error("工具上下文 outputWithoutContent 无效");
+    }
+    if (!outputWithoutContent.trim()) {
+      throw new Error("工具上下文 outputWithoutContent 不能为空");
+    }
+    return outputWithoutContent.trimEnd();
+  },
   resolveOptionalPositiveInteger = (
     value: unknown,
     fieldName: string,
@@ -140,8 +157,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
           return;
         }
         callInfoById.set(callId, {
-          name,
           dedupeAction: resolvePageReadDedupeAction(name),
+          name,
         });
       });
     });
@@ -178,8 +195,8 @@ export const collectPageReadDedupeSets = (messages: Message[]) => {
     }
     readEvents.push({
       ...pageReadEvent,
-      dedupeAction,
       callId,
+      dedupeAction,
       index,
       key: buildPageReadKey(pageReadEvent),
     });
@@ -211,11 +228,18 @@ export const getToolOutputContent = (
   msg: Message,
   trimToolResponseIds: Set<string>,
 ): string => {
-  if (trimToolResponseIds.has(msg.tool_call_id || "")) {
-    return `**${t("statusSuccess")}**`;
-  }
   if (typeof msg.content !== "string") {
     throw new Error("工具响应内容无效");
+  }
+  if (trimToolResponseIds.has(msg.tool_call_id || "")) {
+    const outputWithoutContent = resolveOptionalOutputWithoutContent(
+      msg.toolContext,
+    );
+    if (outputWithoutContent === null) {
+      console.error("工具响应缺少 outputWithoutContent，回退原始输出", msg);
+      return msg.content;
+    }
+    return outputWithoutContent;
   }
   return msg.content;
 };

@@ -1,6 +1,3 @@
-import { t } from "../../lib/utils/index.ts";
-import { buildPageReadResult } from "./pageReadHelpers.ts";
-import type { ToolMessageContext, ToolPageReadEvent } from "./definitions.ts";
 import type {
   ClickButtonToolResult,
   CloseBrowserPageToolResult,
@@ -10,10 +7,17 @@ import type {
   OpenBrowserPageToolResult,
   PageReadToolResult,
 } from "./toolResultTypes.ts";
+import type { ToolMessageContext, ToolPageReadEvent } from "./definitions.ts";
+import { buildPageReadResult } from "./pageReadHelpers.ts";
+import { t } from "../../lib/utils/index.ts";
 
 type PageReadEventOptions = {
   requirePageNumber: boolean;
   skipInternal: boolean;
+};
+
+type PageReadMessageContextOptions = PageReadEventOptions & {
+  outputWithoutContent?: string;
 };
 
 type NormalizedPageReadResult = {
@@ -63,14 +67,30 @@ const resolveOptionalTrimmedString = (value: string): string | undefined => {
   return trimmed;
 };
 
+const resolveOptionalOutputWithoutContent = (
+  value: string | undefined,
+): string | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string") {
+    throw new Error("outputWithoutContent 必须是字符串");
+  }
+  const normalized = value.trimEnd();
+  if (!normalized.trim()) {
+    throw new Error("outputWithoutContent 不能为空");
+  }
+  return normalized;
+};
+
 const resolvePageReadResult = (
   result: PageReadToolResult,
 ): NormalizedPageReadResult => ({
+  content: resolveString(result.content, "content"),
+  isInternal: resolveBoolean(result.isInternal, "isInternal"),
   tabId: resolvePositiveInteger(result.tabId, "Tab ID"),
   title: resolveString(result.title, "title"),
   url: resolveString(result.url, "url"),
-  content: resolveString(result.content, "content"),
-  isInternal: resolveBoolean(result.isInternal, "isInternal"),
 });
 
 const resolvePageChunk = (
@@ -110,18 +130,26 @@ const buildPageReadEvent = (
 
 const buildOptionalPageReadMessageContext = (
   result: PageReadToolResult,
-  options: PageReadEventOptions,
+  options: PageReadMessageContextOptions,
 ): ToolMessageContext | null => {
   const pageReadEvent = buildPageReadEvent(result, options);
   if (pageReadEvent === null) {
     return null;
   }
-  return { pageReadEvent };
+  const outputWithoutContent = resolveOptionalOutputWithoutContent(
+      options.outputWithoutContent,
+    ),
+    messageContext: ToolMessageContext = { pageReadEvent };
+  if (outputWithoutContent !== undefined) {
+    messageContext.outputWithoutContent = outputWithoutContent;
+  }
+  return messageContext;
 };
 
 const buildRequiredPageReadMessageContext = (
   result: PageReadToolResult,
   errorMessage: string,
+  outputWithoutContent?: string,
 ): ToolMessageContext => {
   const pageReadEvent = buildPageReadEvent(result, {
     requirePageNumber: false,
@@ -130,7 +158,13 @@ const buildRequiredPageReadMessageContext = (
   if (pageReadEvent === null) {
     throw new Error(errorMessage);
   }
-  return { pageReadEvent };
+  const normalizedOutputWithoutContent =
+      resolveOptionalOutputWithoutContent(outputWithoutContent),
+    messageContext: ToolMessageContext = { pageReadEvent };
+  if (normalizedOutputWithoutContent !== undefined) {
+    messageContext.outputWithoutContent = normalizedOutputWithoutContent;
+  }
+  return messageContext;
 };
 
 const buildInternalPageReadResult = (
@@ -138,9 +172,9 @@ const buildInternalPageReadResult = (
   content: string,
 ): string =>
   buildPageReadResult({
-    headerLines,
-    contentLabel: "",
     content,
+    contentLabel: "",
+    headerLines,
     isInternal: true,
   });
 
@@ -151,15 +185,56 @@ const buildChunkPageReadResult = (
   totalPages: number,
 ): string =>
   buildPageReadResult({
+    content,
+    contentLabel: t("statusChunkContent", [String(pageNumber)]),
     headerLines: [
       ...headerLines,
       `${t("statusTotalChunks")}：`,
       String(totalPages),
     ],
-    contentLabel: t("statusChunkContent", [String(pageNumber)]),
-    content,
     isInternal: false,
   });
+
+const buildHeaderOnlyPageReadResult = (
+    headerLines: string[],
+    isInternal: boolean,
+  ): string => {
+    if (isInternal) {
+      return buildPageReadResult({
+        content: "",
+        contentLabel: "",
+        headerLines,
+        isInternal: true,
+      });
+    }
+    return headerLines.join("\n");
+  },
+  buildOpenBrowserPageOutputWithoutContent = (
+    result: OpenBrowserPageToolResult,
+  ): string => {
+    const { tabId, title, isInternal } = resolvePageReadResult(result),
+      headerLines = [
+        t("statusOpenSuccess"),
+        `${t("statusTitle")}：`,
+        title,
+        `${t("statusTabId")}：`,
+        String(tabId),
+      ];
+    if (isInternal) {
+      return buildHeaderOnlyPageReadResult(headerLines, true);
+    }
+    const { totalPages } = resolvePageChunk(result);
+    return buildHeaderOnlyPageReadResult(
+      [...headerLines, `${t("statusTotalChunks")}：`, String(totalPages)],
+      false,
+    );
+  },
+  buildClickButtonOutputWithoutContent = (
+    result: ClickButtonToolResult,
+  ): string => {
+    const { isInternal } = resolvePageReadResult(result);
+    return buildHeaderOnlyPageReadResult([t("statusClickSuccess")], isInternal);
+  };
 
 export const buildGetPageMarkdownMessageContext = (
   _args: unknown,
@@ -175,13 +250,21 @@ export const buildOpenBrowserPageMessageContext = (
   _args: unknown,
   result: OpenBrowserPageToolResult,
 ): ToolMessageContext =>
-  buildRequiredPageReadMessageContext(result, "open_page 缺少页面读取事件");
+  buildRequiredPageReadMessageContext(
+    result,
+    "open_page 缺少页面读取事件",
+    buildOpenBrowserPageOutputWithoutContent(result),
+  );
 
 export const buildClickButtonMessageContext = (
   _args: unknown,
   result: ClickButtonToolResult,
 ): ToolMessageContext =>
-  buildRequiredPageReadMessageContext(result, "click_button 缺少页面读取事件");
+  buildRequiredPageReadMessageContext(
+    result,
+    "click_button 缺少页面读取事件",
+    buildClickButtonOutputWithoutContent(result),
+  );
 
 export const formatGetPageMarkdownResult = (
   result: GetPageMarkdownToolResult,
@@ -229,11 +312,11 @@ export const formatOpenBrowserPageResult = (
 export const formatClickButtonResult = (
   result: ClickButtonToolResult,
 ): string => {
-  const { title, content, isInternal } = resolvePageReadResult(result);
+  const { content, isInternal } = resolvePageReadResult(result);
   return buildPageReadResult({
-    headerLines: [t("statusClickSuccess"), `${t("statusTitle")}："${title}"；`],
-    contentLabel: `${t("statusContent")}：`,
     content,
+    contentLabel: `${t("statusContent")}：`,
+    headerLines: [t("statusClickSuccess")],
     isInternal,
   });
 };
