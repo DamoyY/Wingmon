@@ -11,6 +11,7 @@ import {
 import { cloneBodyWithShadowDom, resolveRenderedText } from "./shadowDom.ts";
 import type { MarkdownChunkResult } from "../../shared/index.ts";
 import type { PageNumberInput } from "../common/index.ts";
+import { clearHiddenElementsForMarkdown } from "../dom/visibility.js";
 import createTurndownService from "./turndownService.ts";
 import replaceButtons from "./buttons.js";
 import replaceInputs from "./inputs.js";
@@ -83,7 +84,13 @@ const prepareMarkdownPageContent = (
   if (!pageData?.body) {
     throw new Error("页面内容为空");
   }
-  const bodyClone = cloneBodyWithShadowDom(pageData.body);
+  const bodyClone = (() => {
+    try {
+      return cloneBodyWithShadowDom(pageData.body);
+    } finally {
+      clearHiddenElementsForMarkdown(pageData.body);
+    }
+  })();
   replaceButtons(bodyClone);
   replaceInputs(bodyClone);
   insertChunkAnchorMarkers(bodyClone);

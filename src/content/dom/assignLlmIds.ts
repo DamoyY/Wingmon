@@ -5,7 +5,9 @@ import {
 } from "./domPathHash.js";
 import {
   type ElementVisibilityOptions,
+  clearHiddenElementsForMarkdown,
   isElementVisible,
+  markHiddenElementsForMarkdown,
 } from "./visibility.js";
 import { buildIdMap } from "../extractors/labels.js";
 import { isEditableElement } from "./editableElements.js";
@@ -81,44 +83,54 @@ const collectVisibleButtons = (root: Element): Element[] =>
   collectVisibleControls(root, isButtonElement);
 
 const assignLlmIds = (root: Element): void => {
-  const buttons = collectVisibleButtons(root),
-    inputs = collectVisibleInputs(root),
-    idMap = buildIdMap(root),
-    usedIds = new Set<string>(),
-    resolveLabelSafely = (resolver: () => string, kind: string): string => {
-      try {
-        const label = resolver();
-        return label;
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        console.error(`${kind}命名失败：${message}`);
-        return "";
-      }
-    },
-    namedButtons = buttons.filter((button) =>
-      resolveLabelSafely(() => resolveButtonLabel(idMap, button), "按钮"),
-    ),
-    namedInputs = inputs.filter((input) =>
-      resolveLabelSafely(() => resolveInputLabel(root, idMap, input), "输入框"),
-    ),
-    totalTargets = namedButtons.length + namedInputs.length,
-    assignId = (element: Element): void => {
-      const path = buildDomPath(element, root, llmIdPathErrorMessages),
-        id = hashDomPath(path, HASH_LENGTH);
-      if (usedIds.has(id)) {
-        throw new Error(
-          `控件 ID 冲突：${id}，控件总量：${String(totalTargets)}`,
-        );
-      }
-      usedIds.add(id);
-      element.setAttribute("data-llm-id", id);
-    };
-  namedButtons.forEach((button) => {
-    assignId(button);
-  });
-  namedInputs.forEach((input) => {
-    assignId(input);
-  });
+  markHiddenElementsForMarkdown(root);
+  try {
+    const buttons = collectVisibleButtons(root),
+      inputs = collectVisibleInputs(root),
+      idMap = buildIdMap(root),
+      usedIds = new Set<string>(),
+      resolveLabelSafely = (resolver: () => string, kind: string): string => {
+        try {
+          const label = resolver();
+          return label;
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          console.error(`${kind}命名失败：${message}`);
+          return "";
+        }
+      },
+      namedButtons = buttons.filter((button) =>
+        resolveLabelSafely(() => resolveButtonLabel(idMap, button), "按钮"),
+      ),
+      namedInputs = inputs.filter((input) =>
+        resolveLabelSafely(
+          () => resolveInputLabel(root, idMap, input),
+          "输入框",
+        ),
+      ),
+      totalTargets = namedButtons.length + namedInputs.length,
+      assignId = (element: Element): void => {
+        const path = buildDomPath(element, root, llmIdPathErrorMessages),
+          id = hashDomPath(path, HASH_LENGTH);
+        if (usedIds.has(id)) {
+          throw new Error(
+            `控件 ID 冲突：${id}，控件总量：${String(totalTargets)}`,
+          );
+        }
+        usedIds.add(id);
+        element.setAttribute("data-llm-id", id);
+      };
+    namedButtons.forEach((button) => {
+      assignId(button);
+    });
+    namedInputs.forEach((input) => {
+      assignId(input);
+    });
+  } catch (error) {
+    clearHiddenElementsForMarkdown(root);
+    throw error;
+  }
 };
 
 export default assignLlmIds;
