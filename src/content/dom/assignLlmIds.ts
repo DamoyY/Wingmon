@@ -19,32 +19,44 @@ const llmIdPathErrorMessages: DomPathErrorMessages = {
   invalidRoot: "根节点无效",
   outsideRoot: "控件不在根节点之内",
 };
-const llmInputVisibilityOptions: ElementVisibilityOptions = {
+const llmControlVisibilityOptions: ElementVisibilityOptions = {
   minimumHeight: 4,
   minimumWidth: 4,
   requirePointerEvents: true,
 };
+const skippedTraversalTags = new Set([
+  "SCRIPT",
+  "STYLE",
+  "NOSCRIPT",
+  "LINK",
+  "META",
+  "SVG",
+  "PATH",
+]);
+const isButtonElement = (element: Element): boolean => {
+  if (element instanceof HTMLButtonElement) {
+    return true;
+  }
+  return (
+    element instanceof HTMLInputElement &&
+    (element.type === "button" || element.type === "submit")
+  );
+};
 
-const collectVisibleInputs = (root: Element): Element[] => {
+const collectVisibleControls = (
+  root: Element,
+  matcher: (element: Element) => boolean,
+): Element[] => {
   const doc = root.ownerDocument;
   const win = doc.defaultView;
   if (!win) {
     throw new Error("无法获取窗口对象");
   }
-  const inputs: Element[] = [];
+  const controls: Element[] = [];
   const walker = doc.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
     acceptNode: (node: Node) => {
       const element = node as Element;
-      const tag = element.tagName;
-      if (
-        tag === "SCRIPT" ||
-        tag === "STYLE" ||
-        tag === "NOSCRIPT" ||
-        tag === "LINK" ||
-        tag === "META" ||
-        tag === "SVG" ||
-        tag === "PATH"
-      ) {
+      if (skippedTraversalTags.has(element.tagName)) {
         return NodeFilter.FILTER_REJECT;
       }
       return NodeFilter.FILTER_ACCEPT;
@@ -53,20 +65,23 @@ const collectVisibleInputs = (root: Element): Element[] => {
   let node = walker.nextNode();
   while (node) {
     const element = node as Element;
-    if (isEditableElement(element)) {
-      if (isElementVisible(element, win, llmInputVisibilityOptions)) {
-        inputs.push(element);
-      }
+    if (
+      matcher(element) &&
+      isElementVisible(element, win, llmControlVisibilityOptions)
+    ) {
+      controls.push(element);
     }
     node = walker.nextNode();
   }
-  return inputs;
+  return controls;
 };
+const collectVisibleInputs = (root: Element): Element[] =>
+  collectVisibleControls(root, isEditableElement);
+const collectVisibleButtons = (root: Element): Element[] =>
+  collectVisibleControls(root, isButtonElement);
 
 const assignLlmIds = (root: Element): void => {
-  const buttons = root.querySelectorAll(
-      'button, input[type="button"], input[type="submit"]',
-    ),
+  const buttons = collectVisibleButtons(root),
     inputs = collectVisibleInputs(root),
     idMap = buildIdMap(root),
     usedIds = new Set<string>(),
@@ -80,7 +95,7 @@ const assignLlmIds = (root: Element): void => {
         return "";
       }
     },
-    namedButtons = Array.from(buttons).filter((button) =>
+    namedButtons = buttons.filter((button) =>
       resolveLabelSafely(() => resolveButtonLabel(idMap, button), "按钮"),
     ),
     namedInputs = inputs.filter((input) =>
