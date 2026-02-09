@@ -18,6 +18,7 @@ type MarkdownChunkingOutput = {
 };
 
 const utf8Encoder = new TextEncoder();
+const controlMarkerSuffix = ">>";
 
 const clampBoundary = (boundary: number, contentLength: number): number => {
   if (!Number.isInteger(boundary)) {
@@ -59,11 +60,11 @@ const moveBoundaryAfterControlMarker = (
     if (markerStart < 0) {
       return adjustedBoundary;
     }
-    const markerEnd = content.indexOf("]", markerStart);
+    const markerEnd = content.indexOf(controlMarkerSuffix, markerStart);
     if (markerEnd < 0) {
       throw new Error("控件标记未闭合");
     }
-    const markerAfterEnd = markerEnd + 1;
+    const markerAfterEnd = markerEnd + controlMarkerSuffix.length;
     if (adjustedBoundary <= markerStart || adjustedBoundary >= markerAfterEnd) {
       return adjustedBoundary;
     }

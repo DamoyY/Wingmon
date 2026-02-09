@@ -13,6 +13,7 @@ type MarkdownChunkingOptions = {
 };
 
 const MARKDOWN_CHUNK_TOKENS = 3000;
+const controlMarkerSuffix = ">>";
 
 const assertNonNegativeInteger = (value: number, label: string): void => {
   if (!Number.isInteger(value) || value < 0) {
@@ -117,11 +118,11 @@ const moveBoundaryAfterControlMarker = (
     if (markerStart < 0) {
       return adjustedBoundary;
     }
-    const markerEnd = content.indexOf("]", markerStart);
+    const markerEnd = content.indexOf(controlMarkerSuffix, markerStart);
     if (markerEnd < 0) {
       throw new Error("控件标记未闭合");
     }
-    const markerAfterEnd = markerEnd + 1;
+    const markerAfterEnd = markerEnd + controlMarkerSuffix.length;
     if (adjustedBoundary <= markerStart || adjustedBoundary >= markerAfterEnd) {
       return adjustedBoundary;
     }

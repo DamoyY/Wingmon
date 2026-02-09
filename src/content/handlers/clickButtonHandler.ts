@@ -3,10 +3,15 @@ import type {
   ClickButtonResponse,
 } from "../../shared/index.ts";
 import { isPdfDocument, normalizeLlmId } from "../common/index.ts";
+import { escapeControlMarkerField } from "../extractors/controlMarkers.ts";
 import { convertPageContentToMarkdownPages } from "../extractors/converter.js";
 import withPreparedBody from "./withPreparedBody.js";
 
 type SendResponse = (response: ClickButtonResponse) => void;
+
+const buildButtonIdMarker = (normalizedId: string): string =>
+  `| id: \`${escapeControlMarkerField(normalizedId)}\` >>`;
+
 const domStableDelayMs = 500,
   domStableMaxDelayMs = 5000,
   findSingleButton = (normalizedId: string): HTMLElement | null => {
@@ -25,7 +30,7 @@ const domStableDelayMs = 500,
     if (isPdfDocument()) {
       return 1;
     }
-    const marker = `id: "${normalizedId}"`;
+    const marker = buildButtonIdMarker(normalizedId);
     try {
       const title = document.title || "",
         url = window.location.href || "",

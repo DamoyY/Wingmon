@@ -3,6 +3,7 @@ import {
   extractControlMarkers,
   insertChunkAnchorMarkers,
   markViewportCenter,
+  normalizeControlMarkersForMarkdown,
 } from "./controlMarkers.ts";
 import {
   type PrefixTokenCounter,
@@ -100,9 +101,12 @@ const prepareMarkdownPageContent = (
       pageData.body,
       markdownWithMarkers,
       markerToken,
+    ),
+    normalizedContentWithMarkers = normalizeControlMarkersForMarkdown(
+      resolvedContentWithMarkers,
     );
   const { content, viewportIndex, anchors } = extractControlMarkers(
-      resolvedContentWithMarkers,
+      normalizedContentWithMarkers,
       markerToken,
     ),
     { chunked, prefixTokenCounter } = chunkMarkdownContent(content),

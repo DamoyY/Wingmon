@@ -1,4 +1,5 @@
 import { buildIdMap, normalizeText, resolveElementLabel } from "./labels.js";
+import { buildControlMarker } from "./controlMarkers.ts";
 
 const resolveButtonLabel = (
   idMap: Map<string, Element>,
@@ -66,7 +67,7 @@ const replaceButtons = (root: Element): void => {
       removeButtonNode(button);
       return;
     }
-    const replacement = `[button: "${text}", id: "${id}"]`;
+    const replacement = buildControlMarker("Button", text, id);
     applyReplacementToButton(button, replacement);
   });
 };

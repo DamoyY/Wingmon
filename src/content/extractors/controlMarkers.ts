@@ -15,7 +15,48 @@ export type ControlMarkerExtraction = {
   viewportIndex: number;
 };
 
-export const CONTROL_MARKER_PREFIXES = ["[button:", "[input:"] as const;
+export const CONTROL_MARKER_PREFIXES = ["<< Button |", "<< Input |"] as const;
+type ControlMarkerKind = "Button" | "Input";
+
+const escapedBacktickToken = "\\`";
+const escapedBacktickPattern = /`/g;
+const escapedButtonMarkerPattern =
+  /<< Button \| text: \\`([\s\S]*?)\\` \| id: \\`([\s\S]*?)\\` >>/u;
+const escapedInputMarkerPattern =
+  /<< Input \| text: \\`([\s\S]*?)\\` \| id: \\`([\s\S]*?)\\` >>/u;
+
+const composeControlMarker = (
+  kind: ControlMarkerKind,
+  text: string,
+  id: string,
+): string => `<< ${kind} | text: \`${text}\` | id: \`${id}\` >>`;
+
+export const escapeControlMarkerField = (value: string): string =>
+  value.replace(escapedBacktickPattern, escapedBacktickToken);
+
+export const buildControlMarker = (
+  kind: ControlMarkerKind,
+  text: string,
+  id: string,
+): string =>
+  composeControlMarker(
+    kind,
+    escapeControlMarkerField(text),
+    escapeControlMarkerField(id),
+  );
+
+export const normalizeControlMarkersForMarkdown = (content: string): string =>
+  content
+    .replace(
+      escapedButtonMarkerPattern,
+      (_segment, text: string, id: string): string =>
+        composeControlMarker("Button", text, id),
+    )
+    .replace(
+      escapedInputMarkerPattern,
+      (_segment, text: string, id: string): string =>
+        composeControlMarker("Input", text, id),
+    );
 
 const viewportMarkerToken = "LLMVIEWPORTCENTERMARKER";
 

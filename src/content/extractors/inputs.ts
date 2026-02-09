@@ -1,5 +1,6 @@
 import { EXCLUDED_INPUT_TYPES, TEXT_INPUT_ROLES } from "../common/index.ts";
 import { buildIdMap, normalizeText, resolveElementLabel } from "./labels.js";
+import { buildControlMarker } from "./controlMarkers.ts";
 
 const getLabelFromAssociatedLabel = (
   root: Element,
@@ -103,7 +104,7 @@ const replaceInputs = (root: Element): void => {
       removeInputNode(inputNode);
       return;
     }
-    const replacement = `[input: "${text}", id: "${id}"]`;
+    const replacement = buildControlMarker("Input", text, id);
     replaceInputNode(inputNode, replacement);
   });
 };
