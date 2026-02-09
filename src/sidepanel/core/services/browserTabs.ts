@@ -11,13 +11,20 @@ export type CreatedBrowserTab = BrowserTab & {
 };
 
 type PendingWaiter = {
-  resolve: (isComplete: boolean) => void;
   reject: (error: Error) => void;
+  resolve: (isComplete: boolean) => void;
   timeoutId: number;
 };
 
+type TabNavigationFailure = {
+  error: string;
+  url: string;
+};
+
 const pendingWaits: Map<number, Set<PendingWaiter>> = new Map();
-let listenersReady = false;
+const tabNavigationFailures: Map<number, TabNavigationFailure> = new Map();
+let listenersReady = false,
+  navigationListenersReady = false;
 
 const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
   normalizeError = (error: unknown, fallback: string): Error => {
@@ -33,6 +40,55 @@ const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
     const failure = normalizeError(error, fallback);
     console.error(failure.message);
     return failure;
+  },
+  resolveNavigationFailureError = (error: string): string | null => {
+    const normalized = error.trim();
+    if (!normalized) {
+      return null;
+    }
+    return normalized;
+  },
+  clearTabNavigationFailure = (tabId: number): void => {
+    tabNavigationFailures.delete(tabId);
+  },
+  setTabNavigationFailure = (
+    tabId: number,
+    error: string,
+    url: string,
+  ): void => {
+    tabNavigationFailures.set(tabId, { error, url });
+  },
+  registerNavigationListeners = (): void => {
+    if (navigationListenersReady) {
+      return;
+    }
+    navigationListenersReady = true;
+    try {
+      chrome.webNavigation.onCommitted.addListener((details) => {
+        if (details.frameId !== 0) {
+          return;
+        }
+        clearTabNavigationFailure(details.tabId);
+      });
+      chrome.webNavigation.onCompleted.addListener((details) => {
+        if (details.frameId !== 0) {
+          return;
+        }
+        clearTabNavigationFailure(details.tabId);
+      });
+      chrome.webNavigation.onErrorOccurred.addListener((details) => {
+        if (details.frameId !== 0) {
+          return;
+        }
+        const error = resolveNavigationFailureError(details.error);
+        if (error === null) {
+          return;
+        }
+        setTabNavigationFailure(details.tabId, error, details.url);
+      });
+    } catch (error) {
+      console.error("webNavigation API 不可用，无法追踪页面导航错误", error);
+    }
   },
   resolvePendingWaits = (tabId: number, isComplete: boolean): void => {
     const waiters = pendingWaits.get(tabId);
@@ -71,6 +127,11 @@ const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
         resolvePendingWaits(tabId, true);
       }
     });
+    chrome.tabs.onRemoved.addListener((tabId) => {
+      clearTabNavigationFailure(tabId);
+      resolvePendingWaits(tabId, false);
+    });
+    registerNavigationListeners();
   },
   resolveResponseErrorMessage = <TRequest extends ContentScriptRequest>(
     response: ContentScriptResponseByRequest<TRequest>,
@@ -87,6 +148,16 @@ const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
 
 export const initTabListeners = (): void => {
   registerContentScriptListeners();
+};
+
+export const getTabNavigationFailure = (
+  tabId: number,
+): TabNavigationFailure | null => {
+  const failure = tabNavigationFailures.get(tabId);
+  if (!failure) {
+    return null;
+  }
+  return { ...failure };
 };
 
 export const getActiveTab = async (): Promise<BrowserTab> => {

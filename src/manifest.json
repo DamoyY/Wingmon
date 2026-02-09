@@ -4,7 +4,7 @@
   "version": "0.9.0",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
-  "permissions": ["storage", "sidePanel", "tabs", "scripting"],
+  "permissions": ["storage", "sidePanel", "tabs", "scripting", "webNavigation"],
   "host_permissions": ["https://*/*", "http://*/*"],
   "action": {
     "default_title": "Wingmon"

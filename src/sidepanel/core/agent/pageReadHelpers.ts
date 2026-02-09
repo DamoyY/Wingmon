@@ -6,6 +6,7 @@ import {
 } from "../../../shared/index.ts";
 import {
   getSettings,
+  getTabNavigationFailure,
   reloadTab,
   sendMessageToTab,
   waitForContentScript,
@@ -37,6 +38,7 @@ export type PageMarkdownData = PageReadMetadata & {
 };
 
 const pageContentRetryBaseDelayMs = 200,
+  contentScriptMissingReceiverPattern = /Receiving end does not exist/u,
   pageContentRetryTimeoutMs = 10000,
   chunkAnchorIdPattern = /^[a-z0-9]+$/u,
   resolvePageContentRetryDelay = (attempt: number) =>
@@ -230,7 +232,20 @@ export const fetchPageMarkdownData = async (
       return await fetchOnce();
     } catch (error) {
       const failure = normalizePageReadFailure(error),
-        failureMessage = `页面内容获取失败：${failure.message}`;
+        navigationFailure = getTabNavigationFailure(tabId),
+        shouldReplaceWithNavigationFailure =
+          navigationFailure !== null &&
+          contentScriptMissingReceiverPattern.test(failure.message);
+      if (shouldReplaceWithNavigationFailure) {
+        const normalizedFailure = new Error(navigationFailure.error);
+        console.error(
+          `页面内容获取失败：${normalizedFailure.message}`,
+          normalizedFailure,
+          navigationFailure,
+        );
+        throw normalizedFailure;
+      }
+      const failureMessage = `页面内容获取失败：${failure.message}`;
       if (!shouldRetry) {
         console.error(failureMessage, failure);
         throw failure;
