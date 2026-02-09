@@ -17,34 +17,30 @@ import {
 import { t } from "../../lib/utils/index.ts";
 
 type PageReadResultArgs = {
-  headerLines: string[];
-  contentLabel: string;
   content: string;
+  contentLabel: string;
+  headerLines: string[];
   isInternal: boolean;
 };
 
 export type PageReadMetadata = {
+  chunkAnchorWeights?: ChunkAnchorWeight[];
   pageNumber: number;
   totalPages: number;
   viewportPage: number;
-  chunkAnchorWeights?: ChunkAnchorWeight[];
 };
 
 export type PageMarkdownData = PageReadMetadata & {
+  content: string;
   title: string;
   url: string;
-  content: string;
 };
 
 const pageContentRetryBaseDelayMs = 200,
-  pageContentRetryMaxDelayMs = 2000,
   pageContentRetryTimeoutMs = 10000,
   chunkAnchorIdPattern = /^[a-z0-9]+$/u,
   resolvePageContentRetryDelay = (attempt: number) =>
-    Math.min(
-      pageContentRetryBaseDelayMs * 2 ** attempt,
-      pageContentRetryMaxDelayMs,
-    ),
+    pageContentRetryBaseDelayMs * 2 ** attempt,
   waitForDelay = (delayMs: number) =>
     new Promise<void>((resolve) => {
       setTimeout(resolve, delayMs);
@@ -135,10 +131,10 @@ const parseChunkAnchorWeightItem = (
     parseOptionalPositiveInteger(value, "page_number") ?? 1,
   resolvePageMetadata = (
     meta: {
+      chunkAnchorWeights?: unknown;
       pageNumber?: unknown;
       totalPages?: unknown;
       viewportPage?: unknown;
-      chunkAnchorWeights?: unknown;
     },
     fallbackPageNumber?: number,
   ): PageReadMetadata => {
@@ -197,10 +193,10 @@ const buildPageContentMessage = (
 };
 
 const buildPageHashMessage = (pageData?: {
+  chunkAnchorWeights?: ChunkAnchorWeight[];
   pageNumber?: number;
   totalPages?: number;
   viewportPage?: number;
-  chunkAnchorWeights?: ChunkAnchorWeight[];
 }): SetPageHashRequest => ({
   type: "setPageHash",
   ...resolvePageMetadata(pageData ?? {}),
@@ -233,21 +229,21 @@ export const fetchPageMarkdownData = async (
     try {
       return await fetchOnce();
     } catch (error) {
-      const failure = normalizePageReadFailure(error);
+      const failure = normalizePageReadFailure(error),
+        failureMessage = `页面内容获取失败：${failure.message}`;
       if (!shouldRetry) {
-        console.error("页面内容获取失败", failure);
+        console.error(failureMessage, failure);
         throw failure;
       }
       const elapsedMs = Date.now() - startTime,
         delayMs = resolvePageContentRetryDelay(attemptIndex),
-        attemptsMade = attemptIndex + 1;
+        attemptsMade = attemptIndex + 1,
+        retryWarningMessage = `第${String(attemptsMade)}次获取页面内容获取失败：${failure.message}`;
+      console.warn(retryWarningMessage, failure);
       if (elapsedMs + delayMs >= pageContentRetryTimeoutMs) {
-        console.error("页面内容获取失败，已达到重试上限", failure);
-        throw new Error(
-          `页面内容获取失败，已重试 ${String(attemptsMade)} 次：${failure.message}`,
-        );
+        console.warn(failureMessage, failure);
+        throw failure;
       }
-      console.error("页面内容获取失败，准备重试", failure);
       await waitForDelay(delayMs);
       attemptIndex += 1;
     }
@@ -257,10 +253,10 @@ export const fetchPageMarkdownData = async (
 export const syncPageHash = async (
   tabId: number,
   pageData?: {
+    chunkAnchorWeights?: ChunkAnchorWeight[];
     pageNumber?: number;
     totalPages?: number;
     viewportPage?: number;
-    chunkAnchorWeights?: ChunkAnchorWeight[];
   },
 ): Promise<void> => {
   await waitForContentScript(tabId);

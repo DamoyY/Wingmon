@@ -1,10 +1,10 @@
-import OpenAI from "openai";
 import type { ToolCall, ToolDefinition } from "../agent/definitions.ts";
 import getApiStrategy, {
   type ApiRequestChunk,
   type ApiToolAdapter,
 } from "./strategies.ts";
 import type { MessageRecord } from "../store/index.ts";
+import OpenAI from "openai";
 import type { Settings } from "../services/index.ts";
 
 type RequestModelPayload = {
