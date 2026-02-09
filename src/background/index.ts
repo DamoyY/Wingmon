@@ -9,14 +9,31 @@ type ContentScriptReadyMessage = RuntimeMessageObject & {
   type: "contentScriptReady";
 };
 type BrowserTab = chrome.tabs.Tab;
+type LooseRecord = Record<string, unknown>;
+type HtmlPreviewEntry = {
+  code: string;
+  createdAt: number;
+};
+type HtmlPreviewStoragePayload = Record<string, LooseRecord | undefined>;
+type ContextMenuUpdateProperties = Omit<
+  chrome.contextMenus.CreateProperties,
+  "id"
+>;
 
 const contentScriptFilePath = "public/content.bundle.js",
-  supportedProtocols = new Set<string>(["http:", "https:"]);
+  supportedProtocols = new Set<string>(["http:", "https:"]),
+  htmlPreviewStorageKey = "html_previews",
+  showHtmlContextMenuId = "show-html-download-page",
+  showHtmlContextMenuTitle = "下载页面",
+  showHtmlDownloadFilename = "wingmon_generation.html",
+  showHtmlPageUrl = chrome.runtime.getURL("public/show-html.html"),
+  showHtmlContextMenuProperties: ContextMenuUpdateProperties = {
+    contexts: ["all"],
+    title: showHtmlContextMenuTitle,
+    visible: false,
+  };
 
-const logError = (
-    message: string,
-    error: Error | string | null = null,
-  ): void => {
+const logError = (message: string, error: unknown = null): void => {
     if (error !== null) {
       console.error(message, error);
       return;
@@ -27,6 +44,20 @@ const logError = (
     message: unknown,
   ): message is RuntimeMessageObject =>
     message !== null && typeof message === "object" && !Array.isArray(message),
+  isLooseRecord = (value: unknown): value is LooseRecord =>
+    value !== null && typeof value === "object" && !Array.isArray(value),
+  isHtmlPreviewEntry = (entry: unknown): entry is HtmlPreviewEntry => {
+    if (!isLooseRecord(entry)) {
+      return false;
+    }
+    if (typeof entry.code !== "string") {
+      return false;
+    }
+    if (typeof entry.createdAt !== "number") {
+      return false;
+    }
+    return Number.isFinite(entry.createdAt);
+  },
   getMessageType = (message: unknown): string | null => {
     if (!isRuntimeMessageObject(message)) {
       return null;
@@ -37,6 +68,162 @@ const logError = (
     message: unknown,
   ): message is ContentScriptReadyMessage =>
     getMessageType(message) === "contentScriptReady",
+  getShowHtmlPreviewId = (url: string | undefined): string | null => {
+    const normalizedUrl = normalizeUrl(url);
+    if (!normalizedUrl) {
+      return null;
+    }
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(normalizedUrl);
+    } catch (error) {
+      logError(`无法解析右键菜单页面 URL: ${normalizedUrl}`, error);
+      return null;
+    }
+    if (!parsedUrl.href.startsWith(showHtmlPageUrl)) {
+      return null;
+    }
+    const previewId = parsedUrl.searchParams.get("id");
+    if (typeof previewId !== "string" || !previewId.trim()) {
+      logError(`show-html 页面缺少预览 id: ${normalizedUrl}`);
+      return null;
+    }
+    return previewId;
+  },
+  getHtmlPreviewCode = async (previewId: string): Promise<string | null> => {
+    let result: HtmlPreviewStoragePayload;
+    try {
+      result = await chrome.storage.local.get<HtmlPreviewStoragePayload>(
+        htmlPreviewStorageKey,
+      );
+    } catch (error) {
+      logError("读取 HTML 预览存储失败", error);
+      return null;
+    }
+    const entries = result[htmlPreviewStorageKey];
+    if (entries === undefined) {
+      logError("HTML 预览存储为空");
+      return null;
+    }
+    if (!isLooseRecord(entries)) {
+      logError("HTML 预览存储格式无效", entries);
+      return null;
+    }
+    const entry = entries[previewId];
+    if (!isHtmlPreviewEntry(entry)) {
+      logError(`HTML 预览记录不存在或格式无效: ${previewId}`, entry ?? null);
+      return null;
+    }
+    return entry.code;
+  },
+  downloadShowHtmlPreview = async (previewId: string): Promise<void> => {
+    const code = await getHtmlPreviewCode(previewId);
+    if (code === null) {
+      return;
+    }
+    const url = `data:text/html;charset=utf-8,${encodeURIComponent(code)}`;
+    try {
+      await chrome.downloads.download({
+        filename: showHtmlDownloadFilename,
+        url,
+      });
+    } catch (error) {
+      logError("下载 HTML 页面失败", error);
+    }
+  },
+  setShowHtmlContextMenuVisibility = async (
+    visible: boolean,
+  ): Promise<void> => {
+    try {
+      await chrome.contextMenus.update(showHtmlContextMenuId, {
+        visible,
+      });
+    } catch (error) {
+      logError("更新 show-html 右键菜单可见性失败", error);
+    }
+  },
+  syncShowHtmlContextMenuVisibilityByTab = async (
+    tab: chrome.tabs.Tab | undefined,
+  ): Promise<void> => {
+    const visible = getShowHtmlPreviewId(tab?.url) !== null;
+    await setShowHtmlContextMenuVisibility(visible);
+  },
+  syncShowHtmlContextMenuVisibilityByTabId = async (
+    tabId: number,
+  ): Promise<void> => {
+    let tab: chrome.tabs.Tab;
+    try {
+      tab = await chrome.tabs.get(tabId);
+    } catch (error) {
+      logError(`读取标签页失败，无法更新菜单可见性: ${String(tabId)}`, error);
+      return;
+    }
+    await syncShowHtmlContextMenuVisibilityByTab(tab);
+  },
+  syncShowHtmlContextMenuVisibilityByActiveTab = async (): Promise<void> => {
+    let tabs: chrome.tabs.Tab[];
+    try {
+      tabs = await chrome.tabs.query({
+        active: true,
+        lastFocusedWindow: true,
+      });
+    } catch (error) {
+      logError("查询活动标签页失败，无法更新菜单可见性", error);
+      return;
+    }
+    await syncShowHtmlContextMenuVisibilityByTab(tabs[0]);
+  },
+  createOrUpdateShowHtmlContextMenu = async (): Promise<void> => {
+    await new Promise<void>((resolve) => {
+      chrome.contextMenus.create(
+        {
+          ...showHtmlContextMenuProperties,
+          id: showHtmlContextMenuId,
+        },
+        () => {
+          const runtimeError = chrome.runtime.lastError;
+          if (!runtimeError) {
+            resolve();
+            return;
+          }
+          if (!runtimeError.message.toLowerCase().includes("duplicate id")) {
+            logError("创建 show-html 右键菜单失败", runtimeError.message);
+            resolve();
+            return;
+          }
+          void chrome.contextMenus
+            .update(showHtmlContextMenuId, showHtmlContextMenuProperties)
+            .catch((error: unknown) => {
+              logError("更新 show-html 右键菜单失败", error);
+            })
+            .finally(() => {
+              resolve();
+            });
+        },
+      );
+    });
+  },
+  registerShowHtmlContextMenu = async (): Promise<void> => {
+    await createOrUpdateShowHtmlContextMenu();
+    await syncShowHtmlContextMenuVisibilityByActiveTab();
+  },
+  handleShowHtmlContextMenuClick = async (
+    info: chrome.contextMenus.OnClickData,
+    tab: chrome.tabs.Tab | undefined,
+  ): Promise<void> => {
+    if (info.menuItemId !== showHtmlContextMenuId) {
+      return;
+    }
+    const previewId =
+      getShowHtmlPreviewId(tab?.url) ??
+      getShowHtmlPreviewId(info.pageUrl) ??
+      getShowHtmlPreviewId(info.frameUrl);
+    if (previewId === null) {
+      logError("右键菜单未找到可下载的 HTML 预览");
+      return;
+    }
+    await downloadShowHtmlPreview(previewId);
+  },
   hasValidTabId = (tab: BrowserTab): tab is BrowserTab & { id: number } => {
     if (typeof tab.id !== "number") {
       return false;
@@ -151,10 +338,39 @@ const logError = (
       return true;
     });
   },
+  registerShowHtmlContextMenuClickListener = (): void => {
+    chrome.contextMenus.onClicked.addListener((info, tab) => {
+      void handleShowHtmlContextMenuClick(info, tab);
+    });
+  },
+  registerShowHtmlContextMenuVisibilityListeners = (): void => {
+    chrome.tabs.onActivated.addListener((activeInfo) => {
+      void syncShowHtmlContextMenuVisibilityByTabId(activeInfo.tabId);
+    });
+    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+      if (!tab.active) {
+        return;
+      }
+      if (
+        typeof changeInfo.url !== "string" &&
+        changeInfo.status !== "complete"
+      ) {
+        return;
+      }
+      void syncShowHtmlContextMenuVisibilityByTabId(tabId);
+    });
+    chrome.windows.onFocusChanged.addListener((windowId) => {
+      if (windowId === chrome.windows.WINDOW_ID_NONE) {
+        return;
+      }
+      void syncShowHtmlContextMenuVisibilityByActiveTab();
+    });
+  },
   handleExtensionInstalled = async (
     details: chrome.runtime.InstalledDetails,
   ): Promise<void> => {
     await enablePanelBehavior();
+    await registerShowHtmlContextMenu();
     if (details.reason !== "install" && details.reason !== "update") {
       return;
     }
@@ -162,10 +378,13 @@ const logError = (
   };
 
 void enablePanelBehavior();
+void registerShowHtmlContextMenu();
 chrome.runtime.onInstalled.addListener((details) => {
   void handleExtensionInstalled(details);
 });
 chrome.action.onClicked.addListener((tab) => {
   void openPanelForTab(tab);
 });
+registerShowHtmlContextMenuClickListener();
+registerShowHtmlContextMenuVisibilityListeners();
 registerContentScriptReadyListener();
