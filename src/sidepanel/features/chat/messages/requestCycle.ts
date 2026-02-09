@@ -64,6 +64,7 @@ export type ResponseStreamChunk = {
 type StatusTracker = {
   reset: () => void;
   setInitial: () => void;
+  replay: () => void;
   updateFromChunk: (chunk: RequestChunk) => void;
   dispose: () => void;
 };
@@ -240,6 +241,12 @@ const createAbortError = (): Error => {
         dotCount = 0;
         lastRenderedStatus = "";
       },
+      replay: (): void => {
+        if (!lastRenderedStatus) {
+          return;
+        }
+        reportStatus(lastRenderedStatus);
+      },
       reset: (): void => {
         stopDotTimer();
         activeStatusKey = STATUS_KEYS.idle;
@@ -266,7 +273,7 @@ const createAbortError = (): Error => {
   }: CreateResponseStreamPayload): AsyncGenerator<ResponseStreamChunk> {
     const reportStatus = ensureStatusReporter(onStatus),
       statusTracker = createStatusTracker(reportStatus);
-    let initializedGroupId = "";
+    let hasShownInitialStatus = false;
     const requestNext = async function* requestNext({
       assistantIndex: overrideAssistantIndex,
     }: {
@@ -326,31 +333,32 @@ const createAbortError = (): Error => {
         onStreamStart = (): void => {
           ensurePendingAssistant();
         };
-      const currentGroupId = ensurePendingAssistant();
-      statusTracker.reset();
-      if (currentGroupId && currentGroupId !== initializedGroupId) {
-        initializedGroupId = currentGroupId;
+      ensurePendingAssistant();
+      if (!hasShownInitialStatus) {
+        hasShownInitialStatus = true;
         statusTracker.setInitial();
+      } else {
+        statusTracker.replay();
       }
       const systemPrompt = await buildSystemPrompt(settings.language),
         tools = getToolDefinitions(settings.apiType),
         requestResult = await requestModel({
-          settings,
-          systemPrompt,
-          tools,
-          toolAdapter: apiToolAdapter,
           messages: state.messages,
+          onChunk: statusTracker.updateFromChunk,
           onDelta: appendAssistantDelta,
           onStreamStart,
-          onChunk: statusTracker.updateFromChunk,
+          settings,
           signal,
+          systemPrompt,
+          toolAdapter: apiToolAdapter,
+          tools,
         }),
         pendingToolCalls = requestResult.toolCalls;
       yield {
-        toolCalls: pendingToolCalls,
+        assistantIndex,
         reply: requestResult.reply,
         streamed: requestResult.streamed,
-        assistantIndex,
+        toolCalls: pendingToolCalls,
       };
       if (!pendingToolCalls.length) {
         return;

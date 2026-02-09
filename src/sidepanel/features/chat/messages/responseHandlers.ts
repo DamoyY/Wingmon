@@ -58,7 +58,11 @@ export const applyStreamedResponse = (
     renderMessagesView();
     throw new Error("未收到有效回复");
   }
-  if (assistantMessage.pending === true && hasText) {
+  if (
+    assistantMessage.pending === true &&
+    hasText &&
+    !pendingToolCalls.length
+  ) {
     updateMessage(assistantIndex, { pending: false });
   }
   renderMessagesView();
@@ -73,7 +77,11 @@ export const applyNonStreamedResponse = (
     resolvedIndex = resolveAssistantIndex(assistantIndex);
   if (reply) {
     if (resolvedIndex !== null) {
-      updateMessage(resolvedIndex, { content: reply, pending: false });
+      if (pendingToolCalls.length > 0) {
+        updateMessage(resolvedIndex, { content: reply });
+      } else {
+        updateMessage(resolvedIndex, { content: reply, pending: false });
+      }
     } else {
       addMessage({
         content: reply,

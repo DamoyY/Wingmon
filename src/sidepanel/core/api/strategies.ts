@@ -258,7 +258,7 @@ const isPresent = <T>(value: T | null): value is T => value !== null,
       if (typeof message.content !== "string") {
         throw new Error(`${role} 消息缺少 content`);
       }
-      return { role, content: message.content };
+      return { content: message.content, role };
     }
     if (role === "tool") {
       if (typeof message.content !== "string") {
@@ -307,56 +307,56 @@ const isPresent = <T>(value: T | null): value is T => value !== null,
     }
     if (item.type === "function_call") {
       return {
-        type: "function_call",
+        arguments: normalizeToolArguments(item.arguments),
         call_id: item.call_id,
         name: item.name,
-        arguments: normalizeToolArguments(item.arguments),
+        type: "function_call",
       };
     }
     return {
-      type: "function_call_output",
       call_id: item.call_id,
       output: item.output,
+      type: "function_call_output",
     };
   },
   toChatTool = (tool: ToolDefinition): ChatCompletionTool => {
     if ("function" in tool) {
       return {
-        type: "function",
         function: {
-          name: tool.function.name,
           description: tool.function.description,
+          name: tool.function.name,
           parameters: tool.function.parameters,
           strict: tool.function.strict,
         },
+        type: "function",
       };
     }
     return {
-      type: "function",
       function: {
-        name: tool.name,
         description: tool.description,
+        name: tool.name,
         parameters: tool.parameters,
         strict: tool.strict,
       },
+      type: "function",
     };
   },
   toResponsesTool = (tool: ToolDefinition): ResponsesTool => {
     if ("function" in tool) {
       return {
-        type: "function",
-        name: tool.function.name,
         description: tool.function.description,
+        name: tool.function.name,
         parameters: tool.function.parameters,
         strict: tool.function.strict,
+        type: "function",
       };
     }
     return {
-      type: "function",
-      name: tool.name,
       description: tool.description,
+      name: tool.name,
       parameters: tool.parameters,
       strict: tool.strict,
+      type: "function",
     };
   },
   toChatToolCallForExtraction = (
@@ -458,10 +458,10 @@ const isPresent = <T>(value: T | null): value is T => value !== null,
       return null;
     }
     const outputItem: ResponsesOutputItemForExtraction = {
-      type: "function_call",
+      arguments: item.arguments,
       call_id: item.call_id,
       name: item.name,
-      arguments: item.arguments,
+      type: "function_call",
     };
     if (typeof item.id === "string" && item.id.length > 0) {
       outputItem.id = item.id;
@@ -492,18 +492,18 @@ const isPresent = <T>(value: T | null): value is T => value !== null,
   createApiStrategies = (toolAdapter: ApiToolAdapter): ApiStrategyMap => ({
     chat: {
       buildStreamRequestBody: (settings, systemPrompt, tools, messages) => ({
-        model: settings.model,
         messages: toolAdapter
           .buildChatMessages(systemPrompt, messages)
           .map(toChatMessageParam),
+        model: settings.model,
         stream: true,
         tools: tools.map(toChatTool),
       }),
       buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) => ({
-        model: settings.model,
         messages: toolAdapter
           .buildChatMessages(systemPrompt, messages)
           .map(toChatMessageParam),
+        model: settings.model,
         stream: false,
         tools: tools.map(toChatTool),
       }),
@@ -533,10 +533,10 @@ const isPresent = <T>(value: T | null): value is T => value !== null,
     responses: {
       buildStreamRequestBody: (settings, systemPrompt, tools, messages) => {
         const body: ResponsesRequestBody = {
-          model: settings.model,
           input: toolAdapter
             .buildResponsesInput(messages)
             .map(toResponsesInputItem),
+          model: settings.model,
           stream: true,
           tools: tools.map(toResponsesTool),
         };
@@ -547,10 +547,10 @@ const isPresent = <T>(value: T | null): value is T => value !== null,
       },
       buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) => {
         const body: ResponsesFallbackRequestBody = {
-          model: settings.model,
           input: toolAdapter
             .buildResponsesInput(messages)
             .map(toResponsesInputItem),
+          model: settings.model,
           stream: false,
           tools: tools.map(toResponsesTool),
         };

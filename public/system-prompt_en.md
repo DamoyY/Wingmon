@@ -51,7 +51,6 @@ To achieve this goal, you need as many candidate URLs as possible.
       - You must use English search terms.
       - Use different search terms and inspect the most relevant results each time.
     * Wrong behavior:
-      - Include time words in search queries (such as 2024, January, latest)
       - Only use the search engine but never open search results (this leads to insufficient or biased information; even when current results are poor, you should try new search terms)
 After obtaining URLs of high-value pages, open those pages and read their content.
 * High-value pages also contain links with higher probability of value, do not miss them.

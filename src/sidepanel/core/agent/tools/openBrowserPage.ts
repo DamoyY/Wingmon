@@ -1,5 +1,4 @@
 import { type JsonValue, isInternalUrl, t } from "../../../lib/utils/index.ts";
-import { MARKDOWN_CHUNK_TOKENS, isPdfUrl } from "../../../../shared/index.ts";
 import {
   buildOpenBrowserPageMessageContext,
   formatOpenBrowserPageResult,
@@ -8,12 +7,10 @@ import type { OpenBrowserPageToolResult } from "../toolResultTypes.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 import ToolInputError from "../errors.ts";
 import { ensureObjectArgs } from "../validation/toolArgsValidation.ts";
-import { parsePageNumber } from "../validation/parsePageNumber.ts";
 
 type OpenPageArgs = {
   url: string;
   focus: boolean;
-  pageNumber: number;
 };
 
 type BrowserTab = Awaited<
@@ -28,13 +25,9 @@ const parameters = {
     additionalProperties: false,
     properties: {
       focus: { description: t("toolParamFocus"), type: "boolean" },
-      page_number: {
-        description: t("toolParamPageNumber", String(MARKDOWN_CHUNK_TOKENS)),
-        type: "number",
-      },
       url: { type: "string" },
     },
-    required: ["url", "focus", "page_number"],
+    required: ["url", "focus"],
     type: "object",
   },
   normalizeTab = (tab: BrowserTab): NormalizedTab | null => {
@@ -67,11 +60,10 @@ const parameters = {
     if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
       throw new ToolInputError("URL 仅支持 http 或 https");
     }
-    const pageNumber = parsePageNumber(rawArgs.page_number);
-    return { focus: rawArgs.focus, pageNumber, url: parsedUrl.toString() };
+    return { focus: rawArgs.focus, url: parsedUrl.toString() };
   },
   execute = async (
-    { url, focus, pageNumber }: OpenPageArgs,
+    { url, focus }: OpenPageArgs,
     context: ToolExecutionContext,
   ): Promise<OpenBrowserPageToolResult> => {
     const followMode = await context.shouldFollowMode(),
@@ -89,8 +81,7 @@ const parameters = {
         await context.focusTab(matchedTab.id);
       }
       const matchedUrl = matchedTab.url || url,
-        isInternal = isInternalUrl(matchedUrl),
-        isPdfDocument = isPdfUrl(matchedUrl);
+        isInternal = isInternalUrl(matchedUrl);
       if (isInternal) {
         return {
           content: "",
@@ -100,11 +91,7 @@ const parameters = {
           url: matchedUrl,
         };
       }
-      const readPageNumber = isPdfDocument ? pageNumber : 1;
-      const pageData = await context.fetchPageMarkdownData(
-        matchedTab.id,
-        readPageNumber,
-      );
+      const pageData = await context.fetchPageMarkdownData(matchedTab.id, 1);
       if (followMode) {
         await context.syncPageHash(matchedTab.id, pageData);
       }
@@ -132,8 +119,7 @@ const parameters = {
         url,
       };
     }
-    const readPageNumber = isPdfUrl(url) ? pageNumber : 1,
-      pageData = await context.fetchPageMarkdownData(tab.id, readPageNumber);
+    const pageData = await context.fetchPageMarkdownData(tab.id, 1);
     if (followMode) {
       await context.syncPageHash(tab.id, pageData);
     }

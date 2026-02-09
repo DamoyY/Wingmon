@@ -144,6 +144,8 @@ const ensureNotAborted = (signal: AbortSignal): void => {
 export class ConversationManager {
   #activeAbortController: AbortController | null = null;
 
+  #ignoreStreamStatus = false;
+
   #listeners = new Set<ConversationManagerListener>();
 
   subscribe(listener: ConversationManagerListener): () => void {
@@ -170,12 +172,20 @@ export class ConversationManager {
     this.#emit({ status, type: "status-change" });
   }
 
+  #emitStatusFromStream(status: string): void {
+    if (this.#ignoreStreamStatus) {
+      return;
+    }
+    this.#emitStatus(status);
+  }
+
   stopSending(): Promise<void> {
     this.#emit({ sending: false, type: "sending-change" });
     const abortController = this.#activeAbortController;
     if (!abortController) {
       return Promise.resolve();
     }
+    this.#ignoreStreamStatus = true;
     abortController.abort();
     this.#emitStatus("");
     return Promise.resolve();
@@ -202,6 +212,7 @@ export class ConversationManager {
     setStateValue("sending", true);
     const abortController = new AbortController();
     this.#activeAbortController = abortController;
+    this.#ignoreStreamStatus = false;
     this.#emit({ sending: true, type: "sending-change" });
     this.#emitStatus("");
     let pendingAssistantIndex: number | null = null;
@@ -222,7 +233,7 @@ export class ConversationManager {
       const responseStream = createResponseStream({
         assistantIndex: pendingAssistantIndex,
         onStatus: (status: string) => {
-          this.#emitStatus(status);
+          this.#emitStatusFromStream(status);
         },
         settings,
         signal: abortController.signal,
@@ -274,6 +285,7 @@ export class ConversationManager {
       if (this.#activeAbortController === abortController) {
         this.#activeAbortController = null;
       }
+      this.#ignoreStreamStatus = false;
       this.#emit({ sending: false, type: "sending-change" });
     }
   }
