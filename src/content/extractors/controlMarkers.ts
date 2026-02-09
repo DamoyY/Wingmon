@@ -10,9 +10,9 @@ export type ChunkAnchorPoint = {
 };
 
 export type ControlMarkerExtraction = {
+  anchors: ChunkAnchorPoint[];
   content: string;
   viewportIndex: number;
-  anchors: ChunkAnchorPoint[];
 };
 
 export const CONTROL_MARKER_PREFIXES = ["[button:", "[input:"] as const;
@@ -50,6 +50,43 @@ export const extractControlMarkers = (
   let cursor = 0;
   let cleanLength = 0;
   let viewportIndex: number | null = null;
+  let trailingLineBreakCount = 0;
+  const appendNormalizedSegment = (segment: string): void => {
+    if (!segment) {
+      return;
+    }
+    let index = 0;
+    while (index < segment.length) {
+      const current = segment[index];
+      if (current === "\r" && segment[index + 1] === "\n") {
+        if (trailingLineBreakCount < 2) {
+          cleanLength += 1;
+          cleanSegments.push("\n");
+          trailingLineBreakCount += 1;
+        }
+        index += 2;
+        continue;
+      }
+      if (current === "\n") {
+        if (trailingLineBreakCount < 2) {
+          cleanLength += 1;
+          cleanSegments.push("\n");
+          trailingLineBreakCount += 1;
+        }
+        index += 1;
+        continue;
+      }
+      const codePoint = segment.codePointAt(index);
+      if (typeof codePoint !== "number") {
+        throw new Error("文本分段解析失败");
+      }
+      const character = String.fromCodePoint(codePoint);
+      cleanSegments.push(character);
+      cleanLength += character.length;
+      index += character.length;
+      trailingLineBreakCount = 0;
+    }
+  };
   const anchorPattern = new RegExp(chunkAnchorMarkerPattern.source, "g");
   while (cursor < contentWithMarkers.length) {
     anchorPattern.lastIndex = cursor;
@@ -67,10 +104,7 @@ export const extractControlMarkers = (
       markerType = "viewport";
     }
     const segment = contentWithMarkers.slice(cursor, markerStart);
-    if (segment) {
-      cleanSegments.push(segment);
-      cleanLength += segment.length;
-    }
+    appendNormalizedSegment(segment);
     if (!markerType) {
       break;
     }
