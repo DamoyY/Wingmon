@@ -24,13 +24,21 @@ type ClickButtonArgs = {
   id: string;
 };
 
-const clickPageReadDelayMs = 500,
-  waitForDelay = (delayMs: number) =>
-    new Promise<void>((resolve) => {
-      setTimeout(resolve, delayMs);
-    }),
-  isTabConnectable = (tab: BrowserTab): boolean =>
+const isTabConnectable = (tab: BrowserTab): boolean =>
     typeof tab.url !== "string" || !isInternalUrl(tab.url),
+  resolveClickButtonReason = (
+    response: ClickButtonResponse,
+  ): string | undefined => {
+    const { reason } = response;
+    if (reason === undefined) {
+      return undefined;
+    }
+    const normalizedReason = reason.trim();
+    if (!normalizedReason) {
+      throw new Error("click_button 返回的 reason 无效");
+    }
+    return normalizedReason;
+  },
   resolveClickButtonPageNumber = (
     response: ClickButtonResponse,
   ): number | undefined => {
@@ -78,7 +86,6 @@ const parameters = {
         error instanceof Error ? error.message : "点击失败",
       invalidResultMessage: "按钮点击返回结果异常",
       onSuccess: async (tabId, clickResult) => {
-        await waitForDelay(clickPageReadDelayMs);
         const requestedPageNumber = clickResult.pageNumber;
         if (requestedPageNumber === undefined) {
           console.error("click_button 未返回按钮分片页码，已回退为默认分片");
@@ -122,7 +129,7 @@ const parameters = {
         return {
           ok: response.ok,
           pageNumber: resolveClickButtonPageNumber(response),
-          reason: response.error,
+          reason: resolveClickButtonReason(response),
         };
       },
       sendMessage: (tabId) => {

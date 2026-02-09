@@ -7,7 +7,9 @@ import { convertPageContentToMarkdownPages } from "../extractors/converter.js";
 import withPreparedBody from "./withPreparedBody.js";
 
 type SendResponse = (response: ClickButtonResponse) => void;
-const findSingleButton = (normalizedId: string): HTMLElement | null => {
+const domStableDelayMs = 500,
+  domStableMaxDelayMs = 5000,
+  findSingleButton = (normalizedId: string): HTMLElement | null => {
     const matches = document.querySelectorAll<HTMLElement>(
       `[data-llm-id="${normalizedId}"]`,
     );
@@ -51,18 +53,76 @@ const findSingleButton = (normalizedId: string): HTMLElement | null => {
       return null;
     }
   },
-  handleClickButton = (
+  waitForDomStability = (): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      const root = document.documentElement;
+      let finished = false;
+      let maxDelayTimer: number | null = null;
+      let stableTimer: number | null = null;
+      const cleanup = (observer: MutationObserver): void => {
+          observer.disconnect();
+          if (stableTimer !== null) {
+            window.clearTimeout(stableTimer);
+            stableTimer = null;
+          }
+          if (maxDelayTimer !== null) {
+            window.clearTimeout(maxDelayTimer);
+            maxDelayTimer = null;
+          }
+        },
+        complete = (observer: MutationObserver): void => {
+          if (finished) {
+            return;
+          }
+          finished = true;
+          cleanup(observer);
+          resolve();
+        },
+        resetStableTimer = (observer: MutationObserver): void => {
+          if (stableTimer !== null) {
+            window.clearTimeout(stableTimer);
+          }
+          stableTimer = window.setTimeout(() => {
+            complete(observer);
+          }, domStableDelayMs);
+        };
+      const observer = new MutationObserver(() => {
+        resetStableTimer(observer);
+      });
+      try {
+        observer.observe(root, {
+          attributes: true,
+          characterData: true,
+          childList: true,
+          subtree: true,
+        });
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : "点击后监听 DOM 变化失败";
+        console.error(errorMessage);
+        cleanup(observer);
+        resolve();
+        return;
+      }
+      maxDelayTimer = window.setTimeout(() => {
+        complete(observer);
+      }, domStableMaxDelayMs);
+      resetStableTimer(observer);
+    });
+  },
+  handleClickButton = async (
     message: ClickButtonRequest,
     sendResponse: SendResponse,
-  ): void => {
+  ): Promise<void> => {
     const normalizedId = normalizeLlmId(message.id ?? null),
       target = findSingleButton(normalizedId);
     if (!target) {
-      sendResponse({ error: `未找到 id 为 ${normalizedId} 的按钮` });
+      sendResponse({ ok: false, reason: "not_found" });
       return;
     }
     const pageNumber = resolveButtonChunkPageNumber(normalizedId);
     target.click();
+    await waitForDomStability();
     if (pageNumber === null) {
       sendResponse({ ok: true });
       return;

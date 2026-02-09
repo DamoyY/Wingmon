@@ -93,6 +93,7 @@ export type ClickButtonRequest = {
 export type ClickButtonResponse = {
   ok?: boolean;
   pageNumber?: number;
+  reason?: string;
   error?: string;
 };
 

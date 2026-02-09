@@ -16,8 +16,8 @@ import {
 } from "../handlers/index.js";
 
 const contentScriptHandlers: ContentScriptRpcHandlerMap = {
-  clickButton: (message, sendResponse): void => {
-    handleClickButton(message, sendResponse);
+  clickButton: (message, sendResponse) => {
+    return handleClickButton(message, sendResponse);
   },
   enterText: (message, sendResponse): void => {
     handleEnterText(message, sendResponse);

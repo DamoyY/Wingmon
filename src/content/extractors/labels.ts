@@ -21,7 +21,7 @@ const getLabelFromIds = (
   const labels = ids.map((id) => {
       const target = idMap.get(id);
       if (!target) {
-        throw new Error(`aria-labelledby 指向不存在的控件: ${id}`);
+        return "";
       }
       return normalizeText(target.textContent);
     }),
@@ -40,7 +40,8 @@ const resolveAriaLabelledby = (
   }
   const ids = ariaLabelledby.split(/\s+/).filter(Boolean);
   if (!ids.length) {
-    throw new Error(emptyValueError);
+    console.error(emptyValueError);
+    return "";
   }
   return getLabelFromIds(idMap, ids);
 };
