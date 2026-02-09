@@ -34,15 +34,23 @@ export type PreparedMarkdownPageContent = {
   prefixTokenCounter: PrefixTokenCounter;
 };
 
-type TurndownService = {
-  turndown: (input: string) => string;
-};
+type TurndownService = { turndown: (input: string) => string };
 
 type CreateTurndownService = () => TurndownService;
 
 const createTurndownServiceTyped =
   createTurndownService as CreateTurndownService;
 const turndown = createTurndownServiceTyped();
+
+const removeTablesWithoutRows = (root: Element): void => {
+  const tables = Array.from(root.getElementsByTagName("table"));
+  tables.forEach((table) => {
+    if (table.rows.length > 0) {
+      return;
+    }
+    table.remove();
+  });
+};
 
 const resolveTextFallback = (
   body: HTMLElement,
@@ -92,6 +100,7 @@ const prepareMarkdownPageContent = (
       clearHiddenElementsForMarkdown(pageData.body);
     }
   })();
+  removeTablesWithoutRows(bodyClone);
   replaceButtons(bodyClone);
   replaceInputs(bodyClone);
   insertChunkAnchorMarkers(bodyClone);
