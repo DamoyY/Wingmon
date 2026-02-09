@@ -41,6 +41,9 @@
   "statusOpenSuccess": {
     "message": "**打开成功**"
   },
+  "statusOpenFailed": {
+    "message": "**打开失败**"
+  },
   "statusReadSuccess": {
     "message": "**读取成功**"
   },
@@ -55,6 +58,9 @@
   },
   "statusFindReasonLabel": {
     "message": "原因："
+  },
+  "statusErrorInfo": {
+    "message": "错误信息"
   },
   "statusFindInvalidArgs": {
     "message": "输入参数不合法"
@@ -121,6 +127,9 @@
   },
   "statusNoAddress": {
     "message": "无地址"
+  },
+  "statusUnknownTabId": {
+    "message": "未知"
   },
   "statusToolCallFailed": {
     "message": "工具调用失败：$1"

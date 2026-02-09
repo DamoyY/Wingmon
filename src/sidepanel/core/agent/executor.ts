@@ -225,6 +225,7 @@ const buildToolMessage = ({
       toolContext = resolved.toolContext;
     } catch (error) {
       const isInputError = error instanceof ToolInputError,
+        tabId = isInputError ? error.tabId : null,
         errorMessage = extractErrorMessage(error, {
           includeNonStringPrimitives: true,
         });
@@ -233,7 +234,9 @@ const buildToolMessage = ({
         isCloseTool: name === toolNames.closeBrowserPage,
         isFindTool: name === toolNames.find,
         isInputError,
+        isOpenTool: name === toolNames.openBrowserPage,
         message: errorMessage,
+        tabId,
       });
     }
     if (!callId || !name) {

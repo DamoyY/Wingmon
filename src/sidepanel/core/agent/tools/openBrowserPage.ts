@@ -7,6 +7,7 @@ import type { OpenBrowserPageToolResult } from "../toolResultTypes.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 import ToolInputError from "../errors.ts";
 import { ensureObjectArgs } from "../validation/toolArgsValidation.ts";
+import { extractErrorMessage } from "../../../../shared/index.ts";
 
 type OpenPageArgs = {
   url: string;
@@ -62,6 +63,46 @@ const parameters = {
     }
     return { focus: rawArgs.focus, url: parsedUrl.toString() };
   },
+  fetchPageResult = async ({
+    context,
+    followMode,
+    tabId,
+    fallbackUrl,
+    requestedUrl,
+  }: {
+    context: ToolExecutionContext;
+    followMode: boolean;
+    tabId: number;
+    fallbackUrl: string;
+    requestedUrl: string;
+  }): Promise<OpenBrowserPageToolResult> => {
+    try {
+      const pageData = await context.fetchPageMarkdownData(tabId, 1);
+      if (followMode) {
+        await context.syncPageHash(tabId, pageData);
+      }
+      return {
+        content: pageData.content,
+        isInternal: isInternalUrl(pageData.url || fallbackUrl),
+        pageNumber: pageData.pageNumber,
+        tabId,
+        title: pageData.title,
+        totalPages: pageData.totalPages,
+        url: pageData.url || fallbackUrl,
+      };
+    } catch (error) {
+      const message = extractErrorMessage(error, {
+        fallback: "页面内容获取失败",
+        includeNonStringPrimitives: true,
+      });
+      console.error(
+        "open_page 页面读取失败",
+        { message, requestedUrl, tabId },
+        error,
+      );
+      throw new ToolInputError(message, { tabId });
+    }
+  },
   execute = async (
     { url, focus }: OpenPageArgs,
     context: ToolExecutionContext,
@@ -91,19 +132,13 @@ const parameters = {
           url: matchedUrl,
         };
       }
-      const pageData = await context.fetchPageMarkdownData(matchedTab.id, 1);
-      if (followMode) {
-        await context.syncPageHash(matchedTab.id, pageData);
-      }
-      return {
-        content: pageData.content,
-        isInternal: isInternalUrl(pageData.url || matchedUrl),
-        pageNumber: pageData.pageNumber,
+      return fetchPageResult({
+        context,
+        fallbackUrl: matchedUrl,
+        followMode,
+        requestedUrl: url,
         tabId: matchedTab.id,
-        title: pageData.title,
-        totalPages: pageData.totalPages,
-        url: pageData.url || matchedUrl,
-      };
+      });
     }
     const tab = await context.createTab(url, shouldFocus);
     if (shouldFocus) {
@@ -119,19 +154,13 @@ const parameters = {
         url,
       };
     }
-    const pageData = await context.fetchPageMarkdownData(tab.id, 1);
-    if (followMode) {
-      await context.syncPageHash(tab.id, pageData);
-    }
-    return {
-      content: pageData.content,
-      isInternal: isInternalUrl(pageData.url || url),
-      pageNumber: pageData.pageNumber,
+    return fetchPageResult({
+      context,
+      fallbackUrl: url,
+      followMode,
+      requestedUrl: url,
       tabId: tab.id,
-      title: pageData.title,
-      totalPages: pageData.totalPages,
-      url: pageData.url || url,
-    };
+    });
   };
 
 export default {

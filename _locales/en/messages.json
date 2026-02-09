@@ -41,6 +41,9 @@
   "statusOpenSuccess": {
     "message": "**Open succeeded**"
   },
+  "statusOpenFailed": {
+    "message": "**Open failed**"
+  },
   "statusReadSuccess": {
     "message": "**Read succeeded**"
   },
@@ -55,6 +58,9 @@
   },
   "statusFindReasonLabel": {
     "message": "Reason: "
+  },
+  "statusErrorInfo": {
+    "message": "Error"
   },
   "statusFindInvalidArgs": {
     "message": "Invalid input arguments"
@@ -121,6 +127,9 @@
   },
   "statusNoAddress": {
     "message": "No Address"
+  },
+  "statusUnknownTabId": {
+    "message": "Unknown"
   },
   "statusToolCallFailed": {
     "message": "Tool call failed: $1"
