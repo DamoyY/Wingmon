@@ -10,6 +10,7 @@ import {
   getToolOutputContent,
 } from "./toolMessageContext.ts";
 import type { MessageRecord } from "../store/index.ts";
+import { parseJson } from "../../lib/utils/index.ts";
 
 type RawToolCall = NonNullable<MessageRecord["tool_calls"]>[number];
 type MessageFieldValue = RawToolCall[string];
@@ -357,4 +358,137 @@ export const buildResponsesInput = (
     });
   });
   return output;
+};
+
+export type AnthropicMessageParam = {
+  role: "user" | "assistant";
+  content:
+    | string
+    | Array<
+        | { type: "text"; text: string }
+        | {
+            type: "tool_use";
+            id: string;
+            name: string;
+            input: Record<string, unknown>;
+          }
+        | { type: "tool_result"; tool_use_id: string; content: string }
+      >;
+};
+
+export const buildMessagesInput = (
+  messages: MessageRecord[],
+): AnthropicMessageParam[] => {
+  const output: AnthropicMessageParam[] = [],
+    contextMessages = buildContextMessages(normalizeMessages(messages)),
+    { removeToolCallIds, trimToolResponseIds } =
+      collectPageReadDedupeSets(contextMessages);
+
+  contextMessages.forEach((message) => {
+    if (message.role === "tool") {
+      const callId = message.tool_call_id;
+      if (!callId) {
+        throw new Error("工具响应缺少 tool_call_id");
+      }
+      if (removeToolCallIds.has(callId)) return;
+
+      output.push({
+        role: "user",
+        content: [
+          {
+            type: "tool_result",
+            tool_use_id: callId,
+            content: getToolOutputContent(message, trimToolResponseIds),
+          },
+        ],
+      });
+      return;
+    }
+
+    if (message.role !== "user" && message.role !== "assistant") return;
+
+    const toolCallEntries = collectToolCallEntries(
+      message.tool_calls,
+      removeToolCallIds,
+    );
+
+    const content: Exclude<AnthropicMessageParam["content"], string> = [];
+    if (typeof message.content === "string" && message.content.trim()) {
+      content.push({ type: "text", text: message.content });
+    }
+
+    toolCallEntries.forEach((entry) => {
+      let input: Record<string, unknown> = {};
+      if (typeof entry.arguments === "string") {
+        try {
+          const parsed = parseJson(entry.arguments);
+          if (
+            typeof parsed === "object" &&
+            parsed !== null &&
+            !Array.isArray(parsed)
+          ) {
+            input = { ...parsed };
+          } else {
+            console.error("工具参数必须是对象或对象字符串", {
+              arguments: entry.arguments,
+              name: entry.name,
+            });
+          }
+        } catch (e) {
+          console.error("Failed to parse tool arguments", e);
+        }
+      } else if (
+        typeof entry.arguments === "object" &&
+        entry.arguments !== null &&
+        !Array.isArray(entry.arguments)
+      ) {
+        input = { ...entry.arguments };
+      } else {
+        console.error("工具参数必须是对象或对象字符串", {
+          arguments: entry.arguments,
+          name: entry.name,
+        });
+      }
+      content.push({
+        type: "tool_use",
+        id: entry.callId,
+        name: entry.name,
+        input,
+      });
+    });
+
+    if (content.length > 0) {
+      output.push({
+        role: message.role,
+        content:
+          content.length === 1 && content[0].type === "text"
+            ? content[0].text
+            : content,
+      });
+    }
+  });
+
+  const merged: AnthropicMessageParam[] = [];
+  output.forEach((msg) => {
+    if (merged.length > 0) {
+      const last = merged[merged.length - 1];
+      if (last.role === msg.role) {
+        if (Array.isArray(last.content) && Array.isArray(msg.content)) {
+          last.content.push(...msg.content);
+        } else if (Array.isArray(last.content)) {
+          if (typeof msg.content === "string") {
+            last.content.push({ type: "text", text: msg.content });
+          }
+        } else if (Array.isArray(msg.content)) {
+          last.content = [{ type: "text", text: last.content }, ...msg.content];
+        } else {
+          last.content = last.content + "\n\n" + msg.content;
+        }
+        return;
+      }
+    }
+    merged.push(msg);
+  });
+
+  return merged;
 };

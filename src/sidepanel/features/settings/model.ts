@@ -5,7 +5,7 @@ import {
   normalizeThemeVariant,
 } from "../../lib/utils/index.ts";
 
-type ApiType = "chat" | "responses";
+type ApiType = "chat" | "responses" | "messages";
 
 export type SettingsInput = {
   apiKey?: string;
@@ -54,9 +54,18 @@ const ensureSettingsInput = (settings: SettingsInputOrNull): SettingsInput =>
     settings ?? {},
   trimString = (value: string | null | undefined): string =>
     typeof value === "string" ? value.trim() : "",
+  normalizeApiType = (value: string | undefined): ApiType => {
+    if (value === "responses") {
+      return "responses";
+    }
+    if (value === "messages") {
+      return "messages";
+    }
+    return "chat";
+  },
   normalizeSettings = (settings: SettingsInput): NormalizedSettings => ({
     apiKey: trimString(settings.apiKey),
-    apiType: settings.apiType === "responses" ? "responses" : "chat",
+    apiType: normalizeApiType(settings.apiType),
     baseUrl: trimString(settings.baseUrl),
     model: trimString(settings.model),
     theme: normalizeTheme(settings.theme ?? "auto"),
@@ -98,7 +107,7 @@ const buildRequiredSettingsPayload = (
   formValues: SettingsInput,
 ): RequiredSettingsPayload => ({
   apiKey: trimString(formValues.apiKey),
-  apiType: formValues.apiType === "responses" ? "responses" : "chat",
+  apiType: normalizeApiType(formValues.apiType),
   baseUrl: trimString(formValues.baseUrl),
   model: trimString(formValues.model),
 });

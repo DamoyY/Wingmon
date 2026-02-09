@@ -2,6 +2,7 @@ import type { MessageRecord } from "../store/index.ts";
 import { addMessage, state, updateMessage } from "../store/index.ts";
 import type { ToolCall } from "./definitions.ts";
 import { createRandomId } from "../../lib/utils/index.ts";
+import type Anthropic from "@anthropic-ai/sdk";
 
 type RawChatToolCallDelta = {
   index?: number;
@@ -71,7 +72,7 @@ type ChatCompletionMessage = {
   };
 };
 
-type ChatCompletionData = {
+export type ChatCompletionData = {
   choices?: Array<{
     message?: ChatCompletionMessage;
   }>;
@@ -85,7 +86,7 @@ type ResponsesOutputItem = {
   arguments?: string;
 };
 
-type ResponsesData = {
+export type ResponsesData = {
   output?: ResponsesOutputItem[];
 };
 
@@ -326,6 +327,63 @@ export const extractResponsesToolCalls = (
       name: item.name,
     }),
   );
+};
+
+export type AnthropicToolCallCollector = Partial<
+  Record<number, { id: string; name: string; arguments: string }>
+>;
+
+export const addAnthropicToolCallEvent = (
+  collector: AnthropicToolCallCollector,
+  event: Anthropic.MessageStreamEvent,
+): AnthropicToolCallCollector => {
+  const next = { ...collector };
+  switch (event.type) {
+    case "content_block_start": {
+      if (event.content_block.type === "tool_use") {
+        next[event.index] = {
+          id: event.content_block.id,
+          name: event.content_block.name,
+          arguments: "",
+        };
+      }
+      break;
+    }
+    case "content_block_delta": {
+      if (event.delta.type === "input_json_delta") {
+        const item = next[event.index];
+        if (item) {
+          item.arguments += event.delta.partial_json;
+        }
+      }
+      break;
+    }
+  }
+  return next;
+};
+
+export const finalizeAnthropicToolCalls = (
+  collector: AnthropicToolCallCollector,
+): NormalizedToolCall[] =>
+  normalizeToolCallList(Object.values(collector), (call) => ({
+    id: call.id,
+    callId: call.id,
+    name: call.name,
+    argumentsText: call.arguments,
+  }));
+
+export const extractAnthropicToolCalls = (
+  message: Anthropic.Message,
+): NormalizedToolCall[] => {
+  const toolUses = message.content.filter(
+    (c): c is Anthropic.ToolUseBlock => c.type === "tool_use",
+  );
+  return normalizeToolCallList(toolUses, (tool) => ({
+    id: tool.id,
+    callId: tool.id,
+    name: tool.name,
+    argumentsText: JSON.stringify(tool.input),
+  }));
 };
 
 export const attachToolCallsToAssistant = (

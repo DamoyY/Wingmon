@@ -1,3 +1,4 @@
+import Anthropic from "@anthropic-ai/sdk";
 import {
   type ApiRequestChunk,
   extractResponsesText,
@@ -24,22 +25,26 @@ import type {
   ResponseCreateParamsNonStreaming,
   ResponseCreateParamsStreaming,
   ResponseInputItem,
-  ResponseOutputItem,
   ResponseStreamEvent,
   Tool as ResponsesTool,
 } from "openai/resources/responses/responses";
 import type { ToolCall, ToolDefinition } from "../agent/definitions.ts";
-import type {
-  addChatToolCallDelta,
-  addResponsesToolCallEvent,
-  extractChatToolCalls,
-  extractResponsesToolCalls,
-  finalizeChatToolCalls,
-  finalizeResponsesToolCalls,
+import {
+  type addChatToolCallDelta,
+  type addResponsesToolCallEvent,
+  type addAnthropicToolCallEvent,
+  type extractChatToolCalls,
+  type extractResponsesToolCalls,
+  type extractAnthropicToolCalls,
+  type finalizeChatToolCalls,
+  type finalizeResponsesToolCalls,
+  type finalizeAnthropicToolCalls,
+  type AnthropicToolCallCollector,
 } from "../agent/toolCallNormalization.ts";
-import type {
-  buildChatMessages,
-  buildResponsesInput,
+import {
+  type buildChatMessages,
+  type buildResponsesInput,
+  type buildMessagesInput,
 } from "../agent/message-builders.ts";
 import type { MessageRecord } from "../store/index.ts";
 
@@ -53,12 +58,16 @@ type StreamEventHandlers = {
 export type ApiToolAdapter = {
   addChatToolCallDelta: typeof addChatToolCallDelta;
   addResponsesToolCallEvent: typeof addResponsesToolCallEvent;
+  addAnthropicToolCallEvent: typeof addAnthropicToolCallEvent;
   buildChatMessages: typeof buildChatMessages;
   buildResponsesInput: typeof buildResponsesInput;
+  buildMessagesInput: typeof buildMessagesInput;
   extractChatToolCalls: typeof extractChatToolCalls;
   extractResponsesToolCalls: typeof extractResponsesToolCalls;
+  extractAnthropicToolCalls: typeof extractAnthropicToolCalls;
   finalizeChatToolCalls: typeof finalizeChatToolCalls;
   finalizeResponsesToolCalls: typeof finalizeResponsesToolCalls;
+  finalizeAnthropicToolCalls: typeof finalizeAnthropicToolCalls;
 };
 
 export type ChatRequestBody = ChatCompletionCreateParamsStreaming;
@@ -66,84 +75,60 @@ export type ChatFallbackRequestBody = ChatCompletionCreateParamsNonStreaming;
 export type ResponsesRequestBody = ResponseCreateParamsStreaming;
 export type ResponsesFallbackRequestBody = ResponseCreateParamsNonStreaming;
 
-export type ChatApiStrategy = {
+export type BaseApiStrategy<TStream, TResponse, TBody, TFallbackBody> = {
   buildStreamRequestBody: (
     settings: Settings,
     systemPrompt: string,
     tools: ToolDefinition[],
     messages: MessageRecord[],
-  ) => ChatRequestBody;
+  ) => TBody;
   buildNonStreamRequestBody: (
     settings: Settings,
     systemPrompt: string,
     tools: ToolDefinition[],
     messages: MessageRecord[],
-  ) => ChatFallbackRequestBody;
+  ) => TFallbackBody;
   stream: (
-    stream: AsyncIterable<ChatCompletionChunk>,
+    stream: AsyncIterable<TStream>,
     handlers: StreamEventHandlers,
   ) => Promise<ToolCall[]>;
-  extractToolCalls: (data: ChatCompletion) => ToolCall[];
-  extractReply: (data: ChatCompletion) => string;
+  extractToolCalls: (data: TResponse) => ToolCall[];
+  extractReply: (data: TResponse) => string;
 };
 
-export type ResponsesApiStrategy = {
-  buildStreamRequestBody: (
-    settings: Settings,
-    systemPrompt: string,
-    tools: ToolDefinition[],
-    messages: MessageRecord[],
-  ) => ResponsesRequestBody;
-  buildNonStreamRequestBody: (
-    settings: Settings,
-    systemPrompt: string,
-    tools: ToolDefinition[],
-    messages: MessageRecord[],
-  ) => ResponsesFallbackRequestBody;
-  stream: (
-    stream: AsyncIterable<ResponseStreamEvent>,
-    handlers: StreamEventHandlers,
-  ) => Promise<ToolCall[]>;
-  extractToolCalls: (data: Response) => ToolCall[];
-  extractReply: (data: Response) => string;
-};
+export type ChatApiStrategy = BaseApiStrategy<
+  ChatCompletionChunk,
+  ChatCompletion,
+  ChatRequestBody,
+  ChatFallbackRequestBody
+>;
+
+export type ResponsesApiStrategy = BaseApiStrategy<
+  ResponseStreamEvent,
+  Response,
+  ResponsesRequestBody,
+  ResponsesFallbackRequestBody
+>;
+
+export type MessagesApiStrategy = BaseApiStrategy<
+  Anthropic.MessageStreamEvent,
+  Anthropic.Message,
+  Anthropic.MessageCreateParamsStreaming,
+  Anthropic.MessageCreateParamsNonStreaming
+>;
 
 type ChatCollector = Parameters<ApiToolAdapter["addChatToolCallDelta"]>[0];
-type ChatDeltaList = Parameters<ApiToolAdapter["addChatToolCallDelta"]>[1];
 type ResponsesCollector = Parameters<
   ApiToolAdapter["addResponsesToolCallEvent"]
 >[0];
-type ChatExtractionPayload = Parameters<
-  ApiToolAdapter["extractChatToolCalls"]
->[0];
-type ChatChoiceForExtraction = NonNullable<
-  ChatExtractionPayload["choices"]
->[number];
-type ChatMessageForExtraction = NonNullable<ChatChoiceForExtraction["message"]>;
-type ChatFunctionCallForExtraction = NonNullable<
-  ChatMessageForExtraction["function_call"]
->;
-type ChatToolCallForExtraction = NonNullable<
-  ChatMessageForExtraction["tool_calls"]
->[number];
-type ResponsesExtractionPayload = Parameters<
-  ApiToolAdapter["extractResponsesToolCalls"]
->[0];
-type ResponsesOutputItemForExtraction = NonNullable<
-  ResponsesExtractionPayload["output"]
->[number];
-type RawChatMessage = ReturnType<ApiToolAdapter["buildChatMessages"]>[number];
-type RawResponsesInputItem = ReturnType<
-  ApiToolAdapter["buildResponsesInput"]
->[number];
 
 type ApiStrategyMap = {
   chat: ChatApiStrategy;
   responses: ResponsesApiStrategy;
+  messages: MessagesApiStrategy;
 };
 
-const isPresent = <T>(value: T | null): value is T => value !== null,
-  isRecord = (value: unknown): value is Record<string, unknown> =>
+const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value),
   readStringField = (source: unknown, field: string): string | null => {
     if (!isRecord(source)) {
@@ -158,33 +143,7 @@ const isPresent = <T>(value: T | null): value is T => value !== null,
   ensureToolAdapter = (
     adapter: ApiToolAdapter | null | undefined,
   ): ApiToolAdapter => {
-    if (adapter === null || adapter === undefined) {
-      throw new Error("缺少工具适配器");
-    }
-    if (typeof adapter.addChatToolCallDelta !== "function") {
-      throw new Error("工具适配器缺少方法：addChatToolCallDelta");
-    }
-    if (typeof adapter.addResponsesToolCallEvent !== "function") {
-      throw new Error("工具适配器缺少方法：addResponsesToolCallEvent");
-    }
-    if (typeof adapter.buildChatMessages !== "function") {
-      throw new Error("工具适配器缺少方法：buildChatMessages");
-    }
-    if (typeof adapter.buildResponsesInput !== "function") {
-      throw new Error("工具适配器缺少方法：buildResponsesInput");
-    }
-    if (typeof adapter.extractChatToolCalls !== "function") {
-      throw new Error("工具适配器缺少方法：extractChatToolCalls");
-    }
-    if (typeof adapter.extractResponsesToolCalls !== "function") {
-      throw new Error("工具适配器缺少方法：extractResponsesToolCalls");
-    }
-    if (typeof adapter.finalizeChatToolCalls !== "function") {
-      throw new Error("工具适配器缺少方法：finalizeChatToolCalls");
-    }
-    if (typeof adapter.finalizeResponsesToolCalls !== "function") {
-      throw new Error("工具适配器缺少方法：finalizeResponsesToolCalls");
-    }
+    if (!adapter) throw new Error("缺少工具适配器");
     return adapter;
   },
   normalizeToolArguments = (value: unknown): string => {
@@ -251,14 +210,14 @@ const isPresent = <T>(value: T | null): value is T => value !== null,
     return value.map(toChatMessageToolCall);
   },
   toChatMessageParam = (
-    message: RawChatMessage,
+    message: ReturnType<ApiToolAdapter["buildChatMessages"]>[number],
   ): ChatCompletionMessageParam => {
     const role = message.role;
     if (role === "system" || role === "developer" || role === "user") {
       if (typeof message.content !== "string") {
         throw new Error(`${role} 消息缺少 content`);
       }
-      return { content: message.content, role };
+      return { content: message.content, role } as ChatCompletionMessageParam;
     }
     if (role === "tool") {
       if (typeof message.content !== "string") {
@@ -298,12 +257,17 @@ const isPresent = <T>(value: T | null): value is T => value !== null,
     }
     throw new Error(`不支持的 Chat 消息角色：${role}`);
   },
-  toResponsesInputItem = (item: RawResponsesInputItem): ResponseInputItem => {
+  toResponsesInputItem = (
+    item: ReturnType<ApiToolAdapter["buildResponsesInput"]>[number],
+  ): ResponseInputItem => {
     if ("role" in item) {
       if (typeof item.content !== "string") {
         throw new Error(`${item.role} 消息缺少 content`);
       }
-      return { role: item.role, content: item.content };
+      return {
+        role: item.role,
+        content: item.content,
+      } as ResponseInputItem;
     }
     if (item.type === "function_call") {
       return {
@@ -320,174 +284,45 @@ const isPresent = <T>(value: T | null): value is T => value !== null,
     };
   },
   toChatTool = (tool: ToolDefinition): ChatCompletionTool => {
-    if ("function" in tool) {
-      return {
-        function: {
-          description: tool.function.description,
-          name: tool.function.name,
-          parameters: tool.function.parameters,
-          strict: tool.function.strict,
-        },
-        type: "function",
-      };
-    }
+    const t = "function" in tool ? tool.function : tool;
     return {
       function: {
-        description: tool.description,
-        name: tool.name,
-        parameters: tool.parameters,
-        strict: tool.strict,
+        description: t.description,
+        name: t.name,
+        parameters: t.parameters as Record<string, unknown>,
+        strict: t.strict,
       },
       type: "function",
     };
   },
   toResponsesTool = (tool: ToolDefinition): ResponsesTool => {
-    if ("function" in tool) {
-      return {
-        description: tool.function.description,
-        name: tool.function.name,
-        parameters: tool.function.parameters,
-        strict: tool.function.strict,
-        type: "function",
-      };
-    }
+    const t = "function" in tool ? tool.function : tool;
     return {
-      description: tool.description,
-      name: tool.name,
-      parameters: tool.parameters,
-      strict: tool.strict,
+      description: t.description,
+      name: t.name,
+      parameters: t.parameters as Record<string, unknown>,
+      strict: t.strict,
       type: "function",
     };
   },
-  toChatToolCallForExtraction = (
-    toolCall: ChatCompletionMessageToolCall,
-  ): ChatToolCallForExtraction | null => {
-    if (toolCall.type !== "function") {
-      return null;
-    }
-    const parsed: ChatToolCallForExtraction = {};
-    if (typeof toolCall.id === "string" && toolCall.id.length > 0) {
-      parsed.id = toolCall.id;
-      parsed.call_id = toolCall.id;
-    }
-    const parsedFunction: NonNullable<ChatToolCallForExtraction["function"]> =
-      {};
-    if (
-      typeof toolCall.function.name === "string" &&
-      toolCall.function.name.length > 0
-    ) {
-      parsedFunction.name = toolCall.function.name;
-    }
-    if (typeof toolCall.function.arguments === "string") {
-      parsedFunction.arguments = toolCall.function.arguments;
-    }
-    if (
-      parsedFunction.name !== undefined ||
-      parsedFunction.arguments !== undefined
-    ) {
-      parsed.function = parsedFunction;
-    }
-    if (
-      parsed.id === undefined &&
-      parsed.call_id === undefined &&
-      parsed.function === undefined
-    ) {
-      return null;
-    }
-    return parsed;
-  },
-  toChatFunctionCallForExtraction = (
-    value: unknown,
-  ): ChatFunctionCallForExtraction | null => {
-    if (!isRecord(value)) {
-      return null;
-    }
-    const name = readStringField(value, "name");
-    if (name === null || name.length === 0) {
-      return null;
-    }
-    const functionPayload: ChatFunctionCallForExtraction = { name },
-      argumentsText = readStringField(value, "arguments");
-    if (argumentsText !== null) {
-      functionPayload.arguments = argumentsText;
-    }
-    return functionPayload;
-  },
-  toChatExtractionPayload = (data: ChatCompletion): ChatExtractionPayload => {
-    const firstChoice = data.choices.at(0);
-    if (firstChoice === undefined) {
-      return {};
-    }
-    const toolCalls = Array.isArray(firstChoice.message.tool_calls)
-      ? firstChoice.message.tool_calls
-          .map(toChatToolCallForExtraction)
-          .filter(isPresent)
-      : [];
-    if (toolCalls.length === 0) {
-      const rawMessage = firstChoice.message as unknown,
-        functionPayload = toChatFunctionCallForExtraction(
-          isRecord(rawMessage) ? rawMessage.function_call : null,
-        );
-      if (functionPayload !== null) {
-        const message: ChatMessageForExtraction = {
-          function_call: functionPayload,
-        };
-        if (typeof data.id === "string" && data.id.length > 0) {
-          message.id = data.id;
-        } else {
-          message.id = functionPayload.name;
-        }
-        return {
-          choices: [{ message }],
-        };
-      }
-      return {};
-    }
+  toAnthropicTool = (tool: ToolDefinition): Anthropic.Tool => {
+    const t = "function" in tool ? tool.function : tool;
     return {
-      choices: [{ message: { tool_calls: toolCalls } }],
+      name: t.name,
+      description: t.description,
+      input_schema: t.parameters as Anthropic.Tool.InputSchema,
     };
   },
-  isFunctionCallOutputItem = (
-    item: ResponseOutputItem,
-  ): item is Extract<ResponseOutputItem, { type: "function_call" }> =>
-    item.type === "function_call",
-  toResponsesOutputItemForExtraction = (
-    item: ResponseOutputItem,
-  ): ResponsesOutputItemForExtraction | null => {
-    if (!isFunctionCallOutputItem(item)) {
-      return null;
-    }
-    const outputItem: ResponsesOutputItemForExtraction = {
-      arguments: item.arguments,
-      call_id: item.call_id,
-      name: item.name,
-      type: "function_call",
-    };
-    if (typeof item.id === "string" && item.id.length > 0) {
-      outputItem.id = item.id;
-    }
-    return outputItem;
+  toChatExtractionPayload = (data: ChatCompletion) => {
+    const firstChoice = data.choices.at(0);
+    if (!firstChoice) return {};
+    return { choices: [{ message: firstChoice.message }] };
   },
-  toResponsesExtractionPayload = (
-    data: Response,
-  ): ResponsesExtractionPayload => {
-    const output = data.output
-      .map(toResponsesOutputItemForExtraction)
-      .filter(isPresent);
-    if (output.length === 0) {
-      return {};
-    }
-    return { output };
+  toResponsesExtractionPayload = (data: Response) => {
+    return { output: data.output };
   },
   extractChatReply = (data: ChatCompletion): string => {
-    const firstChoice = data.choices.at(0);
-    if (
-      firstChoice === undefined ||
-      typeof firstChoice.message.content !== "string"
-    ) {
-      return "";
-    }
-    return firstChoice.message.content.trim();
+    return data.choices.at(0)?.message.content?.trim() || "";
   },
   createApiStrategies = (toolAdapter: ApiToolAdapter): ApiStrategyMap => ({
     chat: {
@@ -511,54 +346,45 @@ const isPresent = <T>(value: T | null): value is T => value !== null,
         let collector: ChatCollector = {};
         for await (const chunk of stream) {
           const delta = getChatDeltaText(chunk),
-            toolCallDeltas: ChatDeltaList = getChatToolCallDeltas(chunk),
+            toolCallDeltas = getChatToolCallDeltas(chunk),
             toolCalls = getToolCallsFromChatDeltas(toolCallDeltas);
-          if (delta.length > 0) {
-            onDelta(delta);
-          }
-          if (toolCallDeltas.length > 0) {
+          if (delta !== "") onDelta(delta);
+          if (toolCallDeltas.length > 0)
             collector = toolAdapter.addChatToolCallDelta(
               collector,
               toolCallDeltas,
             );
-          }
           onChunk({ delta, toolCalls });
         }
         return toolAdapter.finalizeChatToolCalls(collector);
       },
       extractToolCalls: (data) =>
-        toolAdapter.extractChatToolCalls(toChatExtractionPayload(data)),
+        toolAdapter.extractChatToolCalls(
+          toChatExtractionPayload(data) as Parameters<
+            ApiToolAdapter["extractChatToolCalls"]
+          >[0],
+        ),
       extractReply: (data) => extractChatReply(data),
     },
     responses: {
-      buildStreamRequestBody: (settings, systemPrompt, tools, messages) => {
-        const body: ResponsesRequestBody = {
-          input: toolAdapter
-            .buildResponsesInput(messages)
-            .map(toResponsesInputItem),
-          model: settings.model,
-          stream: true,
-          tools: tools.map(toResponsesTool),
-        };
-        if (systemPrompt) {
-          body.instructions = systemPrompt;
-        }
-        return body;
-      },
-      buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) => {
-        const body: ResponsesFallbackRequestBody = {
-          input: toolAdapter
-            .buildResponsesInput(messages)
-            .map(toResponsesInputItem),
-          model: settings.model,
-          stream: false,
-          tools: tools.map(toResponsesTool),
-        };
-        if (systemPrompt) {
-          body.instructions = systemPrompt;
-        }
-        return body;
-      },
+      buildStreamRequestBody: (settings, systemPrompt, tools, messages) => ({
+        input: toolAdapter
+          .buildResponsesInput(messages)
+          .map(toResponsesInputItem),
+        model: settings.model,
+        stream: true,
+        tools: tools.map(toResponsesTool),
+        ...(systemPrompt ? { instructions: systemPrompt } : {}),
+      }),
+      buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) => ({
+        input: toolAdapter
+          .buildResponsesInput(messages)
+          .map(toResponsesInputItem),
+        model: settings.model,
+        stream: false,
+        tools: tools.map(toResponsesTool),
+        ...(systemPrompt ? { instructions: systemPrompt } : {}),
+      }),
       stream: async (stream, { onDelta, onChunk }) => {
         let collector: ResponsesCollector = {};
         for await (const event of stream) {
@@ -568,41 +394,87 @@ const isPresent = <T>(value: T | null): value is T => value !== null,
               payload === null
                 ? []
                 : getToolCallsFromResponsesEvent(payload, event.type);
-          if (delta.length > 0) {
-            onDelta(delta);
-          }
-          if (payload !== null) {
+          if (delta !== "") onDelta(delta);
+          if (payload !== null)
             collector = toolAdapter.addResponsesToolCallEvent(
               collector,
               payload,
               event.type,
             );
-          }
           onChunk({ delta, toolCalls });
         }
         return toolAdapter.finalizeResponsesToolCalls(collector);
       },
       extractToolCalls: (data) =>
         toolAdapter.extractResponsesToolCalls(
-          toResponsesExtractionPayload(data),
+          toResponsesExtractionPayload(data) as Parameters<
+            ApiToolAdapter["extractResponsesToolCalls"]
+          >[0],
         ),
       extractReply: (data) => extractResponsesText(data),
     },
+    messages: {
+      buildStreamRequestBody: (settings, systemPrompt, tools, messages) => ({
+        messages: toolAdapter.buildMessagesInput(
+          messages,
+        ) as Anthropic.MessageCreateParamsStreaming["messages"],
+        model: settings.model,
+        stream: true,
+        tools: tools.map(toAnthropicTool),
+        max_tokens: 64000,
+        ...(systemPrompt ? { system: systemPrompt } : {}),
+      }),
+      buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) => ({
+        messages: toolAdapter.buildMessagesInput(
+          messages,
+        ) as Anthropic.MessageCreateParamsNonStreaming["messages"],
+        model: settings.model,
+        stream: false,
+        tools: tools.map(toAnthropicTool),
+        max_tokens: 64000,
+        ...(systemPrompt ? { system: systemPrompt } : {}),
+      }),
+      stream: async (stream, { onDelta, onChunk }) => {
+        let collector: AnthropicToolCallCollector = {};
+        for await (const event of stream) {
+          let delta = "";
+          if (
+            event.type === "content_block_delta" &&
+            event.delta.type === "text_delta"
+          ) {
+            delta = event.delta.text;
+          }
+          if (delta !== "") onDelta(delta);
+          collector = toolAdapter.addAnthropicToolCallEvent(collector, event);
+          onChunk({ delta, toolCalls: [] });
+        }
+        return toolAdapter.finalizeAnthropicToolCalls(collector);
+      },
+      extractToolCalls: (data) => toolAdapter.extractAnthropicToolCalls(data),
+      extractReply: (data) => {
+        return data.content
+          .filter((c): c is Anthropic.TextBlock => c.type === "text")
+          .map((c) => c.text)
+          .join("")
+          .trim();
+      },
+    },
   });
 
-function getApiStrategy(
-  apiType: "chat",
-  toolAdapter: ApiToolAdapter,
-): ChatApiStrategy;
-function getApiStrategy(
-  apiType: "responses",
-  toolAdapter: ApiToolAdapter,
-): ResponsesApiStrategy;
-function getApiStrategy(
+export default function getApiStrategy(
   apiType: ApiType,
   toolAdapter: ApiToolAdapter,
-): ChatApiStrategy | ResponsesApiStrategy {
-  return createApiStrategies(ensureToolAdapter(toolAdapter))[apiType];
+): ChatApiStrategy | ResponsesApiStrategy | MessagesApiStrategy {
+  const strategyMap = createApiStrategies(ensureToolAdapter(toolAdapter));
+  switch (apiType) {
+    case "chat":
+      return strategyMap.chat;
+    case "responses":
+      return strategyMap.responses;
+    case "messages":
+      return strategyMap.messages;
+    default: {
+      throw new Error(`Unsupported API type: ${apiType as string}`);
+    }
+  }
 }
-
-export default getApiStrategy;

@@ -7,7 +7,7 @@ import {
 type StoredSettingValue = string | boolean | undefined;
 type StoredSettings = Record<string, StoredSettingValue>;
 
-export type ApiType = "chat" | "responses";
+export type ApiType = "chat" | "responses" | "messages";
 
 export type Settings = {
   apiKey: string;
@@ -34,12 +34,31 @@ const settingsKeys = {
     themeColor: "theme_color",
     themeVariant: "theme_variant",
   },
+  endpointPathMap: Record<ApiType, string> = {
+    chat: "/chat/completions",
+    messages: "/v1/messages",
+    responses: "/responses",
+  },
+  endpointPathEntries: Array<{ apiType: ApiType; path: string }> = [
+    { apiType: "chat", path: endpointPathMap.chat },
+    { apiType: "responses", path: endpointPathMap.responses },
+    { apiType: "messages", path: endpointPathMap.messages },
+  ],
+  normalizeApiType = (value: StoredSettingValue): ApiType => {
+    if (value === "responses") {
+      return "responses";
+    }
+    if (value === "messages") {
+      return "messages";
+    }
+    return "chat";
+  },
   toSettings = (data: StoredSettings): Settings => ({
     apiKey:
       typeof data[settingsKeys.apiKey] === "string"
         ? data[settingsKeys.apiKey]
         : "",
-    apiType: data[settingsKeys.apiType] === "responses" ? "responses" : "chat",
+    apiType: normalizeApiType(data[settingsKeys.apiType]),
     baseUrl:
       typeof data[settingsKeys.baseUrl] === "string"
         ? data[settingsKeys.baseUrl]
@@ -114,18 +133,14 @@ export const updateSettings = async (
 };
 
 export const buildEndpoint = (baseUrl: string, apiType: ApiType): string => {
-  const normalized = baseUrl.replace(/\/+$/u, ""),
-    chatPath = "/chat/completions",
-    responsesPath = "/responses";
-  if (normalized.endsWith(chatPath)) {
-    return apiType === "responses"
-      ? `${normalized.slice(0, -chatPath.length)}${responsesPath}`
-      : normalized;
+  const normalized = baseUrl.replace(/\/+$/u, "");
+  for (const { apiType: existingApiType, path } of endpointPathEntries) {
+    if (normalized.endsWith(path)) {
+      if (existingApiType === apiType) {
+        return normalized;
+      }
+      return `${normalized.slice(0, -path.length)}${endpointPathMap[apiType]}`;
+    }
   }
-  if (normalized.endsWith(responsesPath)) {
-    return apiType === "chat"
-      ? `${normalized.slice(0, -responsesPath.length)}${chatPath}`
-      : normalized;
-  }
-  return `${normalized}${apiType === "responses" ? responsesPath : chatPath}`;
+  return `${normalized}${endpointPathMap[apiType]}`;
 };

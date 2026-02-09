@@ -14,15 +14,19 @@ import {
   getToolDefinitions,
 } from "../../../core/agent/definitions.ts";
 import {
+  addAnthropicToolCallEvent,
   addChatToolCallDelta,
   addResponsesToolCallEvent,
+  extractAnthropicToolCalls,
   extractChatToolCalls,
   extractResponsesToolCalls,
+  finalizeAnthropicToolCalls,
   finalizeChatToolCalls,
   finalizeResponsesToolCalls,
 } from "../../../core/agent/toolCallNormalization.ts";
 import {
   buildChatMessages,
+  buildMessagesInput,
   buildResponsesInput,
 } from "../../../core/agent/message-builders.ts";
 import { createRandomId, t } from "../../../lib/utils/index.ts";
@@ -32,12 +36,16 @@ import requestModel from "../../../core/api/client.ts";
 type StatusReporter = (status: string) => void;
 
 type ApiToolAdapter = {
+  addAnthropicToolCallEvent: typeof addAnthropicToolCallEvent;
   addChatToolCallDelta: typeof addChatToolCallDelta;
   addResponsesToolCallEvent: typeof addResponsesToolCallEvent;
   buildChatMessages: typeof buildChatMessages;
+  buildMessagesInput: typeof buildMessagesInput;
   buildResponsesInput: typeof buildResponsesInput;
+  extractAnthropicToolCalls: typeof extractAnthropicToolCalls;
   extractChatToolCalls: typeof extractChatToolCalls;
   extractResponsesToolCalls: typeof extractResponsesToolCalls;
+  finalizeAnthropicToolCalls: typeof finalizeAnthropicToolCalls;
   finalizeChatToolCalls: typeof finalizeChatToolCalls;
   finalizeResponsesToolCalls: typeof finalizeResponsesToolCalls;
 };
@@ -95,12 +103,16 @@ const STATUS_DOT_INTERVAL_MS = 360,
   };
 
 const apiToolAdapter: ApiToolAdapter = {
+  addAnthropicToolCallEvent,
   addChatToolCallDelta,
   addResponsesToolCallEvent,
   buildChatMessages,
+  buildMessagesInput,
   buildResponsesInput,
+  extractAnthropicToolCalls,
   extractChatToolCalls,
   extractResponsesToolCalls,
+  finalizeAnthropicToolCalls,
   finalizeChatToolCalls,
   finalizeResponsesToolCalls,
 };
