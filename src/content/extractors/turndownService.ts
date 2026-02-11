@@ -31,7 +31,7 @@ const ensureTurndownService = (): void => {
     ensureTurndownService();
     const service = new TurndownService({ codeBlockStyle: "fenced" });
     service.use(tables);
-    service.remove(["script", "style"]);
+    service.remove(["script", "style", "noscript"]);
     service.addRule("image", buildImageRule(service));
     return service;
   };

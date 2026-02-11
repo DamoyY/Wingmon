@@ -3,8 +3,8 @@ import type {
   ClickButtonResponse,
 } from "../../shared/index.ts";
 import { isPdfDocument, normalizeLlmId } from "../common/index.ts";
-import { escapeControlMarkerField } from "../extractors/controlMarkers.ts";
 import { convertPageContentToMarkdownPages } from "../extractors/converter.js";
+import { escapeControlMarkerField } from "../extractors/controlMarkers.ts";
 import withPreparedBody from "./withPreparedBody.js";
 
 type SendResponse = (response: ClickButtonResponse) => void;

@@ -8,6 +8,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "latest",
     "@babel/parser": "latest",
+    "@google/genai": "latest",
     "@material/material-color-utilities": "latest",
     "@material/web": "latest",
     "@opendocsg/pdf2md": "latest",
@@ -23,9 +24,9 @@
   },
   "devDependencies": {
     "@eslint/js": "latest",
+    "@types/chrome": "latest",
     "@types/clean-css": "latest",
     "@types/html-minifier-terser": "latest",
-    "@types/chrome": "latest",
     "@types/node": "latest",
     "clean-css": "latest",
     "esbuild": "latest",

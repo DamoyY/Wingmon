@@ -31,12 +31,13 @@ const applyReplacementToButton = (
   button: Element,
   replacement: string,
 ): void => {
-  const target = button as HTMLElement;
-  target.textContent = replacement;
-  if (target instanceof HTMLInputElement) {
-    target.value = replacement;
-    target.setAttribute("value", replacement);
+  const parent = button.parentNode;
+  if (!parent) {
+    throw new Error("按钮缺少父节点");
   }
+  const doc = button.ownerDocument;
+  const textNode = doc.createTextNode(replacement);
+  parent.replaceChild(textNode, button);
 };
 
 const removeButtonNode = (button: Element): void => {

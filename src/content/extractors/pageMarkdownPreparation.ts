@@ -41,6 +41,7 @@ type CreateTurndownService = () => TurndownService;
 const createTurndownServiceTyped =
   createTurndownService as CreateTurndownService;
 const turndown = createTurndownServiceTyped();
+const llmDataAttributePrefix = "data-llm-";
 
 const removeTablesWithoutRows = (root: Element): void => {
   const tables = Array.from(root.getElementsByTagName("table"));
@@ -49,6 +50,17 @@ const removeTablesWithoutRows = (root: Element): void => {
       return;
     }
     table.remove();
+  });
+};
+
+const removeInternalLlmDataAttributes = (root: Element): void => {
+  const elements = [root, ...Array.from(root.querySelectorAll("*"))];
+  elements.forEach((element) => {
+    Array.from(element.attributes).forEach((attribute) => {
+      if (attribute.name.startsWith(llmDataAttributePrefix)) {
+        element.removeAttribute(attribute.name);
+      }
+    });
   });
 };
 
@@ -104,8 +116,9 @@ const prepareMarkdownPageContent = (
   replaceButtons(bodyClone);
   replaceInputs(bodyClone);
   insertChunkAnchorMarkers(bodyClone);
-  const markerToken = markViewportCenter(bodyClone),
-    markdownWithMarkers = turndown.turndown(bodyClone.innerHTML),
+  const markerToken = markViewportCenter(bodyClone);
+  removeInternalLlmDataAttributes(bodyClone);
+  const markdownWithMarkers = turndown.turndown(bodyClone.innerHTML),
     resolvedContentWithMarkers = resolveTextFallback(
       pageData.body,
       markdownWithMarkers,

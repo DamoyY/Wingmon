@@ -98,8 +98,8 @@ const handleEnterText = (
       content = normalizeInputContent(message),
       target = findSingleInput(normalizedId);
     if (!target) {
-      const errorMessage = `未找到 id 为 ${normalizedId} 的输入框`;
-      console.error(errorMessage);
+      const warnMessage = `未找到 id 为 ${normalizedId} 的输入框`;
+      console.warn(warnMessage);
       sendResponse({ ok: false, reason: "not_found" });
       return;
     }

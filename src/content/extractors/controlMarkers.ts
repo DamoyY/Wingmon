@@ -65,7 +65,14 @@ export const markViewportCenter = (root: HTMLElement): string => {
   if (!viewportMarker) {
     throw new Error("未找到视口中心标记，无法定位分片");
   }
-  viewportMarker.textContent = viewportMarkerToken;
+  const markerParent = viewportMarker.parentNode;
+  if (!markerParent) {
+    throw new Error("视口中心标记缺少父节点");
+  }
+  markerParent.replaceChild(
+    root.ownerDocument.createTextNode(viewportMarkerToken),
+    viewportMarker,
+  );
   return viewportMarkerToken;
 };
 
