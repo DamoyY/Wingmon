@@ -39,10 +39,10 @@ const parameters = {
         description: t("toolParamPageNumber", String(MARKDOWN_CHUNK_TOKENS)),
         type: "number",
       },
-      preserveViewport: { type: "boolean" },
+      preserveViewport: { type: ["boolean", "null"] },
       tabId: { type: "number" },
     },
-    required: ["pageNumber", "tabId"],
+    required: ["pageNumber", "preserveViewport", "tabId"],
     type: "object",
   },
   validateArgs = (args: JsonValue): GetPageArgs => {

@@ -11,6 +11,7 @@ type BrowserTab = Awaited<
 const parameters = {
     additionalProperties: false,
     properties: {},
+    required: [],
     type: "object",
   },
   buildListTabsOutput = (tabs: BrowserTab[]): string =>
