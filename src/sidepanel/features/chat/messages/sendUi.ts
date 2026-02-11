@@ -9,64 +9,25 @@ import {
   setText,
   showKeyView,
 } from "../../../ui/index.ts";
-import { state, updateMessage } from "../../../core/store/index.ts";
 import { clearPromptContent } from "../composerState.ts";
 import { renderMessagesView } from "./presenter.ts";
+import { setStateValue } from "../../../core/store/index.ts";
 type SettingsFormValues = Parameters<typeof fillSettingsForm>[0];
 
-const normalizeStatusMessage = (message: string | null | undefined): string => {
+const normalizeStatusMessage = (
+  message: string | null | undefined,
+): string | null => {
   if (message === undefined || message === null) {
-    return "";
+    return null;
+  }
+  if (message.length === 0) {
+    return null;
   }
   return message;
 };
 
-const resolveStatusTargetIndex = (): number | null => {
-  const { messages } = state;
-  let lastAssistantIndex: number | null = null;
-  let lastVisibleAssistantIndex: number | null = null;
-  for (let i = messages.length - 1; i >= 0; i -= 1) {
-    const message = messages[i];
-    if (message.role !== "assistant") {
-      continue;
-    }
-    const isHidden = message.hidden === true;
-    if (message.pending === true && !isHidden) {
-      return i;
-    }
-    if (lastAssistantIndex === null) {
-      lastAssistantIndex = i;
-    }
-    if (!isHidden && lastVisibleAssistantIndex === null) {
-      lastVisibleAssistantIndex = i;
-    }
-  }
-  return lastVisibleAssistantIndex ?? lastAssistantIndex;
-};
-
-const updateAssistantStatus = (index: number, status: string): void => {
-  const { messages } = state;
-  if (index < 0 || index >= messages.length) {
-    console.error("未找到可更新的助手消息状态");
-    return;
-  }
-  const message = messages[index];
-  if (message.status === status) {
-    return;
-  }
-  updateMessage(index, { status });
-};
-
 export const reportSendStatus = (message: string | null | undefined): void => {
-  const normalizedMessage = normalizeStatusMessage(message);
-  const targetIndex = resolveStatusTargetIndex();
-  if (targetIndex === null) {
-    if (normalizedMessage) {
-      console.error("未找到可更新的助手消息状态");
-    }
-    return;
-  }
-  updateAssistantStatus(targetIndex, normalizedMessage);
+  setStateValue("activeStatus", normalizeStatusMessage(message));
 };
 
 export const requestSettingsCompletion = (

@@ -54,8 +54,26 @@ const setPageHash = (message: SetPageHashRequest): SetPageHashResponse => {
     const pageNumber = resolveSetPageHashPageNumber(message),
       chunkAnchorWeights = resolveSetPageHashChunkAnchorWeights(message);
     if (isHtmlDocument()) {
-      const providedTotalPages = resolveSetPageHashTotalPages(message),
-        totalPages = providedTotalPages ?? resolveHtmlTotalPages();
+      const providedTotalPages = resolveSetPageHashTotalPages(message);
+      if (providedTotalPages !== null && providedTotalPages <= 1) {
+        return {
+          ok: true,
+          pageNumber,
+          shouldReload: false,
+          skipped: false,
+          totalPages: providedTotalPages,
+        };
+      }
+      const totalPages = providedTotalPages ?? resolveHtmlTotalPages();
+      if (totalPages <= 1) {
+        return {
+          ok: true,
+          pageNumber,
+          shouldReload: false,
+          skipped: false,
+          totalPages,
+        };
+      }
       if (!chunkAnchorWeights) {
         const fallbackMetrics = scrollHtmlByPage(pageNumber, totalPages);
         warnFallbackToPageRatioScroll({

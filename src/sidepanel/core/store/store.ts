@@ -15,12 +15,12 @@ export type MessageRecord = {
   pending?: boolean;
   hidden?: boolean;
   groupId?: string;
-  status?: string;
   tool_calls?: Array<{ [key: string]: MessageFieldValue }>;
   [key: string]: MessageFieldValue;
 };
 
 export type PanelState<TMessage extends MessageRecord = MessageRecord> = {
+  activeStatus: string | null;
   conversationId: string;
   messages: TMessage[];
   sending: boolean;
@@ -43,6 +43,7 @@ type StateListener<K extends StateKey = StateKey> = (
 type SubscriberStore = Map<StateKey, Set<StateListener>>;
 
 export const state: PanelState = {
+  activeStatus: null,
   conversationId: createRandomId("conv"),
   messages: [],
   sending: false,
@@ -152,6 +153,9 @@ const normalizeMessage = <TMessage extends MessageRecord>(
   message: TMessage,
 ): TMessage => {
   const normalized = { ...message };
+  if (Object.hasOwn(normalized, "status")) {
+    delete normalized.status;
+  }
   normalized.hidden = resolveMessageHidden(normalized);
   return normalized;
 };
@@ -229,6 +233,7 @@ export const touchUpdatedAt = (): void => {
 
 export const resetConversation = (): void => {
   setStateValue("conversationId", createRandomId("conv"), { type: "reset" });
+  setStateValue("activeStatus", null, { type: "reset" });
   setMessages([]);
   setStateValue("updatedAt", Date.now(), { type: "reset" });
 };
@@ -239,6 +244,7 @@ export const loadConversationState = (
   updatedAt: number,
 ): void => {
   setStateValue("conversationId", id, { type: "load" });
+  setStateValue("activeStatus", null, { type: "load" });
   const normalized = messages.map((message) => normalizeMessage(message));
   state.messages = normalized;
   notifyStateChange("messages", {

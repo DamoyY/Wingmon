@@ -212,6 +212,10 @@ const isGoogleSearchPage = (url: string): boolean => {
   ) {
     return false;
   }
+  const tbmValues = parsedUrl.searchParams.getAll("tbm");
+  if (tbmValues.some((value) => value.trim().length > 0)) {
+    return false;
+  }
   return parsedUrl.pathname === googleSearchPath && parsedUrl.search.length > 1;
 };
 

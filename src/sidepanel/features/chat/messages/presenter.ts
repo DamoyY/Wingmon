@@ -29,9 +29,10 @@ type MessagesStateChange = StateChangePayload<"messages"> & {
 
 let actionHandlers: MessageActionHandlers | null = null;
 let unsubscribeMessages: (() => void) | null = null;
+let unsubscribeActiveStatus: (() => void) | null = null;
 
 const buildMessagesForView = (): DisplayMessage[] =>
-    buildDisplayMessages(state.messages),
+    buildDisplayMessages(state.messages, state.activeStatus),
   resolveAssistantGroupId = (message: MessageRecord, index: number): string => {
     if (typeof message.groupId === "string") {
       const trimmed = message.groupId.trim();
@@ -158,14 +159,33 @@ const buildMessagesForView = (): DisplayMessage[] =>
     }
     renderMessagesFromState();
   },
-  ensureMessagesSubscription = (): void => {
-    if (unsubscribeMessages) {
+  handleActiveStatusChange = (): void => {
+    const displayMessages = buildMessagesForView();
+    const lastEntry =
+      displayMessages.length > 0
+        ? displayMessages[displayMessages.length - 1]
+        : null;
+    const updated = updateLastAssistantMessage(lastEntry);
+    if (updated) {
       return;
     }
-    unsubscribeMessages = subscribeState("messages", handleMessagesChange);
+    renderMessages(displayMessages, ensureActionHandlers());
+  },
+  ensureStateSubscriptions = (): void => {
+    if (unsubscribeMessages) {
+      if (unsubscribeActiveStatus) {
+        return;
+      }
+    } else {
+      unsubscribeMessages = subscribeState("messages", handleMessagesChange);
+    }
+    unsubscribeActiveStatus = subscribeState(
+      "activeStatus",
+      handleActiveStatusChange,
+    );
   };
 
 export const renderMessagesView = (): void => {
-  ensureMessagesSubscription();
+  ensureStateSubscriptions();
   renderMessagesFromState();
 };

@@ -1,11 +1,4 @@
 import {
-  type MessageRecord,
-  addMessage,
-  appendAssistantDelta,
-  state,
-  updateMessage,
-} from "../../../core/store/index.ts";
-import {
   type Settings,
   buildSystemPrompt,
 } from "../../../core/services/index.ts";
@@ -24,6 +17,12 @@ import {
   finalizeChatToolCalls,
   finalizeResponsesToolCalls,
 } from "../../../core/agent/toolCallNormalization.ts";
+import {
+  addMessage,
+  appendAssistantDelta,
+  state,
+  updateMessage,
+} from "../../../core/store/index.ts";
 import {
   buildChatMessages,
   buildMessagesInput,
@@ -329,17 +328,10 @@ const createAbortError = (): Error => {
             return;
           }
           const hasContent =
-              typeof message.content === "string" &&
-              message.content.trim().length > 0,
-            patch: Partial<Pick<MessageRecord, "status" | "pending">> = {};
-          if (typeof message.status === "string" && message.status) {
-            patch.status = "";
-          }
+            typeof message.content === "string" &&
+            message.content.trim().length > 0;
           if (message.pending === true && !hasContent) {
-            patch.pending = false;
-          }
-          if (Object.keys(patch).length > 0) {
-            updateMessage(assistantIndex, patch);
+            updateMessage(assistantIndex, { pending: false });
           }
         },
         onStreamStart = (): void => {

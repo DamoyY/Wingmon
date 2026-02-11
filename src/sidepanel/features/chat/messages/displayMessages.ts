@@ -5,7 +5,6 @@ export type MessageEntry = {
   content?: unknown;
   hidden?: boolean;
   pending?: boolean;
-  status?: unknown;
   groupId?: unknown;
 };
 
@@ -22,7 +21,6 @@ type AssistantGroup = {
   contents: string[];
   indices: number[];
   hasPending: boolean;
-  status: string;
   groupId: string;
 };
 
@@ -47,17 +45,6 @@ const resolveMessageContent = (content: unknown, role: string): string => {
   return content;
 };
 
-const resolveMessageStatus = (status: unknown, role: string): string => {
-  if (status === null || status === undefined) {
-    return "";
-  }
-  if (typeof status !== "string") {
-    const label = role ? `：${role}` : "";
-    throw new Error(`状态内容格式无效${label}`);
-  }
-  return status;
-};
-
 const resolveMessageGroupId = (groupId: unknown, role: string): string => {
   if (groupId === null || groupId === undefined) {
     return "";
@@ -71,9 +58,16 @@ const resolveMessageGroupId = (groupId: unknown, role: string): string => {
 
 export const buildDisplayMessages = (
   messages: MessageList,
+  activeStatus: string | null = null,
 ): DisplayMessage[] => {
   if (!Array.isArray(messages)) {
     throw new Error("messages 必须是数组");
+  }
+  if (
+    activeStatus !== null &&
+    (typeof activeStatus !== "string" || activeStatus.length === 0)
+  ) {
+    throw new Error("活动状态格式无效");
   }
   const entries: DisplayMessage[] = [];
   let assistantGroup: AssistantGroup | null = null;
@@ -87,7 +81,6 @@ export const buildDisplayMessages = (
           content,
           indices: assistantGroup.indices,
           role: "assistant",
-          status: assistantGroup.status,
         });
       }
       assistantGroup = null;
@@ -96,7 +89,6 @@ export const buildDisplayMessages = (
       content: string,
       index: number,
       pending: boolean,
-      status: string,
       groupId: string,
     ): void => {
       assistantGroup = {
@@ -104,7 +96,6 @@ export const buildDisplayMessages = (
         groupId,
         hasPending: pending,
         indices: [index],
-        status,
       };
     };
   messages.forEach((msg, index) => {
@@ -118,26 +109,34 @@ export const buildDisplayMessages = (
     const content = resolveMessageContent(msg.content, role);
     if (role === "assistant") {
       const isPending = msg.pending === true;
-      const status = resolveMessageStatus(msg.status, role);
       const groupId = resolveMessageGroupId(msg.groupId, role) || String(index);
       if (!assistantGroup) {
-        startAssistantGroup(content, index, isPending, status, groupId);
+        startAssistantGroup(content, index, isPending, groupId);
         return;
       }
       if (assistantGroup.groupId === groupId) {
         assistantGroup.contents.push(content);
         assistantGroup.hasPending = assistantGroup.hasPending || isPending;
         assistantGroup.indices.push(index);
-        assistantGroup.status = status;
         return;
       }
       flushAssistantGroup();
-      startAssistantGroup(content, index, isPending, status, groupId);
+      startAssistantGroup(content, index, isPending, groupId);
       return;
     }
     flushAssistantGroup();
     entries.push({ content, indices: [index], role });
   });
   flushAssistantGroup();
+  if (activeStatus) {
+    for (let i = entries.length - 1; i >= 0; i -= 1) {
+      const entry = entries[i];
+      if (entry.role !== "assistant") {
+        continue;
+      }
+      entries[i] = { ...entry, status: activeStatus };
+      break;
+    }
+  }
   return entries;
 };
