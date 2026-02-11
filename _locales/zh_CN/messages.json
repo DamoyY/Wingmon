@@ -215,6 +215,12 @@
   "apiType": {
     "message": "API 类型"
   },
+  "requestBodyOverrides": {
+    "message": "请求体覆写"
+  },
+  "requestBodyOverridesPlaceholder": {
+    "message": "- path: \"model\"\n  value: \"gpt-5\"\n- path: \"reasoning.effort\"\n  value: \"high\"\n- path: \"tools.0\"\n  value: null"
+  },
   "language": {
     "message": "语言"
   },

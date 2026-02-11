@@ -15,6 +15,12 @@ md-filled-text-field {
   height: 100%;
 }
 
+#request-body-overrides-input {
+  min-height: 200px;
+  resize: none;
+  font-family: monospace;
+}
+
 md-outlined-select,
 md-filled-select {
   width: 100%;

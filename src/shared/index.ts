@@ -18,6 +18,13 @@ export {
   createPrefixTokenCounter,
   splitMarkdownByTokens,
 } from "./markdownTokenChunking.ts";
+export {
+  applyBodyOverrideRules,
+  parseBodyOverrideRules,
+  type BodyOverrideRule,
+  type BodyOverridePathSegment,
+  type JsonValue,
+} from "./bodyOverrideRules.ts";
 export * from "./contentScriptRpc.ts";
 export type {
   MarkdownChunkResult,

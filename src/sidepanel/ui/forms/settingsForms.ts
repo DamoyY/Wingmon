@@ -14,10 +14,11 @@ type SelectElement = HTMLElement & {
 
 type SettingsFormValues = {
   apiKey: string;
-  baseUrl: string;
-  model: string;
   apiType: string;
+  baseUrl: string;
   language: string;
+  model: string;
+  requestBodyOverrides: string;
   theme: string;
   themeColor: string;
   themeVariant: string;
@@ -54,6 +55,10 @@ export const readSettingsFormValues = (): SettingsFormValues => ({
   ),
   language: readSelectValue(elements.languageSelect as SelectElement, "语言"),
   model: readInputValue(elements.modelInput as TextInputElement, "模型"),
+  requestBodyOverrides: readInputValue(
+    elements.requestBodyOverridesInput as TextInputElement,
+    "请求体覆写",
+  ),
   theme: readSelectValue(elements.themeSelect as SelectElement, "主题"),
   themeColor: readInputValue(
     elements.themeColorInput as TextInputElement,
@@ -82,6 +87,11 @@ export const updateSettingsFormValues = (
       elements.modelInput as TextInputElement,
       "模型输入框",
       "模型输入框未找到",
+    ),
+    requestBodyOverridesInput = ensureElement(
+      elements.requestBodyOverridesInput as TextInputElement,
+      "请求体覆写输入框",
+      "请求体覆写输入框未找到",
     ),
     apiTypeSelect = ensureElement(
       elements.apiTypeSelect as SelectElement,
@@ -116,6 +126,12 @@ export const updateSettingsFormValues = (
   }
   if (Object.hasOwn(values, "model")) {
     modelInput.value = ensureString(values.model, "模型");
+  }
+  if (Object.hasOwn(values, "requestBodyOverrides")) {
+    requestBodyOverridesInput.value = ensureString(
+      values.requestBodyOverrides,
+      "请求体覆写",
+    );
   }
   if (Object.hasOwn(values, "apiType")) {
     selectValue(apiTypeSelect, ensureString(values.apiType, "API 类型"));
@@ -153,6 +169,11 @@ const fillSettingsForm = (settings: SettingsFormValues) => {
       "模型输入框",
       "模型输入框未找到",
     ),
+    requestBodyOverridesInput = ensureElement(
+      elements.requestBodyOverridesInput as TextInputElement,
+      "请求体覆写输入框",
+      "请求体覆写输入框未找到",
+    ),
     apiTypeSelect = ensureElement(
       elements.apiTypeSelect as SelectElement,
       "API 类型选择框",
@@ -181,6 +202,7 @@ const fillSettingsForm = (settings: SettingsFormValues) => {
   keyInput.value = settings.apiKey || "";
   baseUrlInput.value = settings.baseUrl || "";
   modelInput.value = settings.model || "";
+  requestBodyOverridesInput.value = settings.requestBodyOverrides || "";
   selectValue(apiTypeSelect, settings.apiType || "chat");
   selectValue(languageSelect, settings.language || "en");
   selectValue(themeSelect, normalizeTheme(settings.theme));

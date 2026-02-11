@@ -14,6 +14,7 @@ export type Settings = {
   baseUrl: string;
   model: string;
   apiType: ApiType;
+  requestBodyOverrides: string;
   theme: string;
   themeColor: string;
   themeVariant: string;
@@ -30,6 +31,7 @@ const settingsKeys = {
     followMode: "follow_mode",
     language: "language",
     model: "model",
+    requestBodyOverrides: "request_body_overrides",
     theme: "theme",
     themeColor: "theme_color",
     themeVariant: "theme_variant",
@@ -75,6 +77,10 @@ const settingsKeys = {
       typeof data[settingsKeys.model] === "string"
         ? data[settingsKeys.model]
         : "",
+    requestBodyOverrides:
+      typeof data[settingsKeys.requestBodyOverrides] === "string"
+        ? data[settingsKeys.requestBodyOverrides]
+        : "",
     theme: normalizeTheme(
       typeof data[settingsKeys.theme] === "string"
         ? data[settingsKeys.theme]
@@ -105,6 +111,7 @@ const setSettings = async (settings: Settings): Promise<void> => {
     [settingsKeys.baseUrl]: settings.baseUrl,
     [settingsKeys.model]: settings.model,
     [settingsKeys.apiType]: settings.apiType,
+    [settingsKeys.requestBodyOverrides]: settings.requestBodyOverrides,
     [settingsKeys.theme]: normalizeTheme(settings.theme),
     [settingsKeys.themeColor]: normalizeThemeColor(settings.themeColor),
     [settingsKeys.themeVariant]: normalizeThemeVariant(settings.themeVariant),

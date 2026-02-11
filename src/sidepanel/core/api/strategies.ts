@@ -1,4 +1,15 @@
-import Anthropic from "@anthropic-ai/sdk";
+import {
+  type AnthropicToolCallCollector,
+  type addAnthropicToolCallEvent,
+  type addChatToolCallDelta,
+  type addResponsesToolCallEvent,
+  type extractAnthropicToolCalls,
+  type extractChatToolCalls,
+  type extractResponsesToolCalls,
+  type finalizeAnthropicToolCalls,
+  type finalizeChatToolCalls,
+  type finalizeResponsesToolCalls,
+} from "../agent/toolCallNormalization.ts";
 import {
   type ApiRequestChunk,
   extractResponsesText,
@@ -30,23 +41,13 @@ import type {
 } from "openai/resources/responses/responses";
 import type { ToolCall, ToolDefinition } from "../agent/definitions.ts";
 import {
-  type addChatToolCallDelta,
-  type addResponsesToolCallEvent,
-  type addAnthropicToolCallEvent,
-  type extractChatToolCalls,
-  type extractResponsesToolCalls,
-  type extractAnthropicToolCalls,
-  type finalizeChatToolCalls,
-  type finalizeResponsesToolCalls,
-  type finalizeAnthropicToolCalls,
-  type AnthropicToolCallCollector,
-} from "../agent/toolCallNormalization.ts";
-import {
   type buildChatMessages,
-  type buildResponsesInput,
   type buildMessagesInput,
+  type buildResponsesInput,
 } from "../agent/message-builders.ts";
+import Anthropic from "@anthropic-ai/sdk";
 import type { MessageRecord } from "../store/index.ts";
+import { applyBodyOverrideRules } from "../../../shared/index.ts";
 
 export type { ApiRequestChunk } from "./sse.ts";
 
@@ -145,6 +146,15 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   ): ApiToolAdapter => {
     if (!adapter) throw new Error("缺少工具适配器");
     return adapter;
+  },
+  applySettingsRequestBodyOverrides = <TBody extends Record<string, unknown>>(
+    settings: Settings,
+    body: TBody,
+  ): TBody => {
+    if (settings.requestBodyOverrides.trim() === "") {
+      return body;
+    }
+    return applyBodyOverrideRules(body, settings.requestBodyOverrides);
   },
   normalizeToolArguments = (value: unknown): string => {
     if (typeof value === "string") {
@@ -326,22 +336,24 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   },
   createApiStrategies = (toolAdapter: ApiToolAdapter): ApiStrategyMap => ({
     chat: {
-      buildStreamRequestBody: (settings, systemPrompt, tools, messages) => ({
-        messages: toolAdapter
-          .buildChatMessages(systemPrompt, messages)
-          .map(toChatMessageParam),
-        model: settings.model,
-        stream: true,
-        tools: tools.map(toChatTool),
-      }),
-      buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) => ({
-        messages: toolAdapter
-          .buildChatMessages(systemPrompt, messages)
-          .map(toChatMessageParam),
-        model: settings.model,
-        stream: false,
-        tools: tools.map(toChatTool),
-      }),
+      buildStreamRequestBody: (settings, systemPrompt, tools, messages) =>
+        applySettingsRequestBodyOverrides(settings, {
+          messages: toolAdapter
+            .buildChatMessages(systemPrompt, messages)
+            .map(toChatMessageParam),
+          model: settings.model,
+          stream: true,
+          tools: tools.map(toChatTool),
+        }),
+      buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) =>
+        applySettingsRequestBodyOverrides(settings, {
+          messages: toolAdapter
+            .buildChatMessages(systemPrompt, messages)
+            .map(toChatMessageParam),
+          model: settings.model,
+          stream: false,
+          tools: tools.map(toChatTool),
+        }),
       stream: async (stream, { onDelta, onChunk }) => {
         let collector: ChatCollector = {};
         for await (const chunk of stream) {
@@ -367,24 +379,26 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
       extractReply: (data) => extractChatReply(data),
     },
     responses: {
-      buildStreamRequestBody: (settings, systemPrompt, tools, messages) => ({
-        input: toolAdapter
-          .buildResponsesInput(messages)
-          .map(toResponsesInputItem),
-        model: settings.model,
-        stream: true,
-        tools: tools.map(toResponsesTool),
-        ...(systemPrompt ? { instructions: systemPrompt } : {}),
-      }),
-      buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) => ({
-        input: toolAdapter
-          .buildResponsesInput(messages)
-          .map(toResponsesInputItem),
-        model: settings.model,
-        stream: false,
-        tools: tools.map(toResponsesTool),
-        ...(systemPrompt ? { instructions: systemPrompt } : {}),
-      }),
+      buildStreamRequestBody: (settings, systemPrompt, tools, messages) =>
+        applySettingsRequestBodyOverrides(settings, {
+          input: toolAdapter
+            .buildResponsesInput(messages)
+            .map(toResponsesInputItem),
+          model: settings.model,
+          stream: true,
+          tools: tools.map(toResponsesTool),
+          ...(systemPrompt ? { instructions: systemPrompt } : {}),
+        }),
+      buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) =>
+        applySettingsRequestBodyOverrides(settings, {
+          input: toolAdapter
+            .buildResponsesInput(messages)
+            .map(toResponsesInputItem),
+          model: settings.model,
+          stream: false,
+          tools: tools.map(toResponsesTool),
+          ...(systemPrompt ? { instructions: systemPrompt } : {}),
+        }),
       stream: async (stream, { onDelta, onChunk }) => {
         let collector: ResponsesCollector = {};
         for await (const event of stream) {
@@ -414,26 +428,28 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
       extractReply: (data) => extractResponsesText(data),
     },
     messages: {
-      buildStreamRequestBody: (settings, systemPrompt, tools, messages) => ({
-        messages: toolAdapter.buildMessagesInput(
-          messages,
-        ) as Anthropic.MessageCreateParamsStreaming["messages"],
-        model: settings.model,
-        stream: true,
-        tools: tools.map(toAnthropicTool),
-        max_tokens: 64000,
-        ...(systemPrompt ? { system: systemPrompt } : {}),
-      }),
-      buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) => ({
-        messages: toolAdapter.buildMessagesInput(
-          messages,
-        ) as Anthropic.MessageCreateParamsNonStreaming["messages"],
-        model: settings.model,
-        stream: false,
-        tools: tools.map(toAnthropicTool),
-        max_tokens: 64000,
-        ...(systemPrompt ? { system: systemPrompt } : {}),
-      }),
+      buildStreamRequestBody: (settings, systemPrompt, tools, messages) =>
+        applySettingsRequestBodyOverrides(settings, {
+          messages: toolAdapter.buildMessagesInput(
+            messages,
+          ) as Anthropic.MessageCreateParamsStreaming["messages"],
+          model: settings.model,
+          stream: true,
+          tools: tools.map(toAnthropicTool),
+          max_tokens: 64000,
+          ...(systemPrompt ? { system: systemPrompt } : {}),
+        }),
+      buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) =>
+        applySettingsRequestBodyOverrides(settings, {
+          messages: toolAdapter.buildMessagesInput(
+            messages,
+          ) as Anthropic.MessageCreateParamsNonStreaming["messages"],
+          model: settings.model,
+          stream: false,
+          tools: tools.map(toAnthropicTool),
+          max_tokens: 64000,
+          ...(systemPrompt ? { system: systemPrompt } : {}),
+        }),
       stream: async (stream, { onDelta, onChunk }) => {
         let collector: AnthropicToolCallCollector = {};
         for await (const event of stream) {

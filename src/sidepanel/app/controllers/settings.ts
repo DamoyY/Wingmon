@@ -121,6 +121,7 @@ const bindSettingsEvents = () => {
     keyInput,
     baseUrlInput,
     modelInput,
+    requestBodyOverridesInput,
     apiTypeSelect,
     themeSelect,
     themeColorInput,
@@ -140,6 +141,7 @@ const bindSettingsEvents = () => {
   keyInput.addEventListener("input", syncSaveButtonVisibility);
   baseUrlInput.addEventListener("input", syncSaveButtonVisibility);
   modelInput.addEventListener("input", syncSaveButtonVisibility);
+  requestBodyOverridesInput.addEventListener("input", syncSaveButtonVisibility);
   apiTypeSelect.addEventListener("change", syncSaveButtonVisibility);
   themeSelect.addEventListener("change", () => {
     void handleThemeSettingsChangeClick();

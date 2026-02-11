@@ -4,6 +4,7 @@ import {
   normalizeThemeColorSafe,
   normalizeThemeVariant,
 } from "../../lib/utils/index.ts";
+import { parseBodyOverrideRules } from "../../../shared/index.ts";
 
 type ApiType = "chat" | "responses" | "messages";
 
@@ -12,6 +13,7 @@ export type SettingsInput = {
   baseUrl?: string;
   model?: string;
   apiType?: string;
+  requestBodyOverrides?: string;
   theme?: string;
   themeColor?: string;
   themeVariant?: string;
@@ -25,6 +27,7 @@ type NormalizedSettings = {
   baseUrl: string;
   model: string;
   apiType: ApiType;
+  requestBodyOverrides: string;
   theme: string;
   themeColor: string;
   themeVariant: string;
@@ -46,6 +49,7 @@ type RequiredSettingsPayload = {
   baseUrl: string;
   model: string;
   apiType: ApiType;
+  requestBodyOverrides: string;
 };
 
 let settingsSnapshot: NormalizedSettings | null = null;
@@ -54,6 +58,8 @@ const ensureSettingsInput = (settings: SettingsInputOrNull): SettingsInput =>
     settings ?? {},
   trimString = (value: string | null | undefined): string =>
     typeof value === "string" ? value.trim() : "",
+  normalizeRequestBodyOverrides = (value: string | null | undefined): string =>
+    typeof value === "string" ? value.replaceAll("\r\n", "\n").trim() : "",
   normalizeApiType = (value: string | undefined): ApiType => {
     if (value === "responses") {
       return "responses";
@@ -68,6 +74,9 @@ const ensureSettingsInput = (settings: SettingsInputOrNull): SettingsInput =>
     apiType: normalizeApiType(settings.apiType),
     baseUrl: trimString(settings.baseUrl),
     model: trimString(settings.model),
+    requestBodyOverrides: normalizeRequestBodyOverrides(
+      settings.requestBodyOverrides,
+    ),
     theme: normalizeTheme(settings.theme ?? "auto"),
     themeColor: normalizeThemeColorSafe(settings.themeColor ?? null),
     themeVariant: normalizeThemeVariant(settings.themeVariant ?? "neutral"),
@@ -110,6 +119,9 @@ const buildRequiredSettingsPayload = (
   apiType: normalizeApiType(formValues.apiType),
   baseUrl: trimString(formValues.baseUrl),
   model: trimString(formValues.model),
+  requestBodyOverrides: normalizeRequestBodyOverrides(
+    formValues.requestBodyOverrides,
+  ),
 });
 
 export const validateRequiredSettings = (
@@ -119,6 +131,16 @@ export const validateRequiredSettings = (
   if (!payload.apiKey || !payload.baseUrl || !payload.model) {
     return {
       message: "API Key、Base URL 和模型不能为空",
+      payload,
+      valid: false,
+    };
+  }
+  try {
+    parseBodyOverrideRules(payload.requestBodyOverrides);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      message,
       payload,
       valid: false,
     };

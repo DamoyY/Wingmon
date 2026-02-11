@@ -215,6 +215,12 @@
   "apiType": {
     "message": "API Type"
   },
+  "requestBodyOverrides": {
+    "message": "Request Body Overrides"
+  },
+  "requestBodyOverridesPlaceholder": {
+    "message": "- path: \"model\"\n  value: \"gpt-5\"\n- path: \"reasoning.effort\"\n  value: \"high\"\n- path: \"tools.0\"\n  value: null"
+  },
   "language": {
     "message": "Language"
   },

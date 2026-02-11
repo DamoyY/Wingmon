@@ -35,6 +35,7 @@ export type PanelElements = {
   keyInput: MdFilledTextField;
   baseUrlInput: MdFilledTextField;
   modelInput: MdFilledTextField;
+  requestBodyOverridesInput: MdFilledTextField;
   apiTypeSelect: MdFilledSelect;
   languageSelect: MdFilledSelect;
   themeSelect: MdFilledSelect;
@@ -122,6 +123,10 @@ const resolveElements = (): PanelElements => ({
     "openSettings",
   ) as MdIconButton,
   promptEl: requireElementById("prompt", "promptEl") as MdFilledTextField,
+  requestBodyOverridesInput: requireElementById(
+    "request-body-overrides-input",
+    "requestBodyOverridesInput",
+  ) as MdFilledTextField,
   saveKey: requireElementById("save-key", "saveKey") as MdFilledButton,
   sendButton: requireElementById("send", "sendButton") as MdFilledButton,
   sendWithPageButton: requireElementById(
