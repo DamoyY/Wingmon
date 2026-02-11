@@ -11,6 +11,10 @@ import {
   extractErrorMessage,
 } from "../../../shared/index.ts";
 import { type JsonValue, parseJson } from "../../lib/utils/index.ts";
+import {
+  type ToolJsonSchema,
+  createToolArgsValidator,
+} from "./validation/index.js";
 import type { PageMarkdownData } from "./pageReadHelpers.ts";
 import ToolInputError from "./errors.ts";
 import toolModules from "./tools/index.ts";
@@ -30,7 +34,7 @@ export type ToolNameKey =
 
 export type ToolNameMap = Record<ToolNameKey, string>;
 
-type ToolParameters = Record<string, JsonValue>;
+type ToolParameters = ToolJsonSchema;
 
 export type ToolPageReadDedupeAction = "removeToolCall" | "trimToolResponse";
 
@@ -183,6 +187,15 @@ toolModules.forEach((tool) => {
     }
     resolvedToolNames[key] = name;
   }
+  const schemaArgsValidator = createToolArgsValidator(tool.parameters),
+    validateArgs = (args: JsonValue): JsonValue => {
+      const schemaValidatedArgs = schemaArgsValidator(args),
+        customValidateArgs = tool.validateArgs;
+      if (typeof customValidateArgs === "function") {
+        return customValidateArgs(schemaValidatedArgs);
+      }
+      return schemaValidatedArgs;
+    };
   const normalized: ToolModule = {
     buildMessageContext: tool.buildMessageContext,
     description,
@@ -192,7 +205,7 @@ toolModules.forEach((tool) => {
     name,
     pageReadDedupeAction: tool.pageReadDedupeAction,
     parameters: tool.parameters,
-    validateArgs: tool.validateArgs,
+    validateArgs,
   };
   toolModuleByName.set(name, normalized);
   validatedTools.push(normalized);

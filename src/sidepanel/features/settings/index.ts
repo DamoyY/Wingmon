@@ -1,4 +1,5 @@
 export {
+  getSettingsControllerState,
   handleCancelSettings,
   handleFollowModeChange,
   handleLanguageChange,
@@ -6,5 +7,10 @@ export {
   handleSaveSettings,
   handleSettingsFieldChange,
   handleThemeSettingsChange,
+  subscribeSettingsControllerState,
   syncSettingsSnapshot,
+} from "./controller.ts";
+export type {
+  SettingsControllerEffect,
+  SettingsControllerState,
 } from "./controller.ts";

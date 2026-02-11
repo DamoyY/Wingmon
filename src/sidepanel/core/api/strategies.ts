@@ -1,14 +1,16 @@
 import {
   type AnthropicToolCallCollector,
-  type addAnthropicToolCallEvent,
-  type addChatToolCallDelta,
-  type addResponsesToolCallEvent,
-  type extractAnthropicToolCalls,
-  type extractChatToolCalls,
-  type extractResponsesToolCalls,
-  type finalizeAnthropicToolCalls,
-  type finalizeChatToolCalls,
-  type finalizeResponsesToolCalls,
+  type ChatToolCallCollector,
+  type ResponsesToolCallCollector,
+  addAnthropicToolCallEvent,
+  addChatToolCallDelta,
+  addResponsesToolCallEvent,
+  extractAnthropicToolCalls,
+  extractChatToolCalls,
+  extractResponsesToolCalls,
+  finalizeAnthropicToolCalls,
+  finalizeChatToolCalls,
+  finalizeResponsesToolCalls,
 } from "../agent/toolCallNormalization.ts";
 import {
   type ApiRequestChunk,
@@ -40,35 +42,20 @@ import type {
   Tool as ResponsesTool,
 } from "openai/resources/responses/responses";
 import type { ToolCall, ToolDefinition } from "../agent/definitions.ts";
+import { applyBodyOverrideRules, isRecord } from "../../../shared/index.ts";
 import {
-  type buildChatMessages,
-  type buildMessagesInput,
-  type buildResponsesInput,
+  buildChatMessages,
+  buildMessagesInput,
+  buildResponsesInput,
 } from "../agent/message-builders.ts";
 import Anthropic from "@anthropic-ai/sdk";
 import type { MessageRecord } from "../store/index.ts";
-import { applyBodyOverrideRules } from "../../../shared/index.ts";
 
 export type { ApiRequestChunk } from "./sse.ts";
 
 type StreamEventHandlers = {
   onDelta: (delta: string) => void;
   onChunk: (chunk: ApiRequestChunk) => void;
-};
-
-export type ApiToolAdapter = {
-  addChatToolCallDelta: typeof addChatToolCallDelta;
-  addResponsesToolCallEvent: typeof addResponsesToolCallEvent;
-  addAnthropicToolCallEvent: typeof addAnthropicToolCallEvent;
-  buildChatMessages: typeof buildChatMessages;
-  buildResponsesInput: typeof buildResponsesInput;
-  buildMessagesInput: typeof buildMessagesInput;
-  extractChatToolCalls: typeof extractChatToolCalls;
-  extractResponsesToolCalls: typeof extractResponsesToolCalls;
-  extractAnthropicToolCalls: typeof extractAnthropicToolCalls;
-  finalizeChatToolCalls: typeof finalizeChatToolCalls;
-  finalizeResponsesToolCalls: typeof finalizeResponsesToolCalls;
-  finalizeAnthropicToolCalls: typeof finalizeAnthropicToolCalls;
 };
 
 export type ChatRequestBody = ChatCompletionCreateParamsStreaming;
@@ -118,10 +105,8 @@ export type MessagesApiStrategy = BaseApiStrategy<
   Anthropic.MessageCreateParamsNonStreaming
 >;
 
-type ChatCollector = Parameters<ApiToolAdapter["addChatToolCallDelta"]>[0];
-type ResponsesCollector = Parameters<
-  ApiToolAdapter["addResponsesToolCallEvent"]
->[0];
+type ChatCollector = ChatToolCallCollector;
+type ResponsesCollector = ResponsesToolCallCollector;
 
 type ApiStrategyMap = {
   chat: ChatApiStrategy;
@@ -129,9 +114,7 @@ type ApiStrategyMap = {
   messages: MessagesApiStrategy;
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-    typeof value === "object" && value !== null && !Array.isArray(value),
-  readStringField = (source: unknown, field: string): string | null => {
+const readStringField = (source: unknown, field: string): string | null => {
     if (!isRecord(source)) {
       return null;
     }
@@ -140,12 +123,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
       return null;
     }
     return value;
-  },
-  ensureToolAdapter = (
-    adapter: ApiToolAdapter | null | undefined,
-  ): ApiToolAdapter => {
-    if (!adapter) throw new Error("缺少工具适配器");
-    return adapter;
   },
   applySettingsRequestBodyOverrides = <TBody extends Record<string, unknown>>(
     settings: Settings,
@@ -220,7 +197,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
     return value.map(toChatMessageToolCall);
   },
   toChatMessageParam = (
-    message: ReturnType<ApiToolAdapter["buildChatMessages"]>[number],
+    message: ReturnType<typeof buildChatMessages>[number],
   ): ChatCompletionMessageParam => {
     const role = message.role;
     if (role === "system" || role === "developer" || role === "user") {
@@ -268,7 +245,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
     throw new Error(`不支持的 Chat 消息角色：${role}`);
   },
   toResponsesInputItem = (
-    item: ReturnType<ApiToolAdapter["buildResponsesInput"]>[number],
+    item: ReturnType<typeof buildResponsesInput>[number],
   ): ResponseInputItem => {
     if ("role" in item) {
       if (typeof item.content !== "string") {
@@ -334,22 +311,22 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   extractChatReply = (data: ChatCompletion): string => {
     return data.choices.at(0)?.message.content?.trim() || "";
   },
-  createApiStrategies = (toolAdapter: ApiToolAdapter): ApiStrategyMap => ({
+  createApiStrategies = (): ApiStrategyMap => ({
     chat: {
       buildStreamRequestBody: (settings, systemPrompt, tools, messages) =>
         applySettingsRequestBodyOverrides(settings, {
-          messages: toolAdapter
-            .buildChatMessages(systemPrompt, messages)
-            .map(toChatMessageParam),
+          messages: buildChatMessages(systemPrompt, messages).map(
+            toChatMessageParam,
+          ),
           model: settings.model,
           stream: true,
           tools: tools.map(toChatTool),
         }),
       buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) =>
         applySettingsRequestBodyOverrides(settings, {
-          messages: toolAdapter
-            .buildChatMessages(systemPrompt, messages)
-            .map(toChatMessageParam),
+          messages: buildChatMessages(systemPrompt, messages).map(
+            toChatMessageParam,
+          ),
           model: settings.model,
           stream: false,
           tools: tools.map(toChatTool),
@@ -362,18 +339,15 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
             toolCalls = getToolCallsFromChatDeltas(toolCallDeltas);
           if (delta !== "") onDelta(delta);
           if (toolCallDeltas.length > 0)
-            collector = toolAdapter.addChatToolCallDelta(
-              collector,
-              toolCallDeltas,
-            );
+            collector = addChatToolCallDelta(collector, toolCallDeltas);
           onChunk({ delta, toolCalls });
         }
-        return toolAdapter.finalizeChatToolCalls(collector);
+        return finalizeChatToolCalls(collector);
       },
       extractToolCalls: (data) =>
-        toolAdapter.extractChatToolCalls(
+        extractChatToolCalls(
           toChatExtractionPayload(data) as Parameters<
-            ApiToolAdapter["extractChatToolCalls"]
+            typeof extractChatToolCalls
           >[0],
         ),
       extractReply: (data) => extractChatReply(data),
@@ -381,9 +355,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
     responses: {
       buildStreamRequestBody: (settings, systemPrompt, tools, messages) =>
         applySettingsRequestBodyOverrides(settings, {
-          input: toolAdapter
-            .buildResponsesInput(messages)
-            .map(toResponsesInputItem),
+          input: buildResponsesInput(messages).map(toResponsesInputItem),
           model: settings.model,
           stream: true,
           tools: tools.map(toResponsesTool),
@@ -391,9 +363,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
         }),
       buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) =>
         applySettingsRequestBodyOverrides(settings, {
-          input: toolAdapter
-            .buildResponsesInput(messages)
-            .map(toResponsesInputItem),
+          input: buildResponsesInput(messages).map(toResponsesInputItem),
           model: settings.model,
           stream: false,
           tools: tools.map(toResponsesTool),
@@ -410,19 +380,19 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
                 : getToolCallsFromResponsesEvent(payload, event.type);
           if (delta !== "") onDelta(delta);
           if (payload !== null)
-            collector = toolAdapter.addResponsesToolCallEvent(
+            collector = addResponsesToolCallEvent(
               collector,
               payload,
               event.type,
             );
           onChunk({ delta, toolCalls });
         }
-        return toolAdapter.finalizeResponsesToolCalls(collector);
+        return finalizeResponsesToolCalls(collector);
       },
       extractToolCalls: (data) =>
-        toolAdapter.extractResponsesToolCalls(
+        extractResponsesToolCalls(
           toResponsesExtractionPayload(data) as Parameters<
-            ApiToolAdapter["extractResponsesToolCalls"]
+            typeof extractResponsesToolCalls
           >[0],
         ),
       extractReply: (data) => extractResponsesText(data),
@@ -430,7 +400,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
     messages: {
       buildStreamRequestBody: (settings, systemPrompt, tools, messages) =>
         applySettingsRequestBodyOverrides(settings, {
-          messages: toolAdapter.buildMessagesInput(
+          messages: buildMessagesInput(
             messages,
           ) as Anthropic.MessageCreateParamsStreaming["messages"],
           model: settings.model,
@@ -441,7 +411,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
         }),
       buildNonStreamRequestBody: (settings, systemPrompt, tools, messages) =>
         applySettingsRequestBodyOverrides(settings, {
-          messages: toolAdapter.buildMessagesInput(
+          messages: buildMessagesInput(
             messages,
           ) as Anthropic.MessageCreateParamsNonStreaming["messages"],
           model: settings.model,
@@ -461,12 +431,12 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
             delta = event.delta.text;
           }
           if (delta !== "") onDelta(delta);
-          collector = toolAdapter.addAnthropicToolCallEvent(collector, event);
+          collector = addAnthropicToolCallEvent(collector, event);
           onChunk({ delta, toolCalls: [] });
         }
-        return toolAdapter.finalizeAnthropicToolCalls(collector);
+        return finalizeAnthropicToolCalls(collector);
       },
-      extractToolCalls: (data) => toolAdapter.extractAnthropicToolCalls(data),
+      extractToolCalls: (data) => extractAnthropicToolCalls(data),
       extractReply: (data) => {
         return data.content
           .filter((c): c is Anthropic.TextBlock => c.type === "text")
@@ -479,9 +449,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 export default function getApiStrategy(
   apiType: ApiType,
-  toolAdapter: ApiToolAdapter,
 ): ChatApiStrategy | ResponsesApiStrategy | MessagesApiStrategy {
-  const strategyMap = createApiStrategies(ensureToolAdapter(toolAdapter));
+  const strategyMap = createApiStrategies();
   switch (apiType) {
     case "chat":
       return strategyMap.chat;

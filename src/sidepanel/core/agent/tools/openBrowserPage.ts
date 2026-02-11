@@ -1,12 +1,11 @@
-import { type JsonValue, isInternalUrl, t } from "../../../lib/utils/index.ts";
 import {
   buildOpenBrowserPageMessageContext,
   formatOpenBrowserPageResult,
 } from "../toolResultFormatters.ts";
+import { isInternalUrl, t } from "../../../lib/utils/index.ts";
 import type { OpenBrowserPageToolResult } from "../toolResultTypes.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 import ToolInputError from "../errors.ts";
-import { ensureObjectArgs } from "../validation/toolArgsValidation.ts";
 import { extractErrorMessage } from "../../../../shared/index.ts";
 
 type OpenPageArgs = {
@@ -26,7 +25,7 @@ const parameters = {
     additionalProperties: false,
     properties: {
       focus: { description: t("toolParamFocus"), type: "boolean" },
-      url: { type: "string" },
+      url: { minLength: 1, pattern: "\\S", type: "string" },
     },
     required: ["url", "focus"],
     type: "object",
@@ -43,17 +42,10 @@ const parameters = {
       return null;
     }
   },
-  validateArgs = (args: JsonValue): OpenPageArgs => {
-    const rawArgs = ensureObjectArgs(args);
-    if (typeof rawArgs.url !== "string" || !rawArgs.url.trim()) {
-      throw new ToolInputError("URL 必须是非空字符串");
-    }
-    if (typeof rawArgs.focus !== "boolean") {
-      throw new ToolInputError("focus 必须是布尔值");
-    }
+  resolveHttpUrl = (url: string): string => {
     let parsedUrl: URL;
     try {
-      parsedUrl = new URL(rawArgs.url);
+      parsedUrl = new URL(url);
     } catch (error) {
       console.error("URL 格式不正确", error);
       throw new ToolInputError("URL 格式不正确");
@@ -61,7 +53,7 @@ const parameters = {
     if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
       throw new ToolInputError("URL 仅支持 http 或 https");
     }
-    return { focus: rawArgs.focus, url: parsedUrl.toString() };
+    return parsedUrl.toString();
   },
   fetchPageResult = async ({
     context,
@@ -107,13 +99,16 @@ const parameters = {
     { url, focus }: OpenPageArgs,
     context: ToolExecutionContext,
   ): Promise<OpenBrowserPageToolResult> => {
+    const normalizedUrl = resolveHttpUrl(url);
     const followMode = await context.shouldFollowMode(),
       shouldFocus = followMode || focus,
       tabs: BrowserTab[] = await context.getAllTabs(),
       normalizedTabs = tabs
         .map(normalizeTab)
         .filter((tab): tab is NormalizedTab => Boolean(tab)),
-      matchedTab = normalizedTabs.find((tab) => tab.normalizedUrl === url);
+      matchedTab = normalizedTabs.find(
+        (tab) => tab.normalizedUrl === normalizedUrl,
+      );
     if (matchedTab) {
       if (typeof matchedTab.id !== "number") {
         throw new Error("标签页缺少 Tab ID");
@@ -121,7 +116,7 @@ const parameters = {
       if (shouldFocus) {
         await context.focusTab(matchedTab.id);
       }
-      const matchedUrl = matchedTab.url || url,
+      const matchedUrl = matchedTab.url || normalizedUrl,
         isInternal = isInternalUrl(matchedUrl);
       if (isInternal) {
         return {
@@ -136,29 +131,29 @@ const parameters = {
         context,
         fallbackUrl: matchedUrl,
         followMode,
-        requestedUrl: url,
+        requestedUrl: normalizedUrl,
         tabId: matchedTab.id,
       });
     }
-    const tab = await context.createTab(url, shouldFocus);
+    const tab = await context.createTab(normalizedUrl, shouldFocus);
     if (shouldFocus) {
       await context.focusTab(tab.id);
     }
-    const initialInternal = isInternalUrl(url);
+    const initialInternal = isInternalUrl(normalizedUrl);
     if (initialInternal) {
       return {
         content: "",
         isInternal: true,
         tabId: tab.id,
         title: tab.title || "",
-        url,
+        url: normalizedUrl,
       };
     }
     return fetchPageResult({
       context,
-      fallbackUrl: url,
+      fallbackUrl: normalizedUrl,
       followMode,
-      requestedUrl: url,
+      requestedUrl: normalizedUrl,
       tabId: tab.id,
     });
   };
@@ -172,5 +167,4 @@ export default {
   name: "open_page",
   pageReadDedupeAction: "trimToolResponse",
   parameters,
-  validateArgs,
 };

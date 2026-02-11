@@ -6,6 +6,7 @@ import {
   getToolCallName,
   getToolModule,
 } from "./definitions.ts";
+import { isRecord } from "../../../shared/index.ts";
 import { parseRequiredPositiveInteger } from "./validation/index.js";
 
 type Message = {
@@ -35,9 +36,7 @@ type PageReadEvent = PageReadEventBase & {
   key: string;
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-    typeof value === "object" && value !== null && !Array.isArray(value),
-  resolveOptionalOutputWithoutContent = (
+const resolveOptionalOutputWithoutContent = (
     toolContext: unknown,
   ): string | null => {
     if (!isRecord(toolContext)) {

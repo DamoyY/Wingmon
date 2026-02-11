@@ -10,12 +10,19 @@ export {
   type ErrorMessageOptions,
 } from "./errorMessage.ts";
 export {
+  parseOptionalPositiveInteger,
+  parseOptionalPositiveNumber,
+  parseRequiredPositiveInteger,
+  parseRequiredPositiveNumber,
   tryParsePositiveInteger,
   tryParsePositiveNumber,
 } from "./positiveNumber.ts";
 export {
   MARKDOWN_CHUNK_TOKENS,
+  clampBoundary,
   createPrefixTokenCounter,
+  findControlMarkerStart,
+  moveBoundaryAfterControlMarker,
   splitMarkdownByTokens,
 } from "./markdownTokenChunking.ts";
 export {
@@ -23,14 +30,26 @@ export {
   parseBodyOverrideRules,
   type BodyOverrideRule,
   type BodyOverridePathSegment,
-  type JsonValue,
 } from "./bodyOverrideRules.ts";
+export {
+  ensureString,
+  isJsonObject,
+  isJsonValue,
+  isRecord,
+  resolveString,
+} from "./runtimeValidation.ts";
 export * from "./contentScriptRpc.ts";
 export type {
   MarkdownChunkResult,
   MarkdownChunkingOptions,
   TokenLengthResolver,
 } from "./markdownTokenChunking.ts";
+export type {
+  JsonArray,
+  JsonObject,
+  JsonPrimitive,
+  JsonValue,
+} from "./runtimeValidation.ts";
 export type {
   RpcEndpoint,
   RpcErrorResponse,

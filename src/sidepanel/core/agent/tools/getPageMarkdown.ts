@@ -1,16 +1,11 @@
-import { type JsonValue, isInternalUrl, t } from "../../../lib/utils/index.ts";
 import {
   buildGetPageMarkdownMessageContext,
   formatGetPageMarkdownResult,
 } from "../toolResultFormatters.ts";
-import {
-  ensureObjectArgs,
-  validateTabIdArgs,
-} from "../validation/toolArgsValidation.ts";
+import { isInternalUrl, t } from "../../../lib/utils/index.ts";
 import type { GetPageMarkdownToolResult } from "../toolResultTypes.ts";
 import { MARKDOWN_CHUNK_TOKENS } from "../../../../shared/index.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
-import { parsePageNumber } from "../validation/parsePageNumber.ts";
 
 type BrowserTab = Awaited<
   ReturnType<ToolExecutionContext["getAllTabs"]>
@@ -18,18 +13,8 @@ type BrowserTab = Awaited<
 
 type GetPageArgs = {
   pageNumber: number;
-  preserveViewport?: boolean;
+  preserveViewport?: boolean | null;
   tabId: number;
-};
-
-const parsePreserveViewport = (value: JsonValue): boolean => {
-  if (value === null) {
-    return false;
-  }
-  if (typeof value === "boolean") {
-    return value;
-  }
-  throw new Error("preserveViewport 必须是布尔值");
 };
 
 const parameters = {
@@ -37,25 +22,17 @@ const parameters = {
     properties: {
       pageNumber: {
         description: t("toolParamPageNumber", String(MARKDOWN_CHUNK_TOKENS)),
-        type: "number",
+        minimum: 1,
+        type: "integer",
       },
       preserveViewport: { type: ["boolean", "null"] },
-      tabId: { type: "number" },
+      tabId: { minimum: 1, type: "integer" },
     },
     required: ["pageNumber", "preserveViewport", "tabId"],
     type: "object",
   },
-  validateArgs = (args: JsonValue): GetPageArgs => {
-    const argsRecord = ensureObjectArgs(args),
-      { tabId } = validateTabIdArgs(argsRecord),
-      preserveViewport = parsePreserveViewport(
-        argsRecord.preserveViewport ?? null,
-      );
-    const pageNumber = parsePageNumber(argsRecord.pageNumber ?? null);
-    return { pageNumber, preserveViewport, tabId };
-  },
   execute = async (
-    { pageNumber, preserveViewport = false, tabId }: GetPageArgs,
+    { pageNumber, preserveViewport, tabId }: GetPageArgs,
     context: ToolExecutionContext,
   ): Promise<GetPageMarkdownToolResult> => {
     const tabs: BrowserTab[] = await context.getAllTabs(),
@@ -81,7 +58,7 @@ const parameters = {
       };
     }
     const pageData = await context.fetchPageMarkdownData(tabId, pageNumber);
-    if (followMode && !preserveViewport) {
+    if (followMode && preserveViewport !== true) {
       await context.syncPageHash(tabId, pageData);
     }
     return {
@@ -104,5 +81,4 @@ export default {
   name: "get_page",
   pageReadDedupeAction: "removeToolCall",
   parameters,
-  validateArgs,
 };

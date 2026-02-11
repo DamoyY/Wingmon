@@ -52,8 +52,55 @@ type ErrorContext = {
 };
 
 type ThemePayload = Pick<Settings, "theme" | "themeColor" | "themeVariant">;
+type SettingsFormPatch = Partial<Pick<Settings, "themeColor" | "themeVariant">>;
+type ViewTarget = "chat" | "key";
+
+export type SettingsControllerEffect =
+  | {
+      type: "saveButtonVisibilityChanged";
+      visible: boolean;
+    }
+  | {
+      type: "settingsStatusChanged";
+      message: string;
+    }
+  | {
+      type: "settingsFormFilled";
+      settings: Settings;
+    }
+  | {
+      type: "settingsFormPatched";
+      values: SettingsFormPatch;
+    }
+  | {
+      type: "themeChanged";
+      theme: ThemePayload;
+    }
+  | {
+      type: "localeChanged";
+      locale: string;
+    }
+  | {
+      type: "viewSwitchRequested";
+      target: ViewTarget;
+      animate: boolean;
+      isFirstUse: boolean;
+    };
+
+export type SettingsControllerState = {
+  effectVersion: number;
+  lastEffect: SettingsControllerEffect | null;
+};
+
+type SettingsControllerStateListener = (state: SettingsControllerState) => void;
 
 const defaultLocale = "en",
+  settingsControllerState: SettingsControllerState = {
+    effectVersion: 0,
+    lastEffect: null,
+  },
+  settingsControllerStateListeners: Set<SettingsControllerStateListener> =
+    new Set(),
   settingsActionErrorContext: ErrorContext = {
     fallbackMessage: "操作失败，请稍后重试",
     logLabel: "设置操作失败",
@@ -73,6 +120,80 @@ const defaultLocale = "en",
   resolveErrorMessage = (error: unknown, context: ErrorContext): string => {
     console.error(context.logLabel, error);
     return extractErrorMessage(error, { fallback: context.fallbackMessage });
+  },
+  snapshotSettingsControllerState = (): SettingsControllerState => ({
+    effectVersion: settingsControllerState.effectVersion,
+    lastEffect: settingsControllerState.lastEffect,
+  }),
+  notifySettingsControllerStateChange = (): void => {
+    const snapshot = snapshotSettingsControllerState();
+    settingsControllerStateListeners.forEach((listener) => {
+      try {
+        listener(snapshot);
+      } catch (error) {
+        console.error("设置控制器状态订阅回调执行失败", error);
+      }
+    });
+  },
+  publishSettingsControllerEffect = (
+    effect: SettingsControllerEffect,
+  ): void => {
+    settingsControllerState.lastEffect = effect;
+    settingsControllerState.effectVersion += 1;
+    notifySettingsControllerStateChange();
+  },
+  publishSettingsStatus = (message: string): void => {
+    publishSettingsControllerEffect({
+      message,
+      type: "settingsStatusChanged",
+    });
+  },
+  publishSaveButtonVisibility = (visible: boolean): SaveButtonStatePayload => {
+    publishSettingsControllerEffect({
+      type: "saveButtonVisibilityChanged",
+      visible,
+    });
+    return { saveButtonVisible: visible };
+  },
+  publishFormFilled = (settings: Settings): void => {
+    publishSettingsControllerEffect({
+      settings,
+      type: "settingsFormFilled",
+    });
+  },
+  publishFormPatch = (values: SettingsFormPatch): void => {
+    publishSettingsControllerEffect({
+      type: "settingsFormPatched",
+      values,
+    });
+  },
+  publishTheme = (theme: ThemePayload): void => {
+    publishSettingsControllerEffect({
+      theme,
+      type: "themeChanged",
+    });
+  },
+  publishLocale = (locale: string): void => {
+    publishSettingsControllerEffect({
+      locale,
+      type: "localeChanged",
+    });
+  },
+  publishViewSwitch = ({
+    animate,
+    isFirstUse,
+    target,
+  }: {
+    animate: boolean;
+    isFirstUse: boolean;
+    target: ViewTarget;
+  }): void => {
+    publishSettingsControllerEffect({
+      animate,
+      isFirstUse,
+      target,
+      type: "viewSwitchRequested",
+    });
   },
   resolveSaveButtonVisible = (formValues: SettingsInput): boolean =>
     isSettingsDirty(formValues) && isSettingsComplete(formValues),
@@ -95,9 +216,22 @@ const defaultLocale = "en",
     context: ErrorContext,
   ): SettingsControllerFailure =>
     createFailureResult(resolveErrorMessage(error, context)),
+  createFailureWithStatus = (
+    error: unknown,
+    context: ErrorContext,
+  ): SettingsControllerFailure => {
+    const failure = createFailureFromError(error, context);
+    publishSettingsStatus(failure.message);
+    return failure;
+  },
   resolveShouldShowChatView = (settings: Settings): boolean =>
     Boolean(settings.apiKey && settings.baseUrl && settings.model),
   resolveLocale = (language: string): string => language || defaultLocale,
+  toThemePayload = (settings: Settings): ThemePayload => ({
+    theme: settings.theme,
+    themeColor: settings.themeColor,
+    themeVariant: settings.themeVariant,
+  }),
   buildThemePayloadResult = (
     formValues: SettingsInput,
   ): SettingsControllerResult<ThemePayload> => {
@@ -120,15 +254,29 @@ const defaultLocale = "en",
     return createSettingsResult(settings);
   };
 
+export const getSettingsControllerState = (): SettingsControllerState =>
+  snapshotSettingsControllerState();
+
+export const subscribeSettingsControllerState = (
+  listener: SettingsControllerStateListener,
+): (() => void) => {
+  if (typeof listener !== "function") {
+    throw new Error("设置控制器订阅回调无效");
+  }
+  settingsControllerStateListeners.add(listener);
+  return () => {
+    settingsControllerStateListeners.delete(listener);
+  };
+};
+
 export const syncSettingsSnapshot = (settings: SettingsInput): void => {
   syncSettingsSnapshotState(settings);
 };
 
 export const handleSettingsFieldChange = (
   formValues: SettingsInput,
-): SaveButtonStatePayload => ({
-  saveButtonVisible: resolveSaveButtonVisible(formValues),
-});
+): SaveButtonStatePayload =>
+  publishSaveButtonVisibility(resolveSaveButtonVisible(formValues));
 
 export const handleFollowModeChange = async ({
   followMode,
@@ -151,21 +299,40 @@ export const handleSaveSettings = async (
       formValues,
       message: required.message,
     });
+    publishSettingsStatus(required.message);
     return createFailureResult(required.message);
   }
 
   const themePayloadResult = buildThemePayloadResult(formValues);
   if (!themePayloadResult.success) {
+    publishSettingsStatus(themePayloadResult.message);
     return themePayloadResult;
   }
 
   try {
-    return await updateSettingsAndSync({
+    const result = await updateSettingsAndSync({
       ...required.payload,
       ...themePayloadResult.payload,
     });
+    if (!result.success) {
+      publishSettingsStatus(result.message);
+      return result;
+    }
+    publishSettingsStatus("");
+    publishFormPatch({
+      themeColor: result.payload.settings.themeColor,
+      themeVariant: result.payload.settings.themeVariant,
+    });
+    publishTheme(toThemePayload(result.payload.settings));
+    publishSaveButtonVisibility(resolveSaveButtonVisible(formValues));
+    publishViewSwitch({
+      animate: true,
+      isFirstUse: false,
+      target: "chat",
+    });
+    return result;
   } catch (error) {
-    return createFailureFromError(error, settingsActionErrorContext);
+    return createFailureWithStatus(error, settingsActionErrorContext);
   }
 };
 
@@ -174,13 +341,27 @@ export const handleCancelSettings = async (): Promise<
 > => {
   try {
     const settings = await readSettingsAndSync();
+    const locale = resolveLocale(settings.language);
+    const shouldShowChatView = resolveShouldShowChatView(settings);
+    publishFormFilled(settings);
+    publishSettingsStatus("");
+    publishTheme(toThemePayload(settings));
+    publishLocale(locale);
+    publishSaveButtonVisibility(resolveSaveButtonVisible(settings));
+    if (shouldShowChatView) {
+      publishViewSwitch({
+        animate: true,
+        isFirstUse: false,
+        target: "chat",
+      });
+    }
     return createSuccessResult({
-      locale: resolveLocale(settings.language),
+      locale,
       settings,
-      shouldShowChatView: resolveShouldShowChatView(settings),
+      shouldShowChatView,
     });
   } catch (error) {
-    return createFailureFromError(error, settingsReadErrorContext);
+    return createFailureWithStatus(error, settingsReadErrorContext);
   }
 };
 
@@ -189,9 +370,17 @@ export const handleOpenSettings = async (): Promise<
 > => {
   try {
     const settings = await readSettingsAndSync();
+    publishViewSwitch({
+      animate: true,
+      isFirstUse: false,
+      target: "key",
+    });
+    publishFormFilled(settings);
+    publishSaveButtonVisibility(resolveSaveButtonVisible(settings));
+    publishSettingsStatus("");
     return createSettingsResult(settings);
   } catch (error) {
-    return createFailureFromError(error, settingsReadErrorContext);
+    return createFailureWithStatus(error, settingsReadErrorContext);
   }
 };
 
@@ -200,13 +389,26 @@ export const handleThemeSettingsChange = async (
 ): Promise<SettingsControllerResult<SettingsPayload>> => {
   const themePayloadResult = buildThemePayloadResult(formValues);
   if (!themePayloadResult.success) {
+    publishSettingsStatus(themePayloadResult.message);
     return themePayloadResult;
   }
 
   try {
-    return await updateSettingsAndSync(themePayloadResult.payload);
+    const result = await updateSettingsAndSync(themePayloadResult.payload);
+    if (!result.success) {
+      publishSettingsStatus(result.message);
+      return result;
+    }
+    publishSettingsStatus("");
+    publishTheme(toThemePayload(result.payload.settings));
+    publishFormPatch({
+      themeColor: result.payload.settings.themeColor,
+      themeVariant: result.payload.settings.themeVariant,
+    });
+    publishSaveButtonVisibility(resolveSaveButtonVisible(formValues));
+    return result;
   } catch (error) {
-    return createFailureFromError(error, settingsActionErrorContext);
+    return createFailureWithStatus(error, settingsActionErrorContext);
   }
 };
 
@@ -216,17 +418,22 @@ export const handleLanguageChange = async (
   const language = formValues.language?.trim();
   if (!language) {
     console.error("语言设置校验失败", { formValues });
+    publishSettingsStatus("语言不能为空");
     return createFailureResult("语言不能为空");
   }
 
   try {
     const settings = await updateSettings({ language });
     syncSettingsSnapshot(settings);
+    const locale = resolveLocale(settings.language);
+    publishSettingsStatus("");
+    publishLocale(locale);
+    publishSaveButtonVisibility(resolveSaveButtonVisible(formValues));
     return createSuccessResult({
-      locale: resolveLocale(settings.language),
+      locale,
       settings,
     });
   } catch (error) {
-    return createFailureFromError(error, languageErrorContext);
+    return createFailureWithStatus(error, languageErrorContext);
   }
 };

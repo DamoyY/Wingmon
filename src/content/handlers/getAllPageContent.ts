@@ -34,6 +34,8 @@ const handleGetAllPageContent = async (
     const markdown = withPreparedBody((body) => {
       return convertPageContentToMarkdownPages({
         body,
+        locateViewportCenter: false,
+        pageNumber: null,
         title,
         url,
       });

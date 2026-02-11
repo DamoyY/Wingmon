@@ -1,6 +1,16 @@
 import {
+  type SettingsControllerEffect,
+  handleCancelSettings,
+  handleFollowModeChange,
+  handleLanguageChange,
+  handleOpenSettings,
+  handleSaveSettings,
+  handleSettingsFieldChange,
+  handleThemeSettingsChange,
+  subscribeSettingsControllerState,
+} from "../../features/settings/index.ts";
+import {
   applyTheme,
-  clearSettingsStatus,
   elements,
   fillSettingsForm,
   readSettingsFormValues,
@@ -10,98 +20,105 @@ import {
   showKeyView,
   updateSettingsFormValues,
 } from "../../ui/index.ts";
-import {
-  handleCancelSettings,
-  handleFollowModeChange,
-  handleLanguageChange,
-  handleOpenSettings,
-  handleSaveSettings,
-  handleSettingsFieldChange,
-  handleThemeSettingsChange,
-} from "../../features/settings/index.ts";
 import { setLocale, translateDOM } from "../../lib/utils/index.ts";
 
+let unsubscribeSettingsControllerState: (() => void) | null = null;
+let lastHandledEffectVersion = 0;
+let settingsEffectQueue: Promise<void> = Promise.resolve();
+
 const syncSaveButtonVisibility = (): void => {
-  const result = handleSettingsFieldChange(readSettingsFormValues());
-  setSaveButtonVisible(result.saveButtonVisible);
+  handleSettingsFieldChange(readSettingsFormValues());
 };
 
-const applyControllerMessage = (message: string): void => {
-  setSettingsStatus(message);
+const applySettingsEffect = async (
+  effect: SettingsControllerEffect,
+): Promise<void> => {
+  switch (effect.type) {
+    case "saveButtonVisibilityChanged":
+      setSaveButtonVisible(effect.visible);
+      return;
+    case "settingsStatusChanged":
+      setSettingsStatus(effect.message);
+      return;
+    case "settingsFormFilled":
+      fillSettingsForm(effect.settings);
+      return;
+    case "settingsFormPatched":
+      updateSettingsFormValues(effect.values);
+      return;
+    case "themeChanged":
+      applyTheme(
+        effect.theme.theme,
+        effect.theme.themeColor,
+        effect.theme.themeVariant,
+      );
+      return;
+    case "localeChanged":
+      await setLocale(effect.locale);
+      translateDOM();
+      return;
+    case "viewSwitchRequested":
+      if (effect.target === "chat") {
+        await showChatView({ animate: effect.animate });
+        return;
+      }
+      await showKeyView({
+        animate: effect.animate,
+        isFirstUse: effect.isFirstUse,
+      });
+      return;
+    default:
+      throw new Error("未知的设置控制器状态变更类型");
+  }
+};
+
+const enqueueSettingsEffect = (effect: SettingsControllerEffect): void => {
+  settingsEffectQueue = settingsEffectQueue
+    .then(async () => {
+      await applySettingsEffect(effect);
+    })
+    .catch((error: unknown) => {
+      console.error("处理设置控制器状态变更失败", error);
+    });
+};
+
+const ensureSettingsControllerStateSubscription = (): void => {
+  if (unsubscribeSettingsControllerState) {
+    return;
+  }
+  unsubscribeSettingsControllerState = subscribeSettingsControllerState(
+    (controllerState) => {
+      if (controllerState.effectVersion <= lastHandledEffectVersion) {
+        return;
+      }
+      lastHandledEffectVersion = controllerState.effectVersion;
+      const { lastEffect } = controllerState;
+      if (!lastEffect) {
+        return;
+      }
+      enqueueSettingsEffect(lastEffect);
+    },
+  );
 };
 
 const handleSaveSettingsClick = async (): Promise<void> => {
-  const result = await handleSaveSettings(readSettingsFormValues());
-  if (!result.success) {
-    applyControllerMessage(result.message);
-    return;
-  }
-  clearSettingsStatus();
-  const { settings } = result.payload;
-  updateSettingsFormValues({
-    themeColor: settings.themeColor,
-    themeVariant: settings.themeVariant,
-  });
-  applyTheme(settings.theme, settings.themeColor, settings.themeVariant);
-  syncSaveButtonVisibility();
-  await showChatView({ animate: true });
+  await handleSaveSettings(readSettingsFormValues());
 };
 
 const handleCancelSettingsClick = async (): Promise<void> => {
-  const result = await handleCancelSettings();
-  if (!result.success) {
-    applyControllerMessage(result.message);
-    return;
-  }
-  const { settings, locale, shouldShowChatView } = result.payload;
-  fillSettingsForm(settings);
-  clearSettingsStatus();
-  applyTheme(settings.theme, settings.themeColor, settings.themeVariant);
-  await setLocale(locale);
-  translateDOM();
-  syncSaveButtonVisibility();
-  if (shouldShowChatView) {
-    await showChatView({ animate: true });
-  }
+  await handleCancelSettings();
 };
 
 const handleOpenSettingsClick = async (): Promise<void> => {
-  const result = await handleOpenSettings();
-  if (!result.success) {
-    applyControllerMessage(result.message);
-    return;
-  }
-  await showKeyView({ animate: true, isFirstUse: false });
-  fillSettingsForm(result.payload.settings);
-  syncSaveButtonVisibility();
+  await handleOpenSettings();
 };
 
 const handleThemeSettingsChangeClick = async (): Promise<void> => {
-  clearSettingsStatus();
-  const result = await handleThemeSettingsChange(readSettingsFormValues());
-  if (!result.success) {
-    applyControllerMessage(result.message);
-    return;
-  }
-  const { settings } = result.payload;
-  applyTheme(settings.theme, settings.themeColor, settings.themeVariant);
-  updateSettingsFormValues({
-    themeColor: settings.themeColor,
-    themeVariant: settings.themeVariant,
-  });
-  syncSaveButtonVisibility();
+  await handleThemeSettingsChange(readSettingsFormValues());
 };
 
 const handleLanguageChangeClick = async (): Promise<void> => {
-  clearSettingsStatus();
-  const result = await handleLanguageChange(readSettingsFormValues());
-  if (!result.success) {
-    applyControllerMessage(result.message);
-    return;
-  }
-  await setLocale(result.payload.locale);
-  translateDOM();
-  syncSaveButtonVisibility();
+  await handleLanguageChange(readSettingsFormValues());
 };
 
 const handleFollowModeChangeClick = async (
@@ -114,6 +131,7 @@ const handleFollowModeChangeClick = async (
 };
 
 const bindSettingsEvents = () => {
+  ensureSettingsControllerStateSubscription();
   const {
     saveKey,
     cancelSettings,

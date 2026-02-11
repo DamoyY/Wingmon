@@ -1,8 +1,5 @@
-import { type JsonValue, t } from "../../../lib/utils/index.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
-import { ensureObjectArgs } from "../validation/index.js";
-
-type ListTabsArgs = Record<string, never>;
+import { t } from "../../../lib/utils/index.ts";
 
 type BrowserTab = Awaited<
   ReturnType<ToolExecutionContext["getAllTabs"]>
@@ -23,12 +20,8 @@ const parameters = {
         return `${t("statusTitle")}: "${title}"\nURL: "${url}"\n${t("statusTabId")}: "${String(id)}"`;
       })
       .join("\n\n"),
-  validateArgs = (args: JsonValue): ListTabsArgs => {
-    ensureObjectArgs(args);
-    return {};
-  },
   execute = async (
-    _args: ListTabsArgs,
+    _args: Record<string, never>,
     context: ToolExecutionContext,
   ): Promise<string> => {
     const tabs = await context.getAllTabs();
@@ -41,5 +34,4 @@ export default {
   key: "listTabs",
   name: "list_tabs",
   parameters,
-  validateArgs,
 };

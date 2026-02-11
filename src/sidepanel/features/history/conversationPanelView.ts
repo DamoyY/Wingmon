@@ -9,7 +9,7 @@ import {
   showHistoryView,
 } from "../../ui/index.ts";
 import type { HistoryActionHandler } from "./listView.ts";
-import { fetchSortedHistory } from "./data.ts";
+import { getHistory } from "../../core/services/index.ts";
 import { state } from "../../core/store/index.ts";
 import { t } from "../../lib/utils/index.ts";
 
@@ -22,7 +22,9 @@ const refreshHistoryList = async ({
     onSelect,
     onDeleteRequest,
   }: RefreshHistoryListOptions = {}): Promise<void> => {
-    const history = await fetchSortedHistory();
+    const history = [...(await getHistory())].sort(
+      (a, b) => b.updatedAt - a.updatedAt,
+    );
     renderHistoryListView({
       activeId: state.conversationId,
       deleteLabel: t("delete"),

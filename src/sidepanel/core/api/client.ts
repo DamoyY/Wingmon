@@ -1,12 +1,5 @@
 import type { ToolCall, ToolDefinition } from "../agent/definitions.ts";
-import getApiStrategy, {
-  type ApiRequestChunk,
-  type ApiToolAdapter,
-} from "./strategies.ts";
-import type { MessageRecord } from "../store/index.ts";
-import OpenAI from "openai";
-import Anthropic from "@anthropic-ai/sdk";
-import type { Settings } from "../services/index.ts";
+import { createAnthropicClient, createOpenAIClient } from "./clients.ts";
 import {
   createEmptyStreamError,
   isAbortError,
@@ -14,13 +7,16 @@ import {
   normalizeError,
   requestWithRetry,
 } from "./request-utils.ts";
-import { createAnthropicClient, createOpenAIClient } from "./clients.ts";
+import getApiStrategy, { type ApiRequestChunk } from "./strategies.ts";
+import Anthropic from "@anthropic-ai/sdk";
+import type { MessageRecord } from "../store/index.ts";
+import OpenAI from "openai";
+import type { Settings } from "../services/index.ts";
 
 export type RequestModelPayload = {
   settings: Settings;
   systemPrompt: string;
   tools: ToolDefinition[];
-  toolAdapter: ApiToolAdapter;
   messages: MessageRecord[];
   onDelta: (delta: string) => void;
   onStreamStart: () => void;
@@ -58,14 +54,13 @@ async function executeRequest<TStream, TResponse>(
     settings,
     systemPrompt,
     tools,
-    toolAdapter,
     messages,
     onDelta,
     onStreamStart,
     onChunk,
     signal,
   } = payload;
-  const strategy = getApiStrategy(settings.apiType, toolAdapter);
+  const strategy = getApiStrategy(settings.apiType);
 
   const streamRequestBody = strategy.buildStreamRequestBody(
     settings,

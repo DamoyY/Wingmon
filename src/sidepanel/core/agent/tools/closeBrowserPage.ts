@@ -1,23 +1,18 @@
 import type { CloseBrowserPageToolResult } from "../toolResultTypes.ts";
-import type { JsonValue } from "../../../lib/utils/index.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 import { formatCloseBrowserPageResult } from "../toolResultFormatters.ts";
 import { t } from "../../../lib/utils/index.ts";
-import { validateTabIdListArgs } from "../validation/toolArgsValidation.ts";
 
 type ClosePageArgs = {
   tabIds: number[];
 };
-
-const validateArgs = (args: JsonValue): ClosePageArgs =>
-  validateTabIdListArgs(args);
 
 const parameters = {
     additionalProperties: false,
     properties: {
       tabIds: {
         description: t("toolParamTabIdList"),
-        items: { type: "number" },
+        items: { minimum: 1, type: "integer" },
         minItems: 1,
         type: "array",
       },
@@ -49,5 +44,4 @@ export default {
   key: "closeBrowserPage",
   name: "close_page",
   parameters,
-  validateArgs,
 };

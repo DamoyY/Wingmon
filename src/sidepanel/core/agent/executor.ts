@@ -22,13 +22,13 @@ import {
   sendMessageToTab,
   waitForContentScript,
 } from "../services/index.ts";
+import { extractErrorMessage, isRecord } from "../../../shared/index.ts";
 import {
   fetchPageMarkdownData,
   shouldFollowMode,
   syncPageHash,
 } from "./pageReadHelpers.ts";
 import ToolInputError from "./errors.ts";
-import { extractErrorMessage } from "../../../shared/index.ts";
 
 type ToolOutput = {
   content: string;
@@ -76,8 +76,6 @@ export const defaultToolExecutionContext: ToolExecutionContext = {
 
 const resolveToolArguments = (rawArgs: string | JsonValue): JsonValue =>
     typeof rawArgs === "string" ? parseToolArguments(rawArgs || "{}") : rawArgs,
-  isRecord = (value: unknown): value is Record<string, unknown> =>
-    typeof value === "object" && value !== null && !Array.isArray(value),
   serializeToolOutput = (output: unknown, name: string): string => {
     if (
       typeof output === "number" ||

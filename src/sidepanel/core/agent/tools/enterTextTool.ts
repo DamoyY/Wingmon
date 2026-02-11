@@ -1,8 +1,7 @@
-import { type JsonValue, isInternalUrl, t } from "../../../lib/utils/index.ts";
+import { isInternalUrl, t } from "../../../lib/utils/index.ts";
 import type { EnterTextRequest } from "../../../../shared/index.ts";
 import type { EnterTextToolResult } from "../toolResultTypes.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
-import { ensureObjectArgs } from "../validation/toolArgsValidation.ts";
 import { formatEnterTextResult } from "../toolResultFormatters.ts";
 import { runTabAction } from "./tabActionRunner.ts";
 
@@ -10,41 +9,21 @@ type BrowserTab = Awaited<
   ReturnType<ToolExecutionContext["getAllTabs"]>
 >[number];
 
-type EnterTextArgs = { id: string; content: string; invalid?: boolean };
+type EnterTextArgs = { id: string; content: string };
 
 const parameters = {
     additionalProperties: false,
     properties: {
       content: { description: t("toolParamContent"), type: "string" },
-      id: { description: t("toolParamInputId"), type: "string" },
+      id: {
+        description: t("toolParamInputId"),
+        minLength: 1,
+        pattern: "^[0-9a-z]+$",
+        type: "string",
+      },
     },
     required: ["id", "content"],
     type: "object",
-  },
-  buildInvalidArgs = (message: string): EnterTextArgs => {
-    console.error(message);
-    return { content: "", id: "", invalid: true };
-  },
-  validateArgs = (args: JsonValue): EnterTextArgs => {
-    let record: ReturnType<typeof ensureObjectArgs>;
-    try {
-      record = ensureObjectArgs(args);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "工具参数必须是对象";
-      return buildInvalidArgs(message);
-    }
-    const id = typeof record.id === "string" ? record.id.trim() : "";
-    if (!id) {
-      return buildInvalidArgs("id 必须是非空字符串");
-    }
-    if (!/^[0-9a-z]+$/u.test(id)) {
-      return buildInvalidArgs("id 仅支持字母数字");
-    }
-    if (typeof record.content !== "string") {
-      return buildInvalidArgs("content 必须是字符串");
-    }
-    return { content: record.content, id };
   },
   resolveTabId = (tab: BrowserTab): number | null => {
     if (
@@ -59,12 +38,9 @@ const parameters = {
   isTabConnectable = (tab: BrowserTab): boolean =>
     typeof tab.url !== "string" || !isInternalUrl(tab.url),
   execute = async (
-    { id, content, invalid }: EnterTextArgs,
+    { id, content }: EnterTextArgs,
     context: ToolExecutionContext,
   ): Promise<EnterTextToolResult> => {
-    if (invalid) {
-      return { ok: false };
-    }
     let tabs: BrowserTab[];
     try {
       tabs = await context.getAllTabs();
@@ -114,5 +90,4 @@ export default {
   key: "enterText",
   name: "enter_text",
   parameters,
-  validateArgs,
 };

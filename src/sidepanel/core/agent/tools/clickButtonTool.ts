@@ -2,15 +2,13 @@ import type {
   ClickButtonRequest,
   ClickButtonResponse,
 } from "../../../../shared/index.ts";
-import { type JsonValue, isInternalUrl, t } from "../../../lib/utils/index.ts";
 import {
   buildClickButtonMessageContext,
   formatClickButtonResult,
 } from "../toolResultFormatters.ts";
+import { isInternalUrl, t } from "../../../lib/utils/index.ts";
 import type { ClickButtonToolResult } from "../toolResultTypes.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
-import ToolInputError from "../errors.ts";
-import { ensureObjectArgs } from "../validation/toolArgsValidation.ts";
 import { runTabAction } from "./tabActionRunner.ts";
 
 type BrowserTab = Awaited<
@@ -57,20 +55,16 @@ const isTabConnectable = (tab: BrowserTab): boolean =>
 
 const parameters = {
     additionalProperties: false,
-    properties: { id: { description: t("toolParamId"), type: "string" } },
+    properties: {
+      id: {
+        description: t("toolParamId"),
+        minLength: 1,
+        pattern: "^[0-9a-z]+$",
+        type: "string",
+      },
+    },
     required: ["id"],
     type: "object",
-  },
-  validateArgs = (args: JsonValue): ClickButtonArgs => {
-    const record = ensureObjectArgs(args);
-    const id = typeof record.id === "string" ? record.id.trim() : "";
-    if (!id) {
-      throw new ToolInputError("id 必须是非空字符串");
-    }
-    if (!/^[0-9a-z]+$/u.test(id)) {
-      throw new ToolInputError("id 仅支持字母数字");
-    }
-    return { id };
   },
   execute = async (
     { id }: ClickButtonArgs,
@@ -172,5 +166,4 @@ export default {
   name: "click_button",
   pageReadDedupeAction: "trimToolResponse",
   parameters,
-  validateArgs,
 };

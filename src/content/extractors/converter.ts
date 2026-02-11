@@ -1,40 +1,42 @@
 import {
-  type PageContentData,
-  prepareMarkdownPageContent,
-} from "./pageMarkdownPreparation.ts";
+  type PageContentRequest,
+  normalizePageContentRequest,
+} from "./pageContentContracts.ts";
 import type { ChunkAnchorWeight } from "../../shared/index.ts";
+import { prepareMarkdownPageContent } from "./pageMarkdownPreparation.ts";
 import { resolveChunkAnchorWeightsOrThrow } from "./chunkAnchorWeights.ts";
 import { resolvePageNumberInput } from "../common/index.ts";
 
 type MarkdownPageContent = {
-  title: string;
-  url: string;
-  content: string;
-  totalPages: number;
-  pageNumber: number;
-  viewportPage: number;
   chunkAnchorWeights: ChunkAnchorWeight[];
+  content: string;
+  pageNumber: number;
+  title: string;
+  totalPages: number;
   totalTokens: number;
+  url: string;
+  viewportPage: number;
 };
 
 export type MarkdownPageChunk = {
-  pageNumber: number;
   content: string;
+  pageNumber: number;
 };
 
 export type MarkdownPageContentCollection = {
-  title: string;
-  url: string;
-  totalPages: number;
-  viewportPage: number;
   pages: MarkdownPageChunk[];
+  title: string;
+  totalPages: number;
   totalTokens: number;
+  url: string;
+  viewportPage: number;
 };
 
 export const convertPageContentToMarkdownPages = (
-  pageData: PageContentData | null = null,
+  pageData: PageContentRequest,
 ): MarkdownPageContentCollection => {
-  const prepared = prepareMarkdownPageContent(pageData);
+  const normalizedPageData = normalizePageContentRequest(pageData);
+  const prepared = prepareMarkdownPageContent(normalizedPageData);
   return {
     pages: prepared.chunked.chunks.map((content, index) => ({
       content,
@@ -49,10 +51,11 @@ export const convertPageContentToMarkdownPages = (
 };
 
 const convertPageContentToMarkdown = (
-  pageData: PageContentData | null = null,
+  pageData: PageContentRequest,
 ): MarkdownPageContent => {
-  const prepared = prepareMarkdownPageContent(pageData);
-  const pageNumber = resolvePageNumberInput(pageData?.pageNumber ?? null);
+  const normalizedPageData = normalizePageContentRequest(pageData);
+  const prepared = prepareMarkdownPageContent(normalizedPageData);
+  const pageNumber = resolvePageNumberInput(normalizedPageData.pageNumber);
   if (pageNumber > prepared.chunked.totalPages) {
     throw new Error(
       `pageNumber 超出范围：${String(pageNumber)}，总页数：${String(prepared.chunked.totalPages)}`,

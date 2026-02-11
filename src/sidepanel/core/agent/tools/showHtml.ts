@@ -1,7 +1,5 @@
-import { type JsonValue, t } from "../../../lib/utils/index.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
-import ToolInputError from "../errors.ts";
-import { ensureObjectArgs } from "../validation/index.js";
+import { t } from "../../../lib/utils/index.ts";
 
 type ShowHtmlArgs = {
   code: string;
@@ -9,16 +7,9 @@ type ShowHtmlArgs = {
 
 const parameters = {
     additionalProperties: false,
-    properties: { code: { type: "string" } },
+    properties: { code: { minLength: 1, pattern: "\\S", type: "string" } },
     required: ["code"],
     type: "object",
-  },
-  validateArgs = (args: JsonValue): ShowHtmlArgs => {
-    const record = ensureObjectArgs(args);
-    if (typeof record.code !== "string" || !record.code.trim()) {
-      throw new ToolInputError("code 必须是非空字符串");
-    }
-    return { code: record.code };
   },
   execute = async (
     { code }: ShowHtmlArgs,
@@ -39,5 +30,4 @@ export default {
   key: "showHtml",
   name: "show_html",
   parameters,
-  validateArgs,
 };

@@ -10,6 +10,11 @@ import {
   collectPageReadDedupeSets,
   getToolOutputContent,
 } from "./toolMessageContext.ts";
+import {
+  isJsonObject,
+  isRecord,
+  resolveString,
+} from "../../../shared/index.ts";
 import type { MessageRecord } from "../store/index.ts";
 
 type JsonObject = Record<string, JsonValue>;
@@ -73,20 +78,42 @@ type ResponsesInputItem =
       type: "function_call_output";
     };
 
+export type AnthropicMessageParam = {
+  content:
+    | string
+    | Array<
+        | { type: "text"; text: string }
+        | {
+            id: string;
+            input: JsonObject;
+            name: string;
+            type: "tool_use";
+          }
+        | { type: "tool_result"; tool_use_id: string; content: string }
+      >;
+  role: "user" | "assistant";
+};
+
 type ContextPlanItem = {
   includeToolCalls: boolean;
   index: number;
 };
 
-const isRecord = (
-    value: MessageFieldValue,
-  ): value is { [key: string]: MessageFieldValue } =>
-    typeof value === "object" && value !== null && !Array.isArray(value),
-  isJsonObject = (value: JsonValue): value is JsonObject =>
-    typeof value === "object" && value !== null && !Array.isArray(value),
-  resolveString = (value: MessageFieldValue): string =>
-    typeof value === "string" ? value : "",
-  isToolCall = (value: ToolCall | null): value is ToolCall => value !== null,
+type MessageIntermediate =
+  | {
+      content: string;
+      kind: "conversation";
+      role: string;
+      toolCallEntries: ToolCallEntry[];
+    }
+  | {
+      callId: string;
+      content: string;
+      kind: "toolResult";
+    };
+
+const isToolCall = (value: ToolCall | null): value is ToolCall =>
+    value !== null,
   resolveToolCall = (call: RawToolCall): ToolCall | null => {
     const toolCall: ToolCall = {},
       argumentsValue = call.arguments,
@@ -264,7 +291,223 @@ const isRecord = (
         return message;
       }
       return stripToolCalls(message);
+    }),
+  buildMessageIntermediates = (
+    messages: MessageRecord[],
+  ): MessageIntermediate[] => {
+    const contextMessages = buildContextMessages(normalizeMessages(messages)),
+      { removeToolCallIds, trimToolResponseIds } =
+        collectPageReadDedupeSets(contextMessages),
+      intermediates: MessageIntermediate[] = [];
+
+    contextMessages.forEach((message) => {
+      if (message.role === "tool") {
+        const callId = message.tool_call_id;
+        if (!callId) {
+          throw new Error("工具响应缺少 tool_call_id");
+        }
+        if (removeToolCallIds.has(callId)) {
+          return;
+        }
+        intermediates.push({
+          callId,
+          content: getToolOutputContent(message, trimToolResponseIds),
+          kind: "toolResult",
+        });
+        return;
+      }
+
+      const role = message.role;
+      if (typeof role !== "string" || role.length === 0) {
+        return;
+      }
+
+      intermediates.push({
+        content: typeof message.content === "string" ? message.content : "",
+        kind: "conversation",
+        role,
+        toolCallEntries: collectToolCallEntries(
+          message.tool_calls,
+          removeToolCallIds,
+        ),
+      });
     });
+
+    return intermediates;
+  },
+  mapMessageIntermediates = <TOutput>(
+    messages: MessageIntermediate[],
+    mapper: (message: MessageIntermediate) => TOutput[],
+  ): TOutput[] => {
+    const output: TOutput[] = [];
+    messages.forEach((message) => {
+      output.push(...mapper(message));
+    });
+    return output;
+  },
+  buildMappedOutput = <TOutput>(
+    messages: MessageRecord[],
+    mapper: (message: MessageIntermediate) => TOutput[],
+  ): TOutput[] =>
+    mapMessageIntermediates(buildMessageIntermediates(messages), mapper),
+  mapMessageIntermediateToChat = (
+    message: MessageIntermediate,
+  ): ChatRequestMessage[] => {
+    if (message.kind === "toolResult") {
+      return [
+        {
+          content: message.content,
+          role: "tool",
+          tool_call_id: message.callId,
+        },
+      ];
+    }
+
+    const entry: ChatRequestMessage = { role: message.role };
+    if (message.content.length > 0) {
+      entry.content = message.content;
+    }
+    if (message.toolCallEntries.length > 0) {
+      entry.tool_calls = message.toolCallEntries.map(toChatToolCallForRequest);
+    }
+    if (entry.content || (entry.tool_calls && entry.tool_calls.length > 0)) {
+      return [entry];
+    }
+    return [];
+  },
+  mapMessageIntermediateToResponses = (
+    message: MessageIntermediate,
+  ): ResponsesInputItem[] => {
+    if (message.kind === "toolResult") {
+      return [
+        {
+          call_id: message.callId,
+          output: message.content,
+          type: "function_call_output",
+        },
+      ];
+    }
+    if (message.role !== "user" && message.role !== "assistant") {
+      return [];
+    }
+    const output: ResponsesInputItem[] = [];
+    if (message.content.length > 0) {
+      output.push({
+        content: message.content,
+        role: message.role,
+      });
+    }
+    message.toolCallEntries.forEach((entry) => {
+      output.push({
+        arguments: entry.arguments,
+        call_id: entry.callId,
+        name: entry.name,
+        type: "function_call",
+      });
+    });
+    return output;
+  },
+  resolveAnthropicToolInput = (entry: ToolCallEntry): JsonObject => {
+    if (typeof entry.arguments === "string") {
+      try {
+        const parsed = parseJson(entry.arguments);
+        if (isJsonObject(parsed)) {
+          return { ...parsed };
+        }
+        console.error("工具参数必须是对象或对象字符串", {
+          arguments: entry.arguments,
+          name: entry.name,
+        });
+        return {};
+      } catch (error) {
+        console.error("Failed to parse tool arguments", error);
+        return {};
+      }
+    }
+    if (isJsonObject(entry.arguments)) {
+      return { ...entry.arguments };
+    }
+    console.error("工具参数必须是对象或对象字符串", {
+      arguments: entry.arguments,
+      name: entry.name,
+    });
+    return {};
+  },
+  mapMessageIntermediateToAnthropic = (
+    message: MessageIntermediate,
+  ): AnthropicMessageParam[] => {
+    if (message.kind === "toolResult") {
+      return [
+        {
+          content: [
+            {
+              content: message.content,
+              tool_use_id: message.callId,
+              type: "tool_result",
+            },
+          ],
+          role: "user",
+        },
+      ];
+    }
+
+    if (message.role !== "user" && message.role !== "assistant") {
+      return [];
+    }
+
+    const content: Exclude<AnthropicMessageParam["content"], string> = [];
+    if (message.content.trim()) {
+      content.push({ type: "text", text: message.content });
+    }
+
+    message.toolCallEntries.forEach((entry) => {
+      content.push({
+        id: entry.callId,
+        input: resolveAnthropicToolInput(entry),
+        name: entry.name,
+        type: "tool_use",
+      });
+    });
+
+    if (content.length === 0) {
+      return [];
+    }
+
+    if (content.length === 1 && content[0].type === "text") {
+      return [{ content: content[0].text, role: message.role }];
+    }
+
+    return [{ content, role: message.role }];
+  },
+  mergeAnthropicMessages = (
+    messages: AnthropicMessageParam[],
+  ): AnthropicMessageParam[] => {
+    const merged: AnthropicMessageParam[] = [];
+    messages.forEach((message) => {
+      if (merged.length > 0) {
+        const last = merged[merged.length - 1];
+        if (last.role === message.role) {
+          if (Array.isArray(last.content) && Array.isArray(message.content)) {
+            last.content.push(...message.content);
+          } else if (Array.isArray(last.content)) {
+            if (typeof message.content === "string") {
+              last.content.push({ type: "text", text: message.content });
+            }
+          } else if (Array.isArray(message.content)) {
+            last.content = [
+              { type: "text", text: last.content },
+              ...message.content,
+            ];
+          } else {
+            last.content = last.content + "\n\n" + message.content;
+          }
+          return;
+        }
+      }
+      merged.push(message);
+    });
+    return merged;
+  };
 
 export const buildChatMessages = (
   systemPrompt: string,
@@ -274,216 +517,18 @@ export const buildChatMessages = (
   if (systemPrompt) {
     output.push({ content: systemPrompt, role: "system" });
   }
-  const contextMessages = buildContextMessages(normalizeMessages(messages)),
-    { removeToolCallIds, trimToolResponseIds } =
-      collectPageReadDedupeSets(contextMessages);
-  contextMessages.forEach((message) => {
-    if (message.role === "tool") {
-      const callId = message.tool_call_id;
-      if (!callId) {
-        throw new Error("工具响应缺少 tool_call_id");
-      }
-      if (removeToolCallIds.has(callId)) {
-        return;
-      }
-      output.push({
-        content: getToolOutputContent(message, trimToolResponseIds),
-        role: "tool",
-        tool_call_id: callId,
-      });
-      return;
-    }
-    const role = message.role;
-    if (typeof role !== "string" || !role) {
-      return;
-    }
-    const toolCallEntries = collectToolCallEntries(
-      message.tool_calls,
-      removeToolCallIds,
-    );
-    const entry: ChatRequestMessage = { role };
-    if (typeof message.content === "string" && message.content.length > 0) {
-      entry.content = message.content;
-    }
-    if (toolCallEntries.length > 0) {
-      entry.tool_calls = toolCallEntries.map(toChatToolCallForRequest);
-    }
-    if (entry.content || (entry.tool_calls && entry.tool_calls.length > 0)) {
-      output.push(entry);
-    }
-  });
+  output.push(...buildMappedOutput(messages, mapMessageIntermediateToChat));
   return output;
 };
 
 export const buildResponsesInput = (
   messages: MessageRecord[],
-): ResponsesInputItem[] => {
-  const output: ResponsesInputItem[] = [],
-    contextMessages = buildContextMessages(normalizeMessages(messages)),
-    { removeToolCallIds, trimToolResponseIds } =
-      collectPageReadDedupeSets(contextMessages);
-  contextMessages.forEach((message) => {
-    if (message.role === "tool") {
-      const callId = message.tool_call_id;
-      if (!callId) {
-        throw new Error("工具响应缺少 tool_call_id");
-      }
-      if (removeToolCallIds.has(callId)) {
-        return;
-      }
-      output.push({
-        call_id: callId,
-        output: getToolOutputContent(message, trimToolResponseIds),
-        type: "function_call_output",
-      });
-      return;
-    }
-    if (message.role !== "user" && message.role !== "assistant") {
-      return;
-    }
-    if (typeof message.content === "string" && message.content.length > 0) {
-      output.push({
-        content: message.content,
-        role: message.role,
-      });
-    }
-    const toolCallEntries = collectToolCallEntries(
-      message.tool_calls,
-      removeToolCallIds,
-    );
-    toolCallEntries.forEach((entry) => {
-      output.push({
-        arguments: entry.arguments,
-        call_id: entry.callId,
-        name: entry.name,
-        type: "function_call",
-      });
-    });
-  });
-  return output;
-};
-
-export type AnthropicMessageParam = {
-  content:
-    | string
-    | Array<
-        | { type: "text"; text: string }
-        | {
-            id: string;
-            input: JsonObject;
-            name: string;
-            type: "tool_use";
-          }
-        | { type: "tool_result"; tool_use_id: string; content: string }
-      >;
-  role: "user" | "assistant";
-};
+): ResponsesInputItem[] =>
+  buildMappedOutput(messages, mapMessageIntermediateToResponses);
 
 export const buildMessagesInput = (
   messages: MessageRecord[],
-): AnthropicMessageParam[] => {
-  const output: AnthropicMessageParam[] = [],
-    contextMessages = buildContextMessages(normalizeMessages(messages)),
-    { removeToolCallIds, trimToolResponseIds } =
-      collectPageReadDedupeSets(contextMessages);
-
-  contextMessages.forEach((message) => {
-    if (message.role === "tool") {
-      const callId = message.tool_call_id;
-      if (!callId) {
-        throw new Error("工具响应缺少 tool_call_id");
-      }
-      if (removeToolCallIds.has(callId)) return;
-
-      output.push({
-        content: [
-          {
-            content: getToolOutputContent(message, trimToolResponseIds),
-            tool_use_id: callId,
-            type: "tool_result",
-          },
-        ],
-        role: "user",
-      });
-      return;
-    }
-
-    if (message.role !== "user" && message.role !== "assistant") return;
-
-    const toolCallEntries = collectToolCallEntries(
-      message.tool_calls,
-      removeToolCallIds,
-    );
-
-    const content: Exclude<AnthropicMessageParam["content"], string> = [];
-    if (typeof message.content === "string" && message.content.trim()) {
-      content.push({ type: "text", text: message.content });
-    }
-
-    toolCallEntries.forEach((entry) => {
-      let input: JsonObject = {};
-      if (typeof entry.arguments === "string") {
-        try {
-          const parsed = parseJson(entry.arguments);
-          if (isJsonObject(parsed)) {
-            input = { ...parsed };
-          } else {
-            console.error("工具参数必须是对象或对象字符串", {
-              arguments: entry.arguments,
-              name: entry.name,
-            });
-          }
-        } catch (e) {
-          console.error("Failed to parse tool arguments", e);
-        }
-      } else if (isJsonObject(entry.arguments)) {
-        input = { ...entry.arguments };
-      } else {
-        console.error("工具参数必须是对象或对象字符串", {
-          arguments: entry.arguments,
-          name: entry.name,
-        });
-      }
-      content.push({
-        id: entry.callId,
-        input,
-        name: entry.name,
-        type: "tool_use",
-      });
-    });
-
-    if (content.length > 0) {
-      output.push({
-        content:
-          content.length === 1 && content[0].type === "text"
-            ? content[0].text
-            : content,
-        role: message.role,
-      });
-    }
-  });
-
-  const merged: AnthropicMessageParam[] = [];
-  output.forEach((msg) => {
-    if (merged.length > 0) {
-      const last = merged[merged.length - 1];
-      if (last.role === msg.role) {
-        if (Array.isArray(last.content) && Array.isArray(msg.content)) {
-          last.content.push(...msg.content);
-        } else if (Array.isArray(last.content)) {
-          if (typeof msg.content === "string") {
-            last.content.push({ type: "text", text: msg.content });
-          }
-        } else if (Array.isArray(msg.content)) {
-          last.content = [{ type: "text", text: last.content }, ...msg.content];
-        } else {
-          last.content = last.content + "\n\n" + msg.content;
-        }
-        return;
-      }
-    }
-    merged.push(msg);
-  });
-
-  return merged;
-};
+): AnthropicMessageParam[] =>
+  mergeAnthropicMessages(
+    buildMappedOutput(messages, mapMessageIntermediateToAnthropic),
+  );

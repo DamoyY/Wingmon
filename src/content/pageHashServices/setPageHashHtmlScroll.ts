@@ -62,6 +62,7 @@ export const resolveHtmlTotalPages = (): number => {
   assignLlmIds(body);
   const markdown = convertPageContentToMarkdown({
     body,
+    locateViewportCenter: false,
     pageNumber: 1,
     title: document.title || "",
     url: window.location.href || "",

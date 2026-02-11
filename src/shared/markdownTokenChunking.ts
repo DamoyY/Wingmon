@@ -199,7 +199,10 @@ const splitMarkdownByTokens = (
 
 export {
   MARKDOWN_CHUNK_TOKENS,
+  clampBoundary,
   createPrefixTokenCounter,
+  findControlMarkerStart,
+  moveBoundaryAfterControlMarker,
   splitMarkdownByTokens,
 };
 export type {

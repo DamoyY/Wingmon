@@ -1,7 +1,5 @@
-import { type JsonValue, t } from "../../../lib/utils/index.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
-import ToolInputError from "../errors.ts";
-import { ensureObjectArgs } from "../validation/index.js";
+import { t } from "../../../lib/utils/index.ts";
 
 type RunConsoleCommandArgs = {
   command: string;
@@ -9,22 +7,17 @@ type RunConsoleCommandArgs = {
 
 const parameters = {
     additionalProperties: false,
-    properties: { command: { type: "string" } },
+    properties: { command: { minLength: 1, pattern: "\\S", type: "string" } },
     required: ["command"],
     type: "object",
-  },
-  validateArgs = (args: JsonValue): RunConsoleCommandArgs => {
-    const record = ensureObjectArgs(args);
-    if (typeof record.command !== "string" || !record.command.trim()) {
-      throw new ToolInputError("command 必须是非空字符串");
-    }
-    return { command: record.command.trim() };
   },
   execute = async (
     { command }: RunConsoleCommandArgs,
     context: ToolExecutionContext,
   ): Promise<string> => {
-    const result = await context.sendMessageToSandbox({ command });
+    const result = await context.sendMessageToSandbox({
+      command: command.trim(),
+    });
     if (!result.ok) {
       throw new Error(result.error);
     }
@@ -37,5 +30,4 @@ export default {
   key: "runConsoleCommand",
   name: "run_console",
   parameters,
-  validateArgs,
 };

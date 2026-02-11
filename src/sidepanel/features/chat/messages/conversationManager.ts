@@ -1,42 +1,38 @@
 import {
-  type Settings,
-  getSettings,
-  saveConversation,
-} from "../../../core/services/index.ts";
-import {
-  addMessage,
-  removeMessage,
-  setStateValue,
-  state,
-  touchUpdatedAt,
-} from "../../../core/store/index.ts";
+  AGENT_STATUS,
+  type AgentStatus,
+} from "../../../core/agent/toolResultFormatters.ts";
 import {
   applyNonStreamedResponse,
   applyStreamedResponse,
 } from "./responseHandlers.ts";
+import {
+  clearPendingAssistant,
+  createPendingAssistant,
+} from "./pendingAssistantLifecycle.ts";
 import createResponseStream, {
   type ResponseStreamChunk,
 } from "./requestCycle.ts";
+import type { Settings } from "../../../core/services/index.ts";
+import { addMessage } from "../../../core/store/index.ts";
 import appendSharedPageContext from "./pageContext.ts";
-import { createRandomId } from "../../../lib/utils/index.ts";
-import { ensureSettingsReady } from "../../settings/model.ts";
-
-type ConversationManagerEvent =
-  | { type: "sending-change"; sending: boolean }
-  | { type: "status-change"; status: string }
-  | { type: "settings-required"; settings: Settings }
-  | { type: "message-accepted"; content: string };
-
-type ConversationManagerListener = (event: ConversationManagerEvent) => void;
+import { persistConversationState } from "./conversationPersistence.ts";
 
 type ErrorDescriptor = {
-  name: string;
   message: string;
+  name: string;
 };
+
+type MessageAcceptedReporter = (content: string) => void;
+type StatusReporter = (status: AgentStatus) => void;
 
 type SendMessagePayload = {
   content: string;
   includePage?: boolean;
+  onMessageAccepted?: MessageAcceptedReporter;
+  onStatusChange?: StatusReporter;
+  settings: Settings;
+  signal: AbortSignal;
 };
 
 const ensureNotAborted = (signal: AbortSignal): void => {
@@ -45,27 +41,6 @@ const ensureNotAborted = (signal: AbortSignal): void => {
       error.name = "AbortError";
       throw error;
     }
-  },
-  resolvePendingAssistantIndex = (
-    assistantIndex: number | null,
-  ): number | null => {
-    if (
-      assistantIndex !== null &&
-      Number.isInteger(assistantIndex) &&
-      assistantIndex >= 0
-    ) {
-      const message = state.messages.at(assistantIndex);
-      if (message?.role === "assistant" && message.pending === true) {
-        return assistantIndex;
-      }
-    }
-    for (let i = state.messages.length - 1; i >= 0; i -= 1) {
-      const message = state.messages.at(i);
-      if (message?.role === "assistant" && message.pending === true) {
-        return i;
-      }
-    }
-    return null;
   },
   resolveErrorDescriptor = (error: unknown): ErrorDescriptor => {
     if (error instanceof Error) {
@@ -94,149 +69,76 @@ const ensureNotAborted = (signal: AbortSignal): void => {
     }
     return false;
   },
-  clearPendingAssistant = (assistantIndex: number | null): void => {
-    const resolvedAssistantIndex = resolvePendingAssistantIndex(assistantIndex);
-    if (resolvedAssistantIndex === null) {
-      return;
+  saveConversationStateSafely = async (): Promise<void> => {
+    try {
+      await persistConversationState({ deleteWhenEmpty: false });
+    } catch (error) {
+      console.error("保存会话失败", error);
     }
-    const message = state.messages.at(resolvedAssistantIndex);
-    if (!message || message.role !== "assistant" || message.pending !== true) {
-      return;
-    }
-    const hasContent =
-      typeof message.content === "string" && Boolean(message.content.trim());
-    if (hasContent) {
-      return;
-    }
-    const indices = [resolvedAssistantIndex];
-    for (
-      let i = resolvedAssistantIndex + 1;
-      i < state.messages.length;
-      i += 1
-    ) {
-      const nextMessage = state.messages.at(i);
-      if (!nextMessage) {
-        break;
-      }
-      if (!nextMessage.hidden) {
-        break;
-      }
-      indices.push(i);
-    }
-    indices
-      .sort((a, b) => b - a)
-      .forEach((index) => {
-        removeMessage(index);
-      });
   },
-  saveCurrentConversation = async (): Promise<void> => {
-    if (!state.messages.length) {
-      return;
+  saveConversationState = async (): Promise<void> => {
+    await persistConversationState({ deleteWhenEmpty: false });
+  },
+  noopStatusReporter: StatusReporter = (): void => {},
+  noopMessageAcceptedReporter: MessageAcceptedReporter = (): void => {},
+  reportStatusSafely = (
+    reportStatus: StatusReporter,
+    status: AgentStatus,
+  ): void => {
+    try {
+      reportStatus(status);
+    } catch (error) {
+      console.error("状态回调执行失败", error);
     }
-    touchUpdatedAt();
-    await saveConversation(
-      state.conversationId,
-      state.messages,
-      state.updatedAt,
-    );
+  },
+  reportMessageAcceptedSafely = (
+    reportAccepted: MessageAcceptedReporter,
+    content: string,
+  ): void => {
+    try {
+      reportAccepted(content);
+    } catch (error) {
+      console.error("消息接收回调执行失败", error);
+    }
   };
 
 export class ConversationManager {
-  #activeAbortController: AbortController | null = null;
-
-  #ignoreStreamStatus = false;
-
-  #listeners = new Set<ConversationManagerListener>();
-
-  subscribe(listener: ConversationManagerListener): () => void {
-    if (typeof listener !== "function") {
-      throw new Error("会话监听器无效");
-    }
-    this.#listeners.add(listener);
-    return () => {
-      this.#listeners.delete(listener);
-    };
-  }
-
-  #emit(event: ConversationManagerEvent): void {
-    this.#listeners.forEach((listener) => {
-      try {
-        listener(event);
-      } catch (error) {
-        console.error("会话监听回调执行失败", error);
-      }
-    });
-  }
-
-  #emitStatus(status: string): void {
-    this.#emit({ status, type: "status-change" });
-  }
-
-  #emitStatusFromStream(status: string): void {
-    if (this.#ignoreStreamStatus) {
-      return;
-    }
-    this.#emitStatus(status);
-  }
-
-  stopSending(): Promise<void> {
-    this.#emit({ sending: false, type: "sending-change" });
-    const abortController = this.#activeAbortController;
-    if (!abortController) {
-      return Promise.resolve();
-    }
-    this.#ignoreStreamStatus = true;
-    abortController.abort();
-    this.#emitStatus("");
-    return Promise.resolve();
-  }
-
   async sendMessage({
     content,
     includePage = false,
+    settings,
+    signal,
+    onStatusChange = noopStatusReporter,
+    onMessageAccepted = noopMessageAcceptedReporter,
   }: SendMessagePayload): Promise<void> {
-    if (state.sending) {
-      return;
+    if (typeof onStatusChange !== "function") {
+      throw new Error("状态回调无效");
+    }
+    if (typeof onMessageAccepted !== "function") {
+      throw new Error("消息接收回调无效");
     }
     const normalizedContent = content.trim();
     if (!normalizedContent) {
       return;
     }
-    const settings = await getSettings();
-    if (!ensureSettingsReady(settings)) {
-      this.#emit({ settings, type: "settings-required" });
-      return;
-    }
     addMessage({ content: normalizedContent, role: "user" });
-    this.#emit({ content: normalizedContent, type: "message-accepted" });
-    setStateValue("sending", true);
-    const abortController = new AbortController();
-    this.#activeAbortController = abortController;
-    this.#ignoreStreamStatus = false;
-    this.#emit({ sending: true, type: "sending-change" });
-    this.#emitStatus("");
+    reportMessageAcceptedSafely(onMessageAccepted, normalizedContent);
     let pendingAssistantIndex: number | null = null;
     try {
-      await saveCurrentConversation();
-      ensureNotAborted(abortController.signal);
+      await saveConversationState();
+      ensureNotAborted(signal);
       if (includePage) {
-        await appendSharedPageContext({ signal: abortController.signal });
+        await appendSharedPageContext({ signal });
       }
-      ensureNotAborted(abortController.signal);
-      addMessage({
-        content: "",
-        groupId: createRandomId("assistant"),
-        pending: true,
-        role: "assistant",
-      });
-      pendingAssistantIndex = state.messages.length - 1;
+      ensureNotAborted(signal);
+      pendingAssistantIndex = createPendingAssistant();
       const responseStream = createResponseStream({
         assistantIndex: pendingAssistantIndex,
-        onStatus: (status: string) => {
-          this.#emitStatusFromStream(status);
+        onStatus: (status: AgentStatus) => {
+          reportStatusSafely(onStatusChange, status);
         },
         settings,
-        signal: abortController.signal,
+        signal,
       });
       let response = await responseStream.next();
       while (!response.done) {
@@ -258,35 +160,20 @@ export class ConversationManager {
         }
         response = await responseStream.next();
       }
-      this.#emitStatus("");
-      await saveCurrentConversation();
+      reportStatusSafely(onStatusChange, AGENT_STATUS.idle);
+      await saveConversationState();
     } catch (error) {
       const resolvedError = resolveErrorDescriptor(error);
       if (isAbortError(resolvedError)) {
         clearPendingAssistant(pendingAssistantIndex);
-        this.#emitStatus("");
-        try {
-          await saveCurrentConversation();
-        } catch (saveError) {
-          console.error("保存会话失败", saveError);
-        }
+        reportStatusSafely(onStatusChange, AGENT_STATUS.idle);
+        await saveConversationStateSafely();
         return;
       }
       console.error(resolvedError.message || "请求失败");
       clearPendingAssistant(pendingAssistantIndex);
-      this.#emitStatus("");
-      try {
-        await saveCurrentConversation();
-      } catch (saveError) {
-        console.error("保存会话失败", saveError);
-      }
-    } finally {
-      setStateValue("sending", false);
-      if (this.#activeAbortController === abortController) {
-        this.#activeAbortController = null;
-      }
-      this.#ignoreStreamStatus = false;
-      this.#emit({ sending: false, type: "sending-change" });
+      reportStatusSafely(onStatusChange, AGENT_STATUS.idle);
+      await saveConversationStateSafely();
     }
   }
 }

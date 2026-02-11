@@ -7,8 +7,17 @@ import type {
   OpenBrowserPageToolResult,
   PageReadToolResult,
 } from "./toolResultTypes.ts";
-import type { ToolMessageContext, ToolPageReadEvent } from "./definitions.ts";
+import type {
+  ToolCall,
+  ToolMessageContext,
+  ToolPageReadEvent,
+} from "./definitions.ts";
+import {
+  parseOptionalPositiveInteger,
+  parseRequiredPositiveInteger,
+} from "./validation/index.js";
 import { buildPageReadResult } from "./pageReadHelpers.ts";
+import { ensureString } from "../../../shared/index.ts";
 import { t } from "../../lib/utils/index.ts";
 
 type PageReadEventOptions = {
@@ -28,28 +37,27 @@ type NormalizedPageReadResult = {
   isInternal: boolean;
 };
 
-const resolvePositiveInteger = (value: number, fieldName: string): number => {
-  if (!Number.isInteger(value) || value <= 0) {
-    throw new Error(`${fieldName} 必须是正整数`);
-  }
-  return value;
-};
+export const AGENT_STATUS = {
+  browsing: "browsing",
+  coding: "coding",
+  idle: "idle",
+  operating: "operating",
+  searching: "searching",
+  speaking: "speaking",
+  thinking: "thinking",
+} as const;
 
-const resolveOptionalPositiveInteger = (
-  value: number | undefined,
-  fieldName: string,
-): number | undefined => {
-  if (value === undefined) {
-    return undefined;
-  }
-  return resolvePositiveInteger(value, fieldName);
-};
+export type AgentStatus = (typeof AGENT_STATUS)[keyof typeof AGENT_STATUS];
 
-const resolveString = (value: string, fieldName: string): string => {
-  if (typeof value !== "string") {
-    throw new Error(`${fieldName} 必须是字符串`);
-  }
-  return value;
+const TOOL_STATUS_MAP: Partial<Record<string, AgentStatus>> = {
+  click_button: AGENT_STATUS.operating,
+  close_page: AGENT_STATUS.operating,
+  enter_text: AGENT_STATUS.operating,
+  find: AGENT_STATUS.searching,
+  get_page: AGENT_STATUS.browsing,
+  list_tabs: AGENT_STATUS.browsing,
+  run_console: AGENT_STATUS.coding,
+  show_html: AGENT_STATUS.coding,
 };
 
 const resolveBoolean = (value: boolean, fieldName: string): boolean => {
@@ -86,19 +94,57 @@ const resolveOptionalOutputWithoutContent = (
 const resolvePageReadResult = (
   result: PageReadToolResult,
 ): NormalizedPageReadResult => ({
-  content: resolveString(result.content, "content"),
+  content: ensureString(result.content, "content"),
   isInternal: resolveBoolean(result.isInternal, "isInternal"),
-  tabId: resolvePositiveInteger(result.tabId, "Tab ID"),
-  title: resolveString(result.title, "title"),
-  url: resolveString(result.url, "url"),
+  tabId: parseRequiredPositiveInteger(result.tabId, "Tab ID"),
+  title: ensureString(result.title, "title"),
+  url: ensureString(result.url, "url"),
 });
 
 const resolvePageChunk = (
   result: PageReadToolResult,
 ): { pageNumber: number; totalPages: number } => ({
-  pageNumber: resolvePositiveInteger(result.pageNumber ?? 0, "pageNumber"),
-  totalPages: resolvePositiveInteger(result.totalPages ?? 0, "totalPages"),
+  pageNumber: parseRequiredPositiveInteger(result.pageNumber, "pageNumber"),
+  totalPages: parseRequiredPositiveInteger(result.totalPages, "totalPages"),
 });
+
+const resolveToolCallName = (call: ToolCall): string =>
+  call.function?.name ?? call.name ?? "";
+
+const resolveToolCallArguments = (call: ToolCall): string => {
+  const args = call.function?.arguments ?? call.arguments;
+  return typeof args === "string" ? args : "";
+};
+
+const isGoogleSearchOpen = (argsText: string): boolean =>
+  argsText.includes("https://www.google.com/search");
+
+export const resolveStatusFromToolCalls = (
+  toolCalls: ToolCall[],
+): AgentStatus => {
+  if (!Array.isArray(toolCalls)) {
+    throw new Error("toolCalls 必须是数组");
+  }
+  if (!toolCalls.length) {
+    return AGENT_STATUS.idle;
+  }
+  for (const call of toolCalls) {
+    const name = resolveToolCallName(call);
+    if (!name) {
+      continue;
+    }
+    if (name === "open_page") {
+      return isGoogleSearchOpen(resolveToolCallArguments(call))
+        ? AGENT_STATUS.searching
+        : AGENT_STATUS.browsing;
+    }
+    const mapped = TOOL_STATUS_MAP[name];
+    if (mapped !== undefined) {
+      return mapped;
+    }
+  }
+  return AGENT_STATUS.idle;
+};
 
 const buildPageReadEvent = (
   result: PageReadToolResult,
@@ -111,7 +157,7 @@ const buildPageReadEvent = (
   const pageReadEvent: ToolPageReadEvent = {
     tabId: pageReadResult.tabId,
   };
-  const pageNumber = resolveOptionalPositiveInteger(
+  const pageNumber = parseOptionalPositiveInteger(
     result.pageNumber,
     "pageNumber",
   );
@@ -329,7 +375,7 @@ export const formatFindResult = (result: FindToolResult): string => {
     return `${t("statusFindSuccess")}\n\n${t("statusFindNoMatch")}`;
   }
   const pageBlocks = result.pages.map((page, pageIndex) => {
-    const pageNumber = resolvePositiveInteger(
+    const pageNumber = parseRequiredPositiveInteger(
       page.pageNumber,
       `pages[${String(pageIndex)}].pageNumber`,
     );
@@ -337,7 +383,7 @@ export const formatFindResult = (result: FindToolResult): string => {
       throw new Error(`pages[${String(pageIndex)}].lines 必须是非空数组`);
     }
     const lines = page.lines.map((line, lineIndex) => {
-      const text = resolveString(
+      const text = ensureString(
         line,
         `pages[${String(pageIndex)}].lines[${String(lineIndex)}]`,
       );
@@ -362,7 +408,7 @@ export const formatCloseBrowserPageResult = (
   }
   return result.items
     .map((item) => {
-      const tabId = resolvePositiveInteger(item.tabId, "Tab ID");
+      const tabId = parseRequiredPositiveInteger(item.tabId, "Tab ID");
       const ok = resolveBoolean(item.ok, "ok");
       if (ok) {
         return t("statusCloseTabSuccess", [String(tabId)]);

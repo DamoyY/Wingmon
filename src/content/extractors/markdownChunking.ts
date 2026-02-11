@@ -2,6 +2,7 @@ import {
   MARKDOWN_CHUNK_TOKENS,
   type MarkdownChunkResult,
   createPrefixTokenCounter,
+  moveBoundaryAfterControlMarker,
   splitMarkdownByTokens,
 } from "../../shared/index.ts";
 import {
@@ -18,60 +19,6 @@ type MarkdownChunkingOutput = {
 };
 
 const utf8Encoder = new TextEncoder();
-const controlMarkerSuffix = ">>";
-
-const clampBoundary = (boundary: number, contentLength: number): number => {
-  if (!Number.isInteger(boundary)) {
-    throw new Error("分片边界必须为整数");
-  }
-  if (boundary < 0) {
-    return 0;
-  }
-  if (boundary > contentLength) {
-    return contentLength;
-  }
-  return boundary;
-};
-
-const findControlMarkerStart = (
-  content: string,
-  boundary: number,
-  controlMarkerPrefixes: readonly string[],
-): number => {
-  const searchIndex = Math.max(0, boundary - 1);
-  return controlMarkerPrefixes.reduce<number>((maxStart, prefix) => {
-    const start = content.lastIndexOf(prefix, searchIndex);
-    return start > maxStart ? start : maxStart;
-  }, -1);
-};
-
-const moveBoundaryAfterControlMarker = (
-  content: string,
-  boundary: number,
-  controlMarkerPrefixes: readonly string[],
-): number => {
-  let adjustedBoundary = clampBoundary(boundary, content.length);
-  while (adjustedBoundary > 0 && adjustedBoundary < content.length) {
-    const markerStart = findControlMarkerStart(
-      content,
-      adjustedBoundary,
-      controlMarkerPrefixes,
-    );
-    if (markerStart < 0) {
-      return adjustedBoundary;
-    }
-    const markerEnd = content.indexOf(controlMarkerSuffix, markerStart);
-    if (markerEnd < 0) {
-      throw new Error("控件标记未闭合");
-    }
-    const markerAfterEnd = markerEnd + controlMarkerSuffix.length;
-    if (adjustedBoundary <= markerStart || adjustedBoundary >= markerAfterEnd) {
-      return adjustedBoundary;
-    }
-    adjustedBoundary = markerAfterEnd;
-  }
-  return adjustedBoundary;
-};
 
 const lowerBound = (values: readonly number[], target: number): number => {
   let low = 0,

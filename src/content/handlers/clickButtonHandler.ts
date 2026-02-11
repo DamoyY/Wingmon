@@ -52,7 +52,13 @@ const domStableDelayMs = 500,
       const title = document.title || "",
         url = window.location.href || "",
         markdownPages = withPreparedBody((body) => {
-          return convertPageContentToMarkdownPages({ body, title, url });
+          return convertPageContentToMarkdownPages({
+            body,
+            locateViewportCenter: false,
+            pageNumber: null,
+            title,
+            url,
+          });
         }),
         matchedPage = markdownPages.pages.find((page) =>
           page.content.includes(marker),

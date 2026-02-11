@@ -5,6 +5,7 @@ import {
   normalizeThemeVariant,
 } from "../../lib/utils/index.ts";
 import { elements } from "../foundation/elements.ts";
+import { ensureString } from "../../../shared/index.ts";
 
 type TextInputElement = HTMLElement & { value: string };
 type SelectElement = HTMLElement & {
@@ -24,14 +25,20 @@ type SettingsFormValues = {
   themeVariant: string;
 };
 
+type SettingsFormElements = {
+  apiTypeSelect: SelectElement;
+  baseUrlInput: TextInputElement;
+  keyInput: TextInputElement;
+  languageSelect: SelectElement;
+  modelInput: TextInputElement;
+  requestBodyOverridesInput: TextInputElement;
+  themeColorInput: TextInputElement;
+  themeSelect: SelectElement;
+  themeVariantSelect: SelectElement;
+};
+
 const selectValue = (selectEl: SelectElement, value: string) => {
     selectEl.select(value);
-  },
-  ensureString = (value: unknown, label: string) => {
-    if (typeof value !== "string") {
-      throw new Error(`${label}必须是字符串`);
-    }
-    return value;
   },
   readInputValue = (input: TextInputElement | null, label: string): string => {
     if (!input) {
@@ -45,6 +52,54 @@ const selectValue = (selectEl: SelectElement, value: string) => {
     }
     return ensureString(select.value, label);
   };
+
+const getSettingsFormElements = (): SettingsFormElements => ({
+  apiTypeSelect: ensureElement(
+    elements.apiTypeSelect as SelectElement,
+    "API 类型选择框",
+    "API 类型选择框未找到",
+  ),
+  baseUrlInput: ensureElement(
+    elements.baseUrlInput as TextInputElement,
+    "Base URL 输入框",
+    "Base URL 输入框未找到",
+  ),
+  keyInput: ensureElement(
+    elements.keyInput as TextInputElement,
+    "API Key 输入框",
+    "API Key 输入框未找到",
+  ),
+  languageSelect: ensureElement(
+    elements.languageSelect as SelectElement,
+    "语言选择框",
+    "语言选择框未找到",
+  ),
+  modelInput: ensureElement(
+    elements.modelInput as TextInputElement,
+    "模型输入框",
+    "模型输入框未找到",
+  ),
+  requestBodyOverridesInput: ensureElement(
+    elements.requestBodyOverridesInput as TextInputElement,
+    "请求体覆写输入框",
+    "请求体覆写输入框未找到",
+  ),
+  themeColorInput: ensureElement(
+    elements.themeColorInput as TextInputElement,
+    "主题色输入框",
+    "主题色输入框未找到",
+  ),
+  themeSelect: ensureElement(
+    elements.themeSelect as SelectElement,
+    "主题选择框",
+    "主题选择框未找到",
+  ),
+  themeVariantSelect: ensureElement(
+    elements.themeVariantSelect as SelectElement,
+    "Variant 选择框",
+    "Variant 选择框未找到",
+  ),
+});
 
 export const readSettingsFormValues = (): SettingsFormValues => ({
   apiKey: readInputValue(elements.keyInput as TextInputElement, "API Key"),
@@ -73,51 +128,17 @@ export const readSettingsFormValues = (): SettingsFormValues => ({
 export const updateSettingsFormValues = (
   values: Partial<SettingsFormValues>,
 ) => {
-  const keyInput = ensureElement(
-      elements.keyInput as TextInputElement,
-      "API Key 输入框",
-      "API Key 输入框未找到",
-    ),
-    baseUrlInput = ensureElement(
-      elements.baseUrlInput as TextInputElement,
-      "Base URL 输入框",
-      "Base URL 输入框未找到",
-    ),
-    modelInput = ensureElement(
-      elements.modelInput as TextInputElement,
-      "模型输入框",
-      "模型输入框未找到",
-    ),
-    requestBodyOverridesInput = ensureElement(
-      elements.requestBodyOverridesInput as TextInputElement,
-      "请求体覆写输入框",
-      "请求体覆写输入框未找到",
-    ),
-    apiTypeSelect = ensureElement(
-      elements.apiTypeSelect as SelectElement,
-      "API 类型选择框",
-      "API 类型选择框未找到",
-    ),
-    languageSelect = ensureElement(
-      elements.languageSelect as SelectElement,
-      "语言选择框",
-      "语言选择框未找到",
-    ),
-    themeSelect = ensureElement(
-      elements.themeSelect as SelectElement,
-      "主题选择框",
-      "主题选择框未找到",
-    ),
-    themeColorInput = ensureElement(
-      elements.themeColorInput as TextInputElement,
-      "主题色输入框",
-      "主题色输入框未找到",
-    ),
-    themeVariantSelect = ensureElement(
-      elements.themeVariantSelect as SelectElement,
-      "Variant 选择框",
-      "Variant 选择框未找到",
-    );
+  const {
+    keyInput,
+    baseUrlInput,
+    modelInput,
+    requestBodyOverridesInput,
+    apiTypeSelect,
+    languageSelect,
+    themeSelect,
+    themeColorInput,
+    themeVariantSelect,
+  } = getSettingsFormElements();
   if (Object.hasOwn(values, "apiKey")) {
     keyInput.value = ensureString(values.apiKey, "API Key");
   }
@@ -154,59 +175,16 @@ export const updateSettingsFormValues = (
 };
 
 const fillSettingsForm = (settings: SettingsFormValues) => {
-  const keyInput = ensureElement(
-      elements.keyInput as TextInputElement,
-      "API Key 输入框",
-      "API Key 输入框未找到",
-    ),
-    baseUrlInput = ensureElement(
-      elements.baseUrlInput as TextInputElement,
-      "Base URL 输入框",
-      "Base URL 输入框未找到",
-    ),
-    modelInput = ensureElement(
-      elements.modelInput as TextInputElement,
-      "模型输入框",
-      "模型输入框未找到",
-    ),
-    requestBodyOverridesInput = ensureElement(
-      elements.requestBodyOverridesInput as TextInputElement,
-      "请求体覆写输入框",
-      "请求体覆写输入框未找到",
-    ),
-    apiTypeSelect = ensureElement(
-      elements.apiTypeSelect as SelectElement,
-      "API 类型选择框",
-      "API 类型选择框未找到",
-    ),
-    languageSelect = ensureElement(
-      elements.languageSelect as SelectElement,
-      "语言选择框",
-      "语言选择框未找到",
-    ),
-    themeSelect = ensureElement(
-      elements.themeSelect as SelectElement,
-      "主题选择框",
-      "主题选择框未找到",
-    ),
-    themeColorInput = ensureElement(
-      elements.themeColorInput as TextInputElement,
-      "主题色输入框",
-      "主题色输入框未找到",
-    ),
-    themeVariantSelect = ensureElement(
-      elements.themeVariantSelect as SelectElement,
-      "Variant 选择框",
-      "Variant 选择框未找到",
-    );
-  keyInput.value = settings.apiKey || "";
-  baseUrlInput.value = settings.baseUrl || "";
-  modelInput.value = settings.model || "";
-  requestBodyOverridesInput.value = settings.requestBodyOverrides || "";
-  selectValue(apiTypeSelect, settings.apiType || "chat");
-  selectValue(languageSelect, settings.language || "en");
-  selectValue(themeSelect, normalizeTheme(settings.theme));
-  themeColorInput.value = normalizeThemeColor(settings.themeColor);
-  selectValue(themeVariantSelect, normalizeThemeVariant(settings.themeVariant));
+  updateSettingsFormValues({
+    apiKey: settings.apiKey || "",
+    apiType: settings.apiType || "chat",
+    baseUrl: settings.baseUrl || "",
+    language: settings.language || "en",
+    model: settings.model || "",
+    requestBodyOverrides: settings.requestBodyOverrides || "",
+    theme: normalizeTheme(settings.theme),
+    themeColor: normalizeThemeColor(settings.themeColor),
+    themeVariant: normalizeThemeVariant(settings.themeVariant),
+  });
 };
 export default fillSettingsForm;

@@ -1,4 +1,8 @@
 import {
+  AGENT_STATUS,
+  type AgentStatus,
+} from "../../../core/agent/toolResultFormatters.ts";
+import {
   clearPromptInput,
   setComposerSending,
   updateComposerButtonsState,
@@ -12,22 +16,95 @@ import {
 import { clearPromptContent } from "../composerState.ts";
 import { renderMessagesView } from "./presenter.ts";
 import { setStateValue } from "../../../core/store/index.ts";
+import { t } from "../../../lib/utils/index.ts";
+
 type SettingsFormValues = Parameters<typeof fillSettingsForm>[0];
 
-const normalizeStatusMessage = (
-  message: string | null | undefined,
-): string | null => {
-  if (message === undefined || message === null) {
-    return null;
-  }
-  if (message.length === 0) {
-    return null;
-  }
-  return message;
+type ActiveAgentStatus = Exclude<AgentStatus, typeof AGENT_STATUS.idle>;
+
+const STATUS_DOT_INTERVAL_MS = 360;
+const STATUS_DOT_COUNT_MAX = 3;
+
+const STATUS_TEXT_KEY_MAP: Record<ActiveAgentStatus, string> = {
+  browsing: "statusBrowsing",
+  coding: "statusCoding",
+  operating: "statusOperating",
+  searching: "statusSearching",
+  speaking: "statusSpeaking",
+  thinking: "statusThinking",
 };
 
-export const reportSendStatus = (message: string | null | undefined): void => {
-  setStateValue("activeStatus", normalizeStatusMessage(message));
+let activeStatus: AgentStatus = AGENT_STATUS.idle;
+let dotCount = 0;
+let dotTimer: ReturnType<typeof setInterval> | null = null;
+
+const stopStatusAnimation = (): void => {
+  if (dotTimer === null) {
+    return;
+  }
+  clearInterval(dotTimer);
+  dotTimer = null;
+};
+
+const setActiveStatusText = (message: string | null): void => {
+  setStateValue("activeStatus", message);
+};
+
+const resolveStatusTextKey = (status: ActiveAgentStatus): string => {
+  const key = STATUS_TEXT_KEY_MAP[status];
+  if (!key) {
+    throw new Error(`未知状态：${status}`);
+  }
+  return key;
+};
+
+const buildAnimatedStatusText = (
+  status: ActiveAgentStatus,
+  nextDotCount: number,
+): string => {
+  const key = resolveStatusTextKey(status);
+  const baseText = t(key).trimEnd();
+  if (!baseText) {
+    throw new Error(`状态文案缺失：${key}`);
+  }
+  return `${baseText}${".".repeat(nextDotCount)}`;
+};
+
+const renderStatusFrame = (): void => {
+  if (activeStatus === AGENT_STATUS.idle) {
+    setActiveStatusText(null);
+    return;
+  }
+  dotCount = (dotCount % STATUS_DOT_COUNT_MAX) + 1;
+  setActiveStatusText(buildAnimatedStatusText(activeStatus, dotCount));
+};
+
+const startStatusAnimation = (): void => {
+  if (activeStatus === AGENT_STATUS.idle || dotTimer !== null) {
+    return;
+  }
+  dotTimer = setInterval(() => {
+    renderStatusFrame();
+  }, STATUS_DOT_INTERVAL_MS);
+};
+
+const updateStatus = (status: AgentStatus): void => {
+  if (status === activeStatus) {
+    return;
+  }
+  stopStatusAnimation();
+  activeStatus = status;
+  dotCount = 0;
+  if (status === AGENT_STATUS.idle) {
+    setActiveStatusText(null);
+    return;
+  }
+  renderStatusFrame();
+  startStatusAnimation();
+};
+
+export const reportSendStatus = (status: AgentStatus): void => {
+  updateStatus(status);
 };
 
 export const requestSettingsCompletion = (

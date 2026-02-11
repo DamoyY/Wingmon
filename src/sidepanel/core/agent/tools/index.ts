@@ -5,6 +5,7 @@ import type {
   ToolPageReadDedupeAction,
 } from "../definitions.ts";
 import type { JsonValue } from "../../../lib/utils/index.ts";
+import type { ToolJsonSchema } from "../validation/index.js";
 import clickButton from "./clickButtonTool.ts";
 import closeBrowserPage from "./closeBrowserPage.ts";
 import enterText from "./enterTextTool.ts";
@@ -15,7 +16,7 @@ import openBrowserPage from "./openBrowserPage.ts";
 import runConsoleCommand from "./runConsoleCommand.ts";
 import showHtml from "./showHtml.ts";
 
-type ToolParameterSchema = Record<string, JsonValue>;
+type ToolParameterSchema = ToolJsonSchema;
 
 export type ToolModuleEntry = {
   key?: ToolNameKey;
@@ -26,7 +27,7 @@ export type ToolModuleEntry = {
     args: JsonValue,
     context: ToolExecutionContext,
   ) => JsonValue | Promise<JsonValue>;
-  validateArgs: (args: JsonValue) => JsonValue;
+  validateArgs?: (args: JsonValue) => JsonValue;
   formatResult?: (result: JsonValue) => string;
   buildMessageContext?: (
     args: JsonValue,

@@ -1,3 +1,7 @@
 export * from "./toolArgsValidation.ts";
-export * from "./parsePageNumber.ts";
-export * from "./positiveInteger.ts";
+export {
+  parseOptionalPositiveInteger,
+  parseOptionalPositiveNumber,
+  parseRequiredPositiveInteger,
+  parseRequiredPositiveNumber,
+} from "../../../../shared/index.ts";

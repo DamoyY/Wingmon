@@ -1,26 +1,22 @@
 import type { FindToolPageResult, FindToolResult } from "../toolResultTypes.ts";
-import type {
-  GetAllPageContentRequest,
-  GetAllPageContentSuccessResponse,
-  PageContentChunk,
-} from "../../../../shared/index.ts";
-import { type JsonValue, isInternalUrl, t } from "../../../lib/utils/index.ts";
 import {
-  type ToolArgObject,
-  ensureObjectArgs,
-} from "../validation/toolArgsValidation.ts";
+  type GetAllPageContentRequest,
+  type GetAllPageContentSuccessResponse,
+  type PageContentChunk,
+  parseRequiredPositiveInteger,
+} from "../../../../shared/index.ts";
+import { isInternalUrl, t } from "../../../lib/utils/index.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 import ToolInputError from "../errors.ts";
 import { formatFindResult } from "../toolResultFormatters.ts";
-import { parseRequiredPositiveInteger } from "../validation/positiveInteger.js";
 
 type BrowserTab = Awaited<
   ReturnType<ToolExecutionContext["getAllTabs"]>
 >[number];
 
 type FindArgs = {
+  query: string;
   tabId: number;
-  regex: RegExp;
 };
 
 type PageContentItem = {
@@ -29,20 +25,6 @@ type PageContentItem = {
 };
 
 const regexLiteralPattern = /^\/([\s\S]*)\/([a-z]*)$/;
-
-const readArgValue = (record: ToolArgObject, key: string): JsonValue => {
-  if (Object.prototype.hasOwnProperty.call(record, key)) {
-    return record[key];
-  }
-  return null;
-};
-
-const resolveTabId = (record: ToolArgObject): number =>
-  parseRequiredPositiveInteger(
-    readArgValue(record, "tabId"),
-    "Tab ID",
-    ToolInputError,
-  );
 
 const resolveRegex = (query: string): RegExp => {
   const literalMatch = regexLiteralPattern.exec(query);
@@ -61,17 +43,6 @@ const resolveRegex = (query: string): RegExp => {
     console.error("query 正则解析失败", error);
     throw new ToolInputError("query 必须是合法的正则表达式");
   }
-};
-
-const resolveQuery = (value: JsonValue): string => {
-  if (typeof value !== "string") {
-    throw new ToolInputError("query 必须是非空字符串");
-  }
-  const normalized = value.trim();
-  if (!normalized) {
-    throw new ToolInputError("query 必须是非空字符串");
-  }
-  return normalized;
 };
 
 const resolvePageContentItem = (
@@ -130,26 +101,26 @@ const buildFindPageResults = (
 const parameters = {
     additionalProperties: false,
     properties: {
-      query: { description: t("toolParamQuery"), type: "string" },
-      tabId: { description: t("toolParamTabId"), type: "number" },
+      query: {
+        description: t("toolParamQuery"),
+        minLength: 1,
+        pattern: "\\S",
+        type: "string",
+      },
+      tabId: {
+        description: t("toolParamTabId"),
+        minimum: 1,
+        type: "integer",
+      },
     },
     required: ["tabId", "query"],
     type: "object",
   },
-  validateArgs = (args: JsonValue): FindArgs => {
-    const record = ensureObjectArgs(args),
-      tabId = resolveTabId(record),
-      query = resolveQuery(readArgValue(record, "query")),
-      regex = resolveRegex(query);
-    return {
-      regex,
-      tabId,
-    };
-  },
   execute = async (
-    { tabId, regex }: FindArgs,
+    { query, tabId }: FindArgs,
     context: ToolExecutionContext,
   ): Promise<FindToolResult> => {
+    const regex = resolveRegex(query.trim());
     const tabs: BrowserTab[] = await context.getAllTabs(),
       targetTab = tabs.find((tab) => tab.id === tabId);
     if (!targetTab) {
@@ -179,5 +150,4 @@ export default {
   key: "find",
   name: "find",
   parameters,
-  validateArgs,
 };

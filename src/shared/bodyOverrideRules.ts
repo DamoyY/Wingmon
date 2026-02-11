@@ -1,7 +1,10 @@
-type JsonPrimitive = string | number | boolean | null;
-type JsonObject = { [key: string]: JsonValue };
-type JsonArray = JsonValue[];
-export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
+import {
+  type JsonArray,
+  type JsonObject,
+  type JsonValue,
+  isJsonObject,
+  isJsonValue,
+} from "./runtimeValidation.ts";
 
 type RawBodyOverrideRule = {
   path: string;
@@ -34,28 +37,10 @@ type BodyOverrideLine = {
   content: string;
 };
 
+type QuoteDelimiter = '"' | "'";
+
 const numberLiteralPattern = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][-+]?\d+)?$/u,
   indexSegmentPattern = /^\d+$/u,
-  isJsonObject = (value: unknown): value is JsonObject =>
-    typeof value === "object" && value !== null && !Array.isArray(value),
-  isJsonValue = (value: unknown): value is JsonValue => {
-    if (value === null) {
-      return true;
-    }
-    if (typeof value === "string" || typeof value === "boolean") {
-      return true;
-    }
-    if (typeof value === "number") {
-      return Number.isFinite(value);
-    }
-    if (Array.isArray(value)) {
-      return value.every((item) => isJsonValue(item));
-    }
-    if (!isJsonObject(value)) {
-      return false;
-    }
-    return Object.values(value).every((item) => isJsonValue(item));
-  },
   ensureStringInput = (configText: string): string => {
     if (typeof configText !== "string") {
       throw new Error("请求体覆写配置必须是字符串");
@@ -64,13 +49,35 @@ const numberLiteralPattern = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][-+]?\d+)?$/u,
   },
   formatLinePrefix = (lineNumber: number): string =>
     `第 ${String(lineNumber)} 行`,
-  parseDoubleQuotedString = (
+  detectQuoteDelimiter = (literal: string): QuoteDelimiter | null => {
+    if (literal.startsWith('"')) {
+      return '"';
+    }
+    if (literal.startsWith("'")) {
+      return "'";
+    }
+    return null;
+  },
+  parseQuotedStringLiteral = (
     literal: string,
     lineNumber: number,
     label: string,
-  ): string => {
+  ): string | null => {
+    const quoteDelimiter = detectQuoteDelimiter(literal);
+    if (quoteDelimiter === null) {
+      return null;
+    }
+    if (!literal.endsWith(quoteDelimiter)) {
+      const quoteLabel = quoteDelimiter === '"' ? "双引号" : "单引号";
+      throw new Error(
+        `${formatLinePrefix(lineNumber)} ${label} 缺少闭合${quoteLabel}`,
+      );
+    }
+    if (quoteDelimiter === "'") {
+      return literal.slice(1, -1).replaceAll("''", "'");
+    }
     try {
-      const parsed = JSON.parse(literal) as unknown;
+      const parsed: unknown = JSON.parse(literal);
       if (typeof parsed !== "string") {
         throw new Error(`${label}必须是字符串`);
       }
@@ -82,40 +89,22 @@ const numberLiteralPattern = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][-+]?\d+)?$/u,
       );
     }
   },
-  parseSingleQuotedString = (
-    literal: string,
-    lineNumber: number,
-    label: string,
-  ): string => {
-    if (!literal.endsWith("'")) {
-      throw new Error(
-        `${formatLinePrefix(lineNumber)} ${label} 缺少闭合单引号`,
-      );
-    }
-    return literal.slice(1, -1).replaceAll("''", "'");
-  },
   parseScalarString = (
     literal: string,
     lineNumber: number,
     label: string,
-  ): string => {
-    if (literal.startsWith('"')) {
-      return parseDoubleQuotedString(literal, lineNumber, label);
-    }
-    if (literal.startsWith("'")) {
-      return parseSingleQuotedString(literal, lineNumber, label);
-    }
-    return literal;
-  },
+  ): string => parseQuotedStringLiteral(literal, lineNumber, label) ?? literal,
   parseScalarValue = (literal: string, lineNumber: number): JsonValue => {
     if (literal === "") {
       throw new Error(`${formatLinePrefix(lineNumber)} value 不能为空`);
     }
-    if (literal.startsWith('"')) {
-      return parseDoubleQuotedString(literal, lineNumber, "value");
-    }
-    if (literal.startsWith("'")) {
-      return parseSingleQuotedString(literal, lineNumber, "value");
+    const parsedQuotedValue = parseQuotedStringLiteral(
+      literal,
+      lineNumber,
+      "value",
+    );
+    if (parsedQuotedValue !== null) {
+      return parsedQuotedValue;
     }
     if (literal === "null") {
       return null;

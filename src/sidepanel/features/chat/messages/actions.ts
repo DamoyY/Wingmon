@@ -2,19 +2,18 @@ import {
   type MessageRecord,
   removeMessage,
   state,
-  touchUpdatedAt,
 } from "../../../core/store/index.ts";
 import {
   combineMessageContents,
   normalizeIndices,
   t,
 } from "../../../lib/utils/index.ts";
-import { persistConversation } from "../../../core/services/index.ts";
+import { persistConversationState } from "./conversationPersistence.ts";
 
 export type ActionIndices = number | readonly number[];
-type RefreshMessages = () => void;
 type AnimateRemoval = (indices: ActionIndices) => Promise<boolean> | boolean;
 export type MessageActionError = Error;
+type RefreshMessages = () => void;
 
 export type MessageActionHandlers = {
   onCopy: (indices: ActionIndices) => Promise<void>;
@@ -28,15 +27,8 @@ const resolveMessageContent = (message: MessageRecord): string => {
     }
     return message.content;
   },
-  persistConversationState = async (): Promise<void> => {
-    if (state.messages.length) {
-      touchUpdatedAt();
-    }
-    await persistConversation(
-      state.conversationId,
-      state.messages,
-      state.updatedAt,
-    );
+  persistStateAfterMessageAction = async (): Promise<void> => {
+    await persistConversationState();
   },
   resolveCombinedContent = (indices: number[]): string => {
     const contents = indices.map((index) => {
@@ -125,7 +117,7 @@ const resolveMessageContent = (message: MessageRecord): string => {
     ).sort((a, b) => b - a);
     combined.forEach((index) => removeMessage(index));
     refreshMessages();
-    await persistConversationState();
+    await persistStateAfterMessageAction();
   },
   resolveErrorMessage = (error: MessageActionError): string => {
     if (error.message) {
