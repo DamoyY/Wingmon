@@ -1,6 +1,6 @@
-import { EXCLUDED_INPUT_TYPES, TEXT_INPUT_ROLES } from "../common/index.ts";
 import { buildIdMap, normalizeText, resolveElementLabel } from "./labels.js";
 import { buildControlMarker } from "./controlMarkers.ts";
+import { isEditableCandidateElement } from "../dom/editableElements.js";
 
 const getLabelFromAssociatedLabel = (
   root: Element,
@@ -45,27 +45,8 @@ const resolveInputLabel = (
     "aria-labelledby 为空，无法解析输入框名称",
   );
 
-const isInputCandidate = (element: Element): boolean => {
-  if (element instanceof HTMLInputElement) {
-    return !EXCLUDED_INPUT_TYPES.has(element.type);
-  }
-  if (element instanceof HTMLTextAreaElement) {
-    return true;
-  }
-  if (element instanceof HTMLSelectElement) {
-    return true;
-  }
-  const htmlElement = element as HTMLElement;
-  const contentEditable = htmlElement.getAttribute("contenteditable");
-  if (contentEditable !== null && contentEditable !== "false") {
-    return true;
-  }
-  const role = htmlElement.getAttribute("role");
-  if (role && TEXT_INPUT_ROLES.has(role)) {
-    return true;
-  }
-  return false;
-};
+const isInputCandidate = (element: Element): boolean =>
+  isEditableCandidateElement(element);
 
 const replaceInputNode = (input: Element, replacement: string): void => {
   const parent = input.parentNode;

@@ -2,9 +2,14 @@ import type {
   ClickButtonRequest,
   ClickButtonResponse,
 } from "../../shared/index.ts";
+import {
+  isButtonElement,
+  llmControlVisibilityOptions,
+} from "../dom/editableElements.js";
 import { isPdfDocument, normalizeLlmId } from "../common/index.ts";
 import { convertPageContentToMarkdownPages } from "../extractors/converter.js";
 import { escapeControlMarkerField } from "../extractors/controlMarkers.ts";
+import { isElementVisible } from "../dom/visibility.js";
 import withPreparedBody from "./withPreparedBody.js";
 
 type SendResponse = (response: ClickButtonResponse) => void;
@@ -15,16 +20,28 @@ const buildButtonIdMarker = (normalizedId: string): string =>
 const domStableDelayMs = 500,
   domStableMaxDelayMs = 5000,
   findSingleButton = (normalizedId: string): HTMLElement | null => {
-    const matches = document.querySelectorAll<HTMLElement>(
-      `[data-llm-id="${normalizedId}"]`,
-    );
-    if (!matches.length) {
+    const win = document.defaultView;
+    if (!win) {
+      throw new Error("无法获取窗口对象");
+    }
+    const matches = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          `[data-llm-id="${normalizedId}"]`,
+        ),
+      ),
+      buttonMatches = matches.filter((match) => {
+        if (!isButtonElement(match)) {
+          return false;
+        }
+        return isElementVisible(match, win, llmControlVisibilityOptions);
+      });
+    if (!buttonMatches.length) {
       return null;
     }
-    if (matches.length > 1) {
+    if (buttonMatches.length > 1) {
       throw new Error(`找到多个 id 为 ${normalizedId} 的按钮`);
     }
-    return matches[0];
+    return buttonMatches[0];
   },
   resolveButtonChunkPageNumber = (normalizedId: string): number | null => {
     if (isPdfDocument()) {

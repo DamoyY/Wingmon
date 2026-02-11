@@ -2,7 +2,11 @@ import type {
   EnterTextRequest,
   EnterTextResponse,
 } from "../../shared/index.ts";
-import { isEditableElement } from "../dom/editableElements.js";
+import {
+  isEditableElement,
+  llmControlVisibilityOptions,
+} from "../dom/editableElements.js";
+import { isElementVisible } from "../dom/visibility.js";
 import { normalizeLlmId } from "../common/index.ts";
 
 const normalizeInputContent = (message: EnterTextRequest | null): string => {
@@ -13,13 +17,22 @@ const normalizeInputContent = (message: EnterTextRequest | null): string => {
 };
 
 const findSingleInput = (normalizedId: string): Element | null => {
+  const win = document.defaultView;
+  if (!win) {
+    throw new Error("无法获取窗口对象");
+  }
   const matches = Array.from(
     document.querySelectorAll(`[data-llm-id="${normalizedId}"]`),
   );
   if (!matches.length) {
     return null;
   }
-  const editableMatches = matches.filter(isEditableElement);
+  const editableMatches = matches.filter((match) => {
+    if (!isEditableElement(match)) {
+      return false;
+    }
+    return isElementVisible(match, win, llmControlVisibilityOptions);
+  });
   if (!editableMatches.length) {
     throw new Error(`找到 id 为 ${normalizedId} 的控件但不可输入`);
   }

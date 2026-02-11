@@ -1,5 +1,6 @@
 import { buildIdMap, normalizeText, resolveElementLabel } from "./labels.js";
 import { buildControlMarker } from "./controlMarkers.ts";
+import { isButtonElement } from "../dom/editableElements.js";
 
 const resolveButtonLabel = (
   idMap: Map<string, Element>,
@@ -50,12 +51,8 @@ const removeButtonNode = (button: Element): void => {
 
 const replaceButtons = (root: Element): void => {
   const idMap = buildIdMap(root),
-    buttonElements = Array.from(root.getElementsByTagName("button")),
-    inputButtons = Array.from(root.getElementsByTagName("input")).filter(
-      (input) => input.type === "button" || input.type === "submit",
-    ),
-    buttons = [...buttonElements, ...inputButtons].filter((button) =>
-      button.hasAttribute("data-llm-id"),
+    buttons = Array.from(root.querySelectorAll("[data-llm-id]")).filter(
+      (button) => isButtonElement(button),
     );
   buttons.forEach((buttonNode) => {
     const button = buttonNode,
