@@ -32,6 +32,7 @@ export type GetPageContentRequest = {
   type: "getPageContent";
   pageNumber?: PageNumberInput;
   page_number?: PageNumberInput;
+  locateViewportCenter?: boolean;
 };
 
 export type GetPageContentResponse = {

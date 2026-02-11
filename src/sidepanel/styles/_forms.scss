@@ -30,7 +30,10 @@ md-filled-select {
   flex-direction: column;
   gap: 24px;
   flex: 1;
-  justify-content: center;
+  min-height: 0;
+  overflow-y: auto;
+  justify-content: flex-start;
+  padding-block: 50px;
 }
 
 .key-content md-filled-text-field,

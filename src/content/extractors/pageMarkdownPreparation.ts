@@ -6,12 +6,15 @@ import {
   normalizeControlMarkersForMarkdown,
 } from "./controlMarkers.ts";
 import {
+  type PageNumberInput,
+  resolvePageNumberInput,
+} from "../common/index.ts";
+import {
   type PrefixTokenCounter,
   chunkMarkdownContent,
 } from "./markdownChunking.ts";
 import { cloneBodyWithShadowDom, resolveRenderedText } from "./shadowDom.ts";
 import type { MarkdownChunkResult } from "../../shared/index.ts";
-import type { PageNumberInput } from "../common/index.ts";
 import { clearHiddenElementsForMarkdown } from "../dom/visibility.js";
 import createTurndownService from "./turndownService.ts";
 import replaceButtons from "./buttons.js";
@@ -23,6 +26,7 @@ export type PageContentData = {
   title?: string;
   url?: string;
   pageNumber?: PageNumberInput;
+  locateViewportCenter?: boolean;
 };
 
 export type PreparedMarkdownPageContent = {
@@ -67,8 +71,12 @@ const removeInternalLlmDataAttributes = (root: Element): void => {
 const resolveTextFallback = (
   body: HTMLElement,
   htmlContent: string,
-  markerToken: string,
+  markerToken: string | null,
 ): string => {
+  const viewportMarkerToken =
+    typeof markerToken === "string" && markerToken.length > 0
+      ? markerToken
+      : null;
   const fallbackText = resolveRenderedText(body),
     htmlTrimmed = htmlContent.trim(),
     textTrimmed = fallbackText.trim();
@@ -84,8 +92,9 @@ const resolveTextFallback = (
     textTrimmed.length - htmlTrimmed.length > 200
   ) {
     if (
-      htmlContent.includes(markerToken) &&
-      !textTrimmed.includes(markerToken)
+      viewportMarkerToken !== null &&
+      htmlContent.includes(viewportMarkerToken) &&
+      !textTrimmed.includes(viewportMarkerToken)
     ) {
       console.warn("页面渲染文本回退会丢失视口标记，继续使用 Markdown 内容");
       return htmlContent;
@@ -97,6 +106,16 @@ const resolveTextFallback = (
     return textTrimmed;
   }
   return htmlContent;
+};
+
+const resolveViewportPageWithoutMarker = (
+  pageNumberInput: PageNumberInput,
+  totalPages: number,
+): number => {
+  const pageNumber = resolvePageNumberInput(pageNumberInput),
+    normalizedTotalPages =
+      Number.isInteger(totalPages) && totalPages > 0 ? totalPages : 1;
+  return Math.min(normalizedTotalPages, Math.max(1, pageNumber));
 };
 
 const prepareMarkdownPageContent = (
@@ -116,7 +135,8 @@ const prepareMarkdownPageContent = (
   replaceButtons(bodyClone);
   replaceInputs(bodyClone);
   insertChunkAnchorMarkers(bodyClone);
-  const markerToken = markViewportCenter(bodyClone);
+  const locateViewportCenter = pageData.locateViewportCenter === true,
+    markerToken = locateViewportCenter ? markViewportCenter(bodyClone) : null;
   removeInternalLlmDataAttributes(bodyClone);
   const markdownWithMarkers = turndown.turndown(bodyClone.innerHTML),
     resolvedContentWithMarkers = resolveTextFallback(
@@ -131,12 +151,19 @@ const prepareMarkdownPageContent = (
       normalizedContentWithMarkers,
       markerToken,
     ),
-    { chunked, prefixTokenCounter } = chunkMarkdownContent(content),
-    viewportPage = resolveViewportPage(
-      viewportIndex,
-      chunked,
-      prefixTokenCounter,
-    );
+    { chunked, prefixTokenCounter } = chunkMarkdownContent(content);
+  const viewportPage = (() => {
+    if (!locateViewportCenter) {
+      return resolveViewportPageWithoutMarker(
+        pageData.pageNumber ?? null,
+        chunked.totalPages,
+      );
+    }
+    if (viewportIndex === null) {
+      throw new Error("视口中心标记丢失，无法计算分片");
+    }
+    return resolveViewportPage(viewportIndex, chunked, prefixTokenCounter);
+  })();
   return {
     anchors,
     chunked,

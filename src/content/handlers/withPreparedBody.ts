@@ -5,15 +5,24 @@ import {
 } from "../dom/index.js";
 
 type BodyHandler<T> = (body: HTMLBodyElement) => T;
+type WithPreparedBodyOptions = {
+  includeViewportMarker?: boolean;
+};
 
-const withPreparedBody = <T>(handler: BodyHandler<T>): T => {
+const withPreparedBody = <T>(
+  handler: BodyHandler<T>,
+  options: WithPreparedBodyOptions = {},
+): T => {
   const body = document.querySelector("body");
   if (!(body instanceof HTMLBodyElement)) {
     throw new Error("页面没有可用的 body");
   }
+  const includeViewportMarker = options.includeViewportMarker === true;
   let marker: HTMLSpanElement | null = null;
   try {
-    marker = insertViewportMarker(body);
+    if (includeViewportMarker) {
+      marker = insertViewportMarker(body);
+    }
     assignChunkAnchors(body);
     assignLlmIds(body);
     return handler(body);

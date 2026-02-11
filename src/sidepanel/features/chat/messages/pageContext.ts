@@ -146,7 +146,9 @@ const resolveTabId = (activeTab: BrowserTab): number => {
     const activeTab = await getActiveTab(),
       tabId = resolveTabId(activeTab);
     ensureNotAborted(signal);
-    const pageData = await fetchPageMarkdownData(tabId),
+    const pageData = await fetchPageMarkdownData(tabId, undefined, {
+        locateViewportCenter: true,
+      }),
       viewportPlan = resolveViewportPlan(pageData),
       pageNumbers = [viewportPlan.currentChunk];
     if (viewportPlan.nearbyChunk !== null) {

@@ -12,7 +12,7 @@ export type ChunkAnchorPoint = {
 export type ControlMarkerExtraction = {
   anchors: ChunkAnchorPoint[];
   content: string;
-  viewportIndex: number;
+  viewportIndex: number | null;
 };
 
 export const CONTROL_MARKER_PREFIXES = ["<< Button |", "<< Input |"] as const;
@@ -91,8 +91,13 @@ export const insertChunkAnchorMarkers = (root: HTMLElement): void => {
 
 export const extractControlMarkers = (
   contentWithMarkers: string,
-  markerToken: string,
+  markerToken: string | null,
 ): ControlMarkerExtraction => {
+  let viewportMarkerLength = 0;
+  if (typeof markerToken === "string" && markerToken.length > 0) {
+    viewportMarkerLength = markerToken.length;
+  }
+  const shouldTrackViewportMarker = viewportMarkerLength > 0;
   const anchors: ChunkAnchorPoint[] = [];
   const cleanSegments: string[] = [];
   let cursor = 0;
@@ -140,7 +145,9 @@ export const extractControlMarkers = (
     anchorPattern.lastIndex = cursor;
     const anchorMatch = anchorPattern.exec(contentWithMarkers);
     const anchorStart = anchorMatch ? anchorMatch.index : -1;
-    const viewportStart = contentWithMarkers.indexOf(markerToken, cursor);
+    const viewportStart = shouldTrackViewportMarker
+      ? contentWithMarkers.indexOf(markerToken, cursor)
+      : -1;
     let markerStart = contentWithMarkers.length;
     let markerType: "anchor" | "viewport" | null = null;
     if (anchorStart >= 0 && anchorStart < markerStart) {
@@ -161,7 +168,7 @@ export const extractControlMarkers = (
         throw new Error("视口中心标记重复，无法计算分片");
       }
       viewportIndex = cleanLength;
-      cursor = markerStart + markerToken.length;
+      cursor = markerStart + viewportMarkerLength;
       continue;
     }
     const anchorId = anchorMatch?.[1];
@@ -174,7 +181,7 @@ export const extractControlMarkers = (
     });
     cursor = markerStart + anchorMatch[0].length;
   }
-  if (viewportIndex === null) {
+  if (shouldTrackViewportMarker && viewportIndex === null) {
     throw new Error("视口中心标记丢失，无法计算分片");
   }
   return {

@@ -37,6 +37,10 @@ export type PageMarkdownData = PageReadMetadata & {
   url: string;
 };
 
+type FetchPageMarkdownDataOptions = {
+  locateViewportCenter?: boolean;
+};
+
 const pageContentRetryBaseDelayMs = 200,
   contentScriptMissingReceiverPattern = /Receiving end does not exist/u,
   pageContentRetryTimeoutMs = 10000,
@@ -183,15 +187,17 @@ export const buildPageReadResult = ({
 };
 
 const buildPageContentMessage = (
-  pageNumber?: number,
+  pageNumber: number | undefined,
+  options: FetchPageMarkdownDataOptions,
 ): GetPageContentRequest => {
+  const message: GetPageContentRequest = { type: "getPageContent" };
   if (pageNumber !== undefined) {
-    return {
-      pageNumber: resolvePageNumber(pageNumber),
-      type: "getPageContent",
-    };
+    message.pageNumber = resolvePageNumber(pageNumber);
   }
-  return { type: "getPageContent" };
+  if (options.locateViewportCenter === true) {
+    message.locateViewportCenter = true;
+  }
+  return message;
 };
 
 const buildPageHashMessage = (pageData?: {
@@ -207,12 +213,13 @@ const buildPageHashMessage = (pageData?: {
 export const fetchPageMarkdownData = async (
   tabId: number,
   pageNumber?: number,
+  options: FetchPageMarkdownDataOptions = {},
 ): Promise<PageMarkdownData> => {
   const shouldRetry = await waitForContentScript(tabId),
     fetchOnce = async () => {
       const pageData: GetPageContentResponse = await sendMessageToTab(
         tabId,
-        buildPageContentMessage(pageNumber),
+        buildPageContentMessage(pageNumber, options),
       );
       if (typeof pageData.content !== "string") {
         throw new Error("页面内容为空");

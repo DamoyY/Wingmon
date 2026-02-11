@@ -56,6 +56,19 @@ const resolveMessagePageNumber = (message: GetPageContentRequest): number => {
   });
 };
 
+const resolveLocateViewportCenter = (
+  message: GetPageContentRequest,
+): boolean => {
+  const { locateViewportCenter } = message;
+  if (locateViewportCenter === undefined) {
+    return false;
+  }
+  if (typeof locateViewportCenter !== "boolean") {
+    throw new Error("locateViewportCenter 必须是布尔值");
+  }
+  return locateViewportCenter;
+};
+
 const resolveUrlOrNull = (value: string, base?: string): URL | null => {
   try {
     if (typeof base === "string" && base.trim()) {
@@ -249,7 +262,8 @@ const handleGetPageContent = async (
   try {
     const title = document.title || "",
       url = window.location.href || "",
-      pageNumber = resolveMessagePageNumber(message);
+      pageNumber = resolveMessagePageNumber(message),
+      locateViewportCenter = resolveLocateViewportCenter(message);
     if (isPdfDocument()) {
       const markdown = await convertPdfToMarkdown({ pageNumber, title, url });
       sendResponse(markdown);
@@ -265,14 +279,18 @@ const handleGetPageContent = async (
       );
       return;
     }
-    const markdown = withPreparedBody((body) => {
-      return convertPageContentToMarkdown({
-        body,
-        pageNumber,
-        title,
-        url,
-      });
-    });
+    const markdown = withPreparedBody(
+      (body) => {
+        return convertPageContentToMarkdown({
+          body,
+          locateViewportCenter,
+          pageNumber,
+          title,
+          url,
+        });
+      },
+      { includeViewportMarker: locateViewportCenter },
+    );
     sendResponse(markdown);
   } catch (error) {
     sendError(

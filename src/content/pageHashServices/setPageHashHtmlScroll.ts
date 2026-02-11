@@ -1,5 +1,5 @@
-import { assignLlmIds, insertViewportMarker } from "../dom/index.js";
 import type { HtmlFallbackScrollMetrics } from "./setPageHashTypes.js";
+import { assignLlmIds } from "../dom/index.js";
 import convertPageContentToMarkdown from "../extractors/converter.js";
 import { resolvePageNumberInput } from "../common/index.ts";
 
@@ -59,22 +59,14 @@ export const resolveHtmlTotalPages = (): number => {
   if (!body) {
     throw new Error("页面没有可用的 body");
   }
-  let marker: HTMLSpanElement | null = null;
-  try {
-    marker = insertViewportMarker(body);
-    assignLlmIds(body);
-    const markdown = convertPageContentToMarkdown({
-      body,
-      pageNumber: 1,
-      title: document.title || "",
-      url: window.location.href || "",
-    });
-    return markdown.totalPages;
-  } finally {
-    if (marker?.parentNode) {
-      marker.parentNode.removeChild(marker);
-    }
-  }
+  assignLlmIds(body);
+  const markdown = convertPageContentToMarkdown({
+    body,
+    pageNumber: 1,
+    title: document.title || "",
+    url: window.location.href || "",
+  });
+  return markdown.totalPages;
 };
 
 export const isHtmlDocument = (): boolean => {

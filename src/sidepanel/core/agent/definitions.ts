@@ -60,6 +60,7 @@ export type ToolExecutionContext = {
   fetchPageMarkdownData: (
     tabId: number,
     pageNumber?: number,
+    options?: { locateViewportCenter?: boolean },
   ) => Promise<PageMarkdownData>;
   shouldFollowMode: () => Promise<boolean>;
   syncPageHash: (tabId: number, pageData?: ToolPageHashData) => Promise<void>;
