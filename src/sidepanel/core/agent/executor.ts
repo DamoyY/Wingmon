@@ -36,10 +36,10 @@ type ToolOutput = {
 };
 
 type ToolMessage = {
-  role: "tool";
   content: string;
-  tool_call_id: string;
   name: string;
+  role: "tool";
+  tool_call_id: string;
   toolContext?: ToolMessageContext;
 };
 
@@ -80,8 +80,8 @@ const resolveToolArguments = (rawArgs: string | JsonValue): JsonValue =>
     typeof value === "object" && value !== null && !Array.isArray(value),
   serializeToolOutput = (output: unknown, name: string): string => {
     if (
-      typeof output === "string" ||
       typeof output === "number" ||
+      typeof output === "string" ||
       typeof output === "boolean"
     ) {
       return String(output);
@@ -99,9 +99,9 @@ const resolveToolArguments = (rawArgs: string | JsonValue): JsonValue =>
     }
   },
   resolveToolContent = (
-    tool: ToolModule,
-    output: unknown,
     name: string,
+    output: unknown,
+    tool: ToolModule,
   ): string => {
     if (typeof tool.formatResult === "function") {
       const formatted = tool.formatResult(output as JsonValue);
@@ -119,10 +119,10 @@ const resolveToolArguments = (rawArgs: string | JsonValue): JsonValue =>
     return serializeToolOutput(output, name);
   },
   resolveToolContext = (
-    tool: ToolModule,
     args: JsonValue,
-    output: unknown,
     name: string,
+    output: unknown,
+    tool: ToolModule,
   ): ToolMessageContext | null => {
     if (typeof tool.buildMessageContext !== "function") {
       return null;
@@ -137,13 +137,13 @@ const resolveToolArguments = (rawArgs: string | JsonValue): JsonValue =>
     return context;
   },
   executeTool = async (
+    context: ToolExecutionContext,
     name: string,
     rawArgs: string | JsonValue,
-    context: ToolExecutionContext,
   ): Promise<{
-    tool: ToolModule;
     args: JsonValue;
     output: unknown;
+    tool: ToolModule;
   }> => {
     const tool = getToolModule(name),
       parsedArgs = resolveToolArguments(rawArgs),
@@ -152,46 +152,46 @@ const resolveToolArguments = (rawArgs: string | JsonValue): JsonValue =>
     return { args: validatedArgs, output, tool };
   },
   resolveToolOutput = ({
-    tool,
     args,
-    output,
     name,
+    output,
+    tool,
   }: {
-    tool: ToolModule;
     args: JsonValue;
-    output: unknown;
     name: string;
+    output: unknown;
+    tool: ToolModule;
   }): ToolOutput => ({
-    content: resolveToolContent(tool, output, name),
-    toolContext: resolveToolContext(tool, args, output, name),
+    content: resolveToolContent(name, output, tool),
+    toolContext: resolveToolContext(args, name, output, tool),
   });
 
 export const buildPageMarkdownToolOutput = async (
-  tabId: number,
   pageNumber: number,
+  tabId: number,
   context: ToolExecutionContext = defaultToolExecutionContext,
 ): Promise<string> => {
-  const args: { tabId: number; page_number: number } = {
-      page_number: pageNumber,
+  const args: { tabId: number; pageNumber: number } = {
+      pageNumber,
       tabId,
     },
     { tool, output } = await executeTool(
+      context,
       toolNames.getPageMarkdown,
       args,
-      context,
     );
-  return resolveToolContent(tool, output, toolNames.getPageMarkdown);
+  return resolveToolContent(toolNames.getPageMarkdown, output, tool);
 };
 
 const buildToolMessage = ({
     callId,
-    name,
     content,
+    name,
     toolContext,
   }: {
     callId: string;
-    name: string;
     content: string;
+    name: string;
     toolContext: ToolMessageContext | null;
   }): ToolMessage => {
     const message: ToolMessage = {
@@ -218,7 +218,7 @@ const buildToolMessage = ({
       name = getToolCallName(call);
       const rawArgs = getToolCallArguments(call),
         resolved = resolveToolOutput({
-          ...(await executeTool(name, rawArgs, context)),
+          ...(await executeTool(context, name, rawArgs)),
           name,
         });
       output = resolved.content;

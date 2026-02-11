@@ -4,24 +4,81 @@ import { createRandomId } from "../../lib/utils/index.ts";
 const SANDBOX_REQUEST_TYPE = "runConsoleCommand";
 const SANDBOX_RESPONSE_TYPE = "runConsoleResult";
 
-type SandboxRequestPayload = Record<string, JsonValue>;
-type SandboxResponsePayload = {
-  type?: string;
-  requestId?: string;
-  error?: string;
-} & Record<string, JsonValue>;
+export type SandboxConsoleCommandRequest = {
+  command: string;
+};
+
+type SandboxConsoleCommandMessage = {
+  command: string;
+  requestId: string;
+  type: typeof SANDBOX_REQUEST_TYPE;
+};
+
+type SandboxConsoleCommandSuccessResponse = {
+  ok: true;
+  output: string;
+  requestId: string;
+  type: typeof SANDBOX_RESPONSE_TYPE;
+};
+
+type SandboxConsoleCommandErrorResponse = {
+  error: string;
+  ok: false;
+  requestId: string;
+  type: typeof SANDBOX_RESPONSE_TYPE;
+};
+
+export type SandboxConsoleCommandResponse =
+  | SandboxConsoleCommandSuccessResponse
+  | SandboxConsoleCommandErrorResponse;
 
 type SandboxWindowProvider = () => Promise<Window | null>;
 
 let sandboxWindowProvider: SandboxWindowProvider | null = null;
 
-const isSandboxResponsePayload = (
-  payload: Record<string, JsonValue> | null,
-): payload is SandboxResponsePayload => {
-  if (!payload) {
+type RuntimeObject = Record<string, JsonValue>;
+
+const successResponseKeys = new Set(["ok", "output", "requestId", "type"]);
+const errorResponseKeys = new Set(["error", "ok", "requestId", "type"]);
+
+const isRuntimeObject = (value: JsonValue): value is RuntimeObject => {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+};
+
+const hasOnlyKeys = (
+  value: RuntimeObject,
+  allowedKeys: ReadonlySet<string>,
+): boolean => {
+  return Object.keys(value).every((key) => allowedKeys.has(key));
+};
+
+const isNonEmptyString = (value: JsonValue): value is string => {
+  return typeof value === "string" && value.trim().length > 0;
+};
+
+const isSandboxConsoleCommandResponse = (
+  payload: JsonValue,
+): payload is SandboxConsoleCommandResponse => {
+  if (!isRuntimeObject(payload)) {
     return false;
   }
-  return payload.type === SANDBOX_RESPONSE_TYPE;
+  if (
+    payload.type !== SANDBOX_RESPONSE_TYPE ||
+    !isNonEmptyString(payload.requestId) ||
+    typeof payload.ok !== "boolean"
+  ) {
+    return false;
+  }
+  if (payload.ok) {
+    if (!hasOnlyKeys(payload, successResponseKeys)) {
+      return false;
+    }
+    return typeof payload.output === "string";
+  }
+  if (!hasOnlyKeys(payload, errorResponseKeys)) {
+    return false;
+  }
+  return isNonEmptyString(payload.error);
 };
 
 const registerSandboxWindowProvider = (
@@ -45,43 +102,50 @@ const getSandboxWindow = async (): Promise<Window> => {
 };
 
 const sendMessageToSandbox = async (
-  payload: SandboxRequestPayload,
+  payload: SandboxConsoleCommandRequest,
   timeoutMs = 5000,
-): Promise<SandboxResponsePayload> => {
+): Promise<SandboxConsoleCommandResponse> => {
+  if (!isNonEmptyString(payload.command)) {
+    throw new Error("command 必须是非空字符串");
+  }
   const targetWindow = await getSandboxWindow();
   const requestId = createRandomId("sandbox");
-  return new Promise<SandboxResponsePayload>((resolve, reject) => {
+  const requestMessage: SandboxConsoleCommandMessage = {
+    command: payload.command,
+    requestId,
+    type: SANDBOX_REQUEST_TYPE,
+  };
+  return new Promise<SandboxConsoleCommandResponse>((resolve, reject) => {
     let timer = 0;
-    const handleMessage = (
-      event: MessageEvent<Record<string, JsonValue> | null>,
-    ): void => {
+    const cleanup = (): void => {
+      clearTimeout(timer);
+      window.removeEventListener("message", handleMessage);
+    };
+    const handleMessage = (event: MessageEvent<JsonValue>): void => {
       if (event.source !== targetWindow) {
         return;
       }
       const data = event.data;
-      if (!isSandboxResponsePayload(data)) {
+      if (!isRuntimeObject(data) || data.type !== SANDBOX_RESPONSE_TYPE) {
         return;
       }
       if (data.requestId !== requestId) {
         return;
       }
-      clearTimeout(timer);
-      window.removeEventListener("message", handleMessage);
-      if (typeof data.error === "string" && data.error.trim()) {
-        reject(new Error(data.error));
+      if (!isSandboxConsoleCommandResponse(data)) {
+        cleanup();
+        reject(new Error("sandbox 响应格式无效"));
         return;
       }
+      cleanup();
       resolve(data);
     };
     timer = setTimeout(() => {
-      window.removeEventListener("message", handleMessage);
+      cleanup();
       reject(new Error(`等待 sandbox 响应超时（${String(timeoutMs)}ms）`));
     }, timeoutMs);
     window.addEventListener("message", handleMessage);
-    targetWindow.postMessage(
-      { ...payload, requestId, type: SANDBOX_REQUEST_TYPE },
-      "*",
-    );
+    targetWindow.postMessage(requestMessage, "*");
   });
 };
 

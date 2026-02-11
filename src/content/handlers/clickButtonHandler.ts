@@ -136,7 +136,7 @@ const domStableDelayMs = 500,
     message: ClickButtonRequest,
     sendResponse: SendResponse,
   ): Promise<void> => {
-    const normalizedId = normalizeLlmId(message.id ?? null),
+    const normalizedId = normalizeLlmId(message.id),
       target = findSingleButton(normalizedId);
     if (!target) {
       sendResponse({ ok: false, reason: "not_found" });

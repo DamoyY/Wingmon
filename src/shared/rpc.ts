@@ -1,19 +1,16 @@
 export type RpcErrorResponse = {
-  error?: string;
+  error: string;
 };
 
 export type RpcEndpoint<
   TRequest extends { type: string },
-  TResponse extends RpcErrorResponse,
+  TResponse extends object,
 > = {
   request: TRequest;
   response: TResponse;
 };
 
-export type RpcSchema = Record<
-  string,
-  RpcEndpoint<{ type: string }, RpcErrorResponse>
->;
+export type RpcSchema = Record<string, RpcEndpoint<{ type: string }, object>>;
 
 export type RpcRequestUnion<TSchema extends RpcSchema> = {
   [TType in keyof TSchema & string]: TSchema[TType]["request"];

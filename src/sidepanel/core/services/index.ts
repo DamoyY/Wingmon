@@ -5,6 +5,8 @@ export * from "./reloadTab.ts";
 export {
   default as sendMessageToSandbox,
   registerSandboxWindowProvider,
+  type SandboxConsoleCommandRequest,
+  type SandboxConsoleCommandResponse,
 } from "./sandboxBridge.ts";
 export * from "./settingsStorage.ts";
 export { default as buildSystemPrompt } from "./systemPromptBuilder.ts";

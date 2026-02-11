@@ -3,6 +3,11 @@ import {
   normalizePreviewHtml,
 } from "../../core/services/index.ts";
 
+const buildRenderHtmlMessage = (html) => ({
+  html,
+  type: "renderHtml",
+});
+
 const loadPreview = async () => {
   const id = new URLSearchParams(window.location.search).get("id");
   if (!id) {
@@ -21,13 +26,12 @@ const loadPreview = async () => {
     iframe.style.cssText =
       "width: 100vw; height: 100vh; border: none; position: fixed; top: 0; left: 0; display: block;";
     iframe.onload = () => {
-      iframe.contentWindow.postMessage(
-        {
-          html: normalizedCode,
-          type: "renderHtml",
-        },
-        "*",
-      );
+      const targetWindow = iframe.contentWindow;
+      if (!targetWindow) {
+        console.error("sandbox iframe 未就绪");
+        return;
+      }
+      targetWindow.postMessage(buildRenderHtmlMessage(normalizedCode), "*");
     };
     document.body.innerHTML = "";
     document.body.appendChild(iframe);

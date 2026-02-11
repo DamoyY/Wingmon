@@ -5,30 +5,30 @@ import {
 import { parse } from "@opendocsg/pdf2md/lib/util/pdf";
 
 type PageContentData = {
+  pageNumber?: number | null;
   title?: string | null;
   url?: string | null;
-  pageNumber?: number | null;
 };
 
 type MarkdownPageContent = {
-  title: string;
-  url: string;
   content: string;
-  totalPages: number;
   pageNumber: number;
+  title: string;
+  totalPages: number;
+  url: string;
   viewportPage: number;
 };
 
 export type MarkdownPdfPage = {
-  pageNumber: number;
   content: string;
+  pageNumber: number;
 };
 
 export type MarkdownPdfPageCollection = {
-  title: string;
-  url: string;
-  totalPages: number;
   pages: MarkdownPdfPage[];
+  title: string;
+  totalPages: number;
+  url: string;
 };
 
 type PdfDocument = {
@@ -76,7 +76,7 @@ const resolvePageNumber = (pageData: PageContentData | null = null): number => {
   if (Number.isInteger(value) && value > 0) {
     return value;
   }
-  throw new Error("page_number 必须是正整数");
+  throw new Error("pageNumber 必须是正整数");
 };
 
 const fetchPdfBytes = async (url: string): Promise<Uint8Array> => {

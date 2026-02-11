@@ -94,11 +94,12 @@ const setPageHash = (message: SetPageHashRequest): SetPageHashResponse => {
         ok: true,
         pageNumber,
         shouldReload: false,
+        skipped: false,
         totalPages,
       };
     }
     window.location.hash = `page=${String(pageNumber)}`;
-    return { ok: true, pageNumber, shouldReload: true };
+    return { ok: true, pageNumber, shouldReload: true, skipped: false };
   } catch (error) {
     return createSetPageHashErrorResponse(error);
   }

@@ -1,3 +1,4 @@
+import { type JsonValue, parseJson } from "../../lib/utils/index.ts";
 import {
   type ToolCall,
   type ToolCallArguments,
@@ -10,86 +11,88 @@ import {
   getToolOutputContent,
 } from "./toolMessageContext.ts";
 import type { MessageRecord } from "../store/index.ts";
-import { parseJson } from "../../lib/utils/index.ts";
 
-type RawToolCall = NonNullable<MessageRecord["tool_calls"]>[number];
+type JsonObject = Record<string, JsonValue>;
 type MessageFieldValue = RawToolCall[string];
+type RawToolCall = NonNullable<MessageRecord["tool_calls"]>[number];
 
 type Message = {
-  role?: string;
   content?: string;
+  name?: string;
+  role?: string;
   tool_calls?: ToolCall[];
   tool_call_id?: string;
-  name?: string;
   toolContext?: MessageFieldValue;
 };
 
 type ToolCallEntry = {
+  arguments: ToolCallArguments;
   callId: string;
   name: string;
-  arguments: ToolCallArguments;
 };
 
 type ChatToolCallForRequest = {
-  id: string;
-  type: "function";
   function: {
     name: string;
     arguments: ToolCallArguments;
   };
+  id: string;
+  type: "function";
 };
 
 type ChatRequestMessage =
   | {
-      role: "system";
       content: string;
+      role: "system";
     }
   | {
-      role: "tool";
       content: string;
+      role: "tool";
       tool_call_id: string;
     }
   | {
-      role: string;
       content?: string;
+      role: string;
       tool_calls?: ChatToolCallForRequest[];
     };
 
 type ResponsesInputItem =
   | {
-      role: "user" | "assistant";
       content: string;
+      role: "user" | "assistant";
     }
   | {
-      type: "function_call";
+      arguments: ToolCallArguments;
       call_id: string;
       name: string;
-      arguments: ToolCallArguments;
+      type: "function_call";
     }
   | {
-      type: "function_call_output";
       call_id: string;
       output: string;
+      type: "function_call_output";
     };
 
 type ContextPlanItem = {
-  index: number;
   includeToolCalls: boolean;
+  index: number;
 };
 
 const isRecord = (
     value: MessageFieldValue,
   ): value is { [key: string]: MessageFieldValue } =>
     typeof value === "object" && value !== null && !Array.isArray(value),
+  isJsonObject = (value: JsonValue): value is JsonObject =>
+    typeof value === "object" && value !== null && !Array.isArray(value),
   resolveString = (value: MessageFieldValue): string =>
     typeof value === "string" ? value : "",
   isToolCall = (value: ToolCall | null): value is ToolCall => value !== null,
   resolveToolCall = (call: RawToolCall): ToolCall | null => {
     const toolCall: ToolCall = {},
-      id = resolveString(call.id),
-      callId = resolveString(call.call_id),
-      name = resolveString(call.name),
       argumentsValue = call.arguments,
+      callId = resolveString(call.call_id),
+      id = resolveString(call.id),
+      name = resolveString(call.name),
       functionValue = call.function;
     if (id) {
       toolCall.id = id;
@@ -120,8 +123,8 @@ const isRecord = (
       }
     }
     if (
-      !toolCall.id &&
       !toolCall.call_id &&
+      !toolCall.id &&
       !toolCall.name &&
       toolCall.function === undefined
     ) {
@@ -361,19 +364,19 @@ export const buildResponsesInput = (
 };
 
 export type AnthropicMessageParam = {
-  role: "user" | "assistant";
   content:
     | string
     | Array<
         | { type: "text"; text: string }
         | {
-            type: "tool_use";
             id: string;
+            input: JsonObject;
             name: string;
-            input: Record<string, unknown>;
+            type: "tool_use";
           }
         | { type: "tool_result"; tool_use_id: string; content: string }
       >;
+  role: "user" | "assistant";
 };
 
 export const buildMessagesInput = (
@@ -393,14 +396,14 @@ export const buildMessagesInput = (
       if (removeToolCallIds.has(callId)) return;
 
       output.push({
-        role: "user",
         content: [
           {
-            type: "tool_result",
-            tool_use_id: callId,
             content: getToolOutputContent(message, trimToolResponseIds),
+            tool_use_id: callId,
+            type: "tool_result",
           },
         ],
+        role: "user",
       });
       return;
     }
@@ -418,15 +421,11 @@ export const buildMessagesInput = (
     }
 
     toolCallEntries.forEach((entry) => {
-      let input: Record<string, unknown> = {};
+      let input: JsonObject = {};
       if (typeof entry.arguments === "string") {
         try {
           const parsed = parseJson(entry.arguments);
-          if (
-            typeof parsed === "object" &&
-            parsed !== null &&
-            !Array.isArray(parsed)
-          ) {
+          if (isJsonObject(parsed)) {
             input = { ...parsed };
           } else {
             console.error("工具参数必须是对象或对象字符串", {
@@ -437,11 +436,7 @@ export const buildMessagesInput = (
         } catch (e) {
           console.error("Failed to parse tool arguments", e);
         }
-      } else if (
-        typeof entry.arguments === "object" &&
-        entry.arguments !== null &&
-        !Array.isArray(entry.arguments)
-      ) {
+      } else if (isJsonObject(entry.arguments)) {
         input = { ...entry.arguments };
       } else {
         console.error("工具参数必须是对象或对象字符串", {
@@ -450,20 +445,20 @@ export const buildMessagesInput = (
         });
       }
       content.push({
-        type: "tool_use",
         id: entry.callId,
-        name: entry.name,
         input,
+        name: entry.name,
+        type: "tool_use",
       });
     });
 
     if (content.length > 0) {
       output.push({
-        role: message.role,
         content:
           content.length === 1 && content[0].type === "text"
             ? content[0].text
             : content,
+        role: message.role,
       });
     }
   });

@@ -55,7 +55,7 @@ const convertPageContentToMarkdown = (
   const pageNumber = resolvePageNumberInput(pageData?.pageNumber ?? null);
   if (pageNumber > prepared.chunked.totalPages) {
     throw new Error(
-      `page_number 超出范围：${String(pageNumber)}，总页数：${String(prepared.chunked.totalPages)}`,
+      `pageNumber 超出范围：${String(pageNumber)}，总页数：${String(prepared.chunked.totalPages)}`,
     );
   }
   const chunkAnchorWeights = resolveChunkAnchorWeightsOrThrow(

@@ -1,7 +1,7 @@
 import {
   type ChunkAnchorWeight,
   type GetPageContentRequest,
-  type GetPageContentResponse,
+  type GetPageContentSuccessResponse,
   type SetPageHashRequest,
 } from "../../../shared/index.ts";
 import {
@@ -11,10 +11,7 @@ import {
   sendMessageToTab,
   waitForContentScript,
 } from "../services/index.ts";
-import {
-  parseOptionalPositiveInteger,
-  parseOptionalPositiveNumber,
-} from "./validation/index.js";
+import { parseOptionalPositiveInteger } from "./validation/index.js";
 import { t } from "../../lib/utils/index.ts";
 
 type PageReadResultArgs = {
@@ -41,6 +38,13 @@ type FetchPageMarkdownDataOptions = {
   locateViewportCenter?: boolean;
 };
 
+type PageReadMetadataInput = {
+  chunkAnchorWeights?: readonly ChunkAnchorWeight[];
+  pageNumber?: number;
+  totalPages?: number;
+  viewportPage?: number;
+};
+
 const pageContentRetryBaseDelayMs = 200,
   contentScriptMissingReceiverPattern = /Receiving end does not exist/u,
   pageContentRetryTimeoutMs = 10000,
@@ -53,28 +57,21 @@ const pageContentRetryBaseDelayMs = 200,
     });
 
 const parseChunkAnchorWeightItem = (
-    item: unknown,
+    item: ChunkAnchorWeight,
     fieldName: string,
     index: number,
   ): ChunkAnchorWeight => {
-    if (typeof item !== "object" || item === null || Array.isArray(item)) {
-      throw new Error(`${fieldName}[${String(index)}] 必须是对象`);
-    }
-    const chunkAnchorWeight = item as {
-      id?: unknown;
-      weight?: unknown;
-    } | null;
-    if (!chunkAnchorWeight || typeof chunkAnchorWeight.id !== "string") {
+    if (typeof item.id !== "string") {
       throw new Error(`${fieldName}[${String(index)}].id 必须是字符串`);
     }
-    const id = chunkAnchorWeight.id.trim().toLowerCase();
+    const id = item.id.trim().toLowerCase();
     if (!id || !chunkAnchorIdPattern.test(id)) {
       throw new Error(
         `${fieldName}[${String(index)}].id 必须是非空字母数字字符串`,
       );
     }
     const weight = parseOptionalPositiveInteger(
-      chunkAnchorWeight.weight,
+      item.weight,
       `${fieldName}[${String(index)}].weight`,
     );
     if (weight === undefined) {
@@ -86,14 +83,11 @@ const parseChunkAnchorWeightItem = (
     };
   },
   parseOptionalChunkAnchorWeights = (
-    value: unknown,
+    value: readonly ChunkAnchorWeight[] | undefined,
     fieldName: string,
   ): ChunkAnchorWeight[] | undefined => {
-    if (value === undefined || value === null) {
+    if (value === undefined) {
       return undefined;
-    }
-    if (!Array.isArray(value)) {
-      throw new Error(`${fieldName} 必须是数组`);
     }
     const usedIds = new Set<string>();
     const chunkAnchorWeights = value.map((item, index) =>
@@ -119,14 +113,6 @@ const parseChunkAnchorWeightItem = (
     }
     return value;
   },
-  resolveBooleanFlag = (...values: unknown[]): boolean => {
-    for (const value of values) {
-      if (typeof value === "boolean") {
-        return value;
-      }
-    }
-    return false;
-  },
   normalizePageReadFailure = (error: unknown): Error => {
     if (error instanceof Error) {
       return error;
@@ -134,14 +120,9 @@ const parseChunkAnchorWeightItem = (
     return new Error("页面内容获取失败");
   },
   resolvePageNumber = (value?: number): number =>
-    parseOptionalPositiveInteger(value, "page_number") ?? 1,
+    parseOptionalPositiveInteger(value, "pageNumber") ?? 1,
   resolvePageMetadata = (
-    meta: {
-      chunkAnchorWeights?: unknown;
-      pageNumber?: unknown;
-      totalPages?: unknown;
-      viewportPage?: unknown;
-    },
+    meta: PageReadMetadataInput,
     fallbackPageNumber?: number,
   ): PageReadMetadata => {
     const normalizedPageNumber =
@@ -156,7 +137,7 @@ const parseChunkAnchorWeightItem = (
         totalPages,
       ),
       viewportPage = ensurePageInRange(
-        parseOptionalPositiveNumber(meta.viewportPage, "viewportPage") ??
+        parseOptionalPositiveInteger(meta.viewportPage, "viewportPage") ??
           pageNumber,
         "viewportPage",
         totalPages,
@@ -201,14 +182,19 @@ const buildPageContentMessage = (
 };
 
 const buildPageHashMessage = (pageData?: {
-  chunkAnchorWeights?: ChunkAnchorWeight[];
+  chunkAnchorWeights?: readonly ChunkAnchorWeight[];
   pageNumber?: number;
   totalPages?: number;
   viewportPage?: number;
-}): SetPageHashRequest => ({
-  type: "setPageHash",
-  ...resolvePageMetadata(pageData ?? {}),
-});
+}): SetPageHashRequest => {
+  const metadata = resolvePageMetadata(pageData ?? {});
+  return {
+    chunkAnchorWeights: metadata.chunkAnchorWeights,
+    pageNumber: metadata.pageNumber,
+    totalPages: metadata.totalPages,
+    type: "setPageHash",
+  };
+};
 
 export const fetchPageMarkdownData = async (
   tabId: number,
@@ -217,18 +203,15 @@ export const fetchPageMarkdownData = async (
 ): Promise<PageMarkdownData> => {
   const shouldRetry = await waitForContentScript(tabId),
     fetchOnce = async () => {
-      const pageData: GetPageContentResponse = await sendMessageToTab(
+      const pageData: GetPageContentSuccessResponse = await sendMessageToTab(
         tabId,
         buildPageContentMessage(pageNumber, options),
       );
-      if (typeof pageData.content !== "string") {
-        throw new Error("页面内容为空");
-      }
       const metadata = resolvePageMetadata(pageData, pageNumber);
       return {
         content: pageData.content,
-        title: pageData.title || "",
-        url: pageData.url || "",
+        title: pageData.title,
+        url: pageData.url,
         ...metadata,
       };
     },
@@ -286,14 +269,10 @@ export const syncPageHash = async (
     tabId,
     buildPageHashMessage(pageData),
   );
-  if (!response.ok || response.skipped) {
+  if (response.skipped) {
     return;
   }
-  const shouldReload = resolveBooleanFlag(
-    response.shouldReload,
-    response.reload,
-  );
-  if (!shouldReload) {
+  if (!response.shouldReload) {
     return;
   }
   await reloadTab(tabId);

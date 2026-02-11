@@ -19,6 +19,7 @@ type BrowserTab = Awaited<
 type PageMarkdownData = Awaited<
   ReturnType<ToolExecutionContext["fetchPageMarkdownData"]>
 >;
+type ClickButtonMessage = Exclude<ClickButtonResponse, { error: string }>;
 
 type ClickButtonArgs = {
   id: string;
@@ -27,21 +28,23 @@ type ClickButtonArgs = {
 const isTabConnectable = (tab: BrowserTab): boolean =>
     typeof tab.url !== "string" || !isInternalUrl(tab.url),
   resolveClickButtonReason = (
-    response: ClickButtonResponse,
+    response: ClickButtonMessage,
   ): string | undefined => {
-    const { reason } = response;
-    if (reason === undefined) {
+    if (response.ok) {
       return undefined;
     }
-    const normalizedReason = reason.trim();
+    const normalizedReason = response.reason.trim();
     if (!normalizedReason) {
       throw new Error("click_button 返回的 reason 无效");
     }
     return normalizedReason;
   },
   resolveClickButtonPageNumber = (
-    response: ClickButtonResponse,
+    response: ClickButtonMessage,
   ): number | undefined => {
+    if (!response.ok) {
+      return undefined;
+    }
     const { pageNumber } = response;
     if (pageNumber === undefined) {
       return undefined;
@@ -125,7 +128,7 @@ const parameters = {
         return result;
       },
       resolveResult: (candidate) => {
-        const response: ClickButtonResponse = candidate;
+        const response: ClickButtonMessage = candidate;
         return {
           ok: response.ok,
           pageNumber: resolveClickButtonPageNumber(response),

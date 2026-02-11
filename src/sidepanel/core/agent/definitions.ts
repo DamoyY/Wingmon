@@ -1,4 +1,9 @@
-import type { BrowserTab, CreatedBrowserTab } from "../services/index.ts";
+import type {
+  BrowserTab,
+  CreatedBrowserTab,
+  SandboxConsoleCommandRequest,
+  SandboxConsoleCommandResponse,
+} from "../services/index.ts";
 import {
   type ChunkAnchorWeight,
   type ContentScriptRequest,
@@ -48,92 +53,89 @@ export type ToolPageHashData = {
 };
 
 export type ToolExecutionContext = {
-  getAllTabs: () => Promise<BrowserTab[]>;
-  waitForContentScript: (tabId: number) => Promise<boolean>;
-  sendMessageToTab: <TRequest extends ContentScriptRequest>(
-    tabId: number,
-    payload: TRequest,
-  ) => Promise<ContentScriptResponseByRequest<TRequest>>;
   closeTab: (tabId: number) => Promise<void>;
-  focusTab: (tabId: number) => Promise<void>;
   createTab: (url: string, active: boolean) => Promise<CreatedBrowserTab>;
   fetchPageMarkdownData: (
     tabId: number,
     pageNumber?: number,
     options?: { locateViewportCenter?: boolean },
   ) => Promise<PageMarkdownData>;
+  focusTab: (tabId: number) => Promise<void>;
+  getAllTabs: () => Promise<BrowserTab[]>;
+  getRuntimeUrl: (path: string) => string;
+  saveHtmlPreview: (args: { code: string }) => Promise<string>;
+  sendMessageToSandbox: (
+    payload: SandboxConsoleCommandRequest,
+    timeoutMs?: number,
+  ) => Promise<SandboxConsoleCommandResponse>;
+  sendMessageToTab: <TRequest extends ContentScriptRequest>(
+    tabId: number,
+    payload: TRequest,
+  ) => Promise<ContentScriptResponseByRequest<TRequest>>;
   shouldFollowMode: () => Promise<boolean>;
   syncPageHash: (tabId: number, pageData?: ToolPageHashData) => Promise<void>;
-  sendMessageToSandbox: (
-    payload: Record<string, JsonValue>,
-    timeoutMs?: number,
-  ) => Promise<JsonValue>;
-  saveHtmlPreview: (args: { code: string }) => Promise<string>;
-  getRuntimeUrl: (path: string) => string;
+  waitForContentScript: (tabId: number) => Promise<boolean>;
 };
 
-type ToolCallFunction = {
-  name?: string;
-  arguments?: string;
-};
+type ToolCallFunction = { arguments?: string; name?: string };
 
 export type ToolCallArguments = string | JsonValue;
 
 export type ToolCall = {
-  id?: string;
-  call_id?: string;
-  name?: string;
   arguments?: ToolCallArguments;
+  call_id?: string;
   function?: ToolCallFunction;
+  id?: string;
+  name?: string;
 };
 
 type ToolCallInput = ToolCall | null | undefined;
 
 export type ToolModule<TArgs = JsonValue, TResult = JsonValue> = {
-  key?: ToolNameKey;
-  name: string;
-  description: string;
-  parameters: ToolParameters;
-  execute: (
-    args: TArgs,
-    context: ToolExecutionContext,
-  ) => TResult | Promise<TResult>;
-  validateArgs: (args: JsonValue) => TArgs;
-  formatResult?: (result: TResult) => string;
   buildMessageContext?: (
     args: TArgs,
     result: TResult,
   ) => ToolMessageContext | null;
+  description: string;
+  execute: (
+    args: TArgs,
+    context: ToolExecutionContext,
+  ) => TResult | Promise<TResult>;
+  formatResult?: (result: TResult) => string;
+  key?: ToolNameKey;
+  name: string;
   pageReadDedupeAction?: ToolPageReadDedupeAction;
+  parameters: ToolParameters;
+  validateArgs: (args: JsonValue) => TArgs;
 };
 
 export type ToolValidator<TArgs = JsonValue> = (args: JsonValue) => TArgs;
 
 type ToolDefinitionFunction = {
-  name: string;
   description: string;
+  name: string;
   parameters: ToolParameters;
   strict: boolean;
 };
 
 type ChatToolDefinition = {
-  type: "function";
   function: ToolDefinitionFunction;
+  type: "function";
 };
 
 type ResponsesToolDefinition = {
-  type: "function";
-  name: string;
   description: string;
+  name: string;
   parameters: ToolParameters;
   strict: boolean;
+  type: "function";
 };
 
 export type ToolDefinition = ChatToolDefinition | ResponsesToolDefinition;
 
 const ensureToolName = (
-    value: string | undefined,
     key: ToolNameKey,
+    value: string | undefined,
   ): string => {
     if (!value) {
       throw new Error(`工具 key 缺失：${key}`);
@@ -141,21 +143,21 @@ const ensureToolName = (
     return value;
   },
   resolveToolNames = (names: Partial<ToolNameMap>): ToolNameMap => ({
-    clickButton: ensureToolName(names.clickButton, "clickButton"),
+    clickButton: ensureToolName("clickButton", names.clickButton),
     closeBrowserPage: ensureToolName(
-      names.closeBrowserPage,
       "closeBrowserPage",
+      names.closeBrowserPage,
     ),
-    enterText: ensureToolName(names.enterText, "enterText"),
-    find: ensureToolName(names.find, "find"),
-    getPageMarkdown: ensureToolName(names.getPageMarkdown, "getPageMarkdown"),
-    listTabs: ensureToolName(names.listTabs, "listTabs"),
-    openBrowserPage: ensureToolName(names.openBrowserPage, "openBrowserPage"),
+    enterText: ensureToolName("enterText", names.enterText),
+    find: ensureToolName("find", names.find),
+    getPageMarkdown: ensureToolName("getPageMarkdown", names.getPageMarkdown),
+    listTabs: ensureToolName("listTabs", names.listTabs),
+    openBrowserPage: ensureToolName("openBrowserPage", names.openBrowserPage),
     runConsoleCommand: ensureToolName(
-      names.runConsoleCommand,
       "runConsoleCommand",
+      names.runConsoleCommand,
     ),
-    showHtml: ensureToolName(names.showHtml, "showHtml"),
+    showHtml: ensureToolName("showHtml", names.showHtml),
   });
 
 const validatedTools: ToolModule[] = [],

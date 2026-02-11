@@ -9,13 +9,6 @@ import {
 import { isElementVisible } from "../dom/visibility.js";
 import { normalizeLlmId } from "../common/index.ts";
 
-const normalizeInputContent = (message: EnterTextRequest | null): string => {
-  if (typeof message?.content !== "string") {
-    throw new Error("content 必须是字符串");
-  }
-  return message.content;
-};
-
 const findSingleInput = (normalizedId: string): Element | null => {
   const win = document.defaultView;
   if (!win) {
@@ -107,8 +100,8 @@ const handleEnterText = (
   sendResponse: (response: EnterTextResponse) => void,
 ): void => {
   try {
-    const normalizedId = normalizeLlmId(message.id ?? null),
-      content = normalizeInputContent(message),
+    const normalizedId = normalizeLlmId(message.id),
+      content = message.content,
       target = findSingleInput(normalizedId);
     if (!target) {
       const warnMessage = `未找到 id 为 ${normalizedId} 的输入框`;

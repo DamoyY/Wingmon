@@ -1,7 +1,7 @@
 import type { FindToolPageResult, FindToolResult } from "../toolResultTypes.ts";
 import type {
   GetAllPageContentRequest,
-  GetAllPageContentResponse,
+  GetAllPageContentSuccessResponse,
   PageContentChunk,
 } from "../../../../shared/index.ts";
 import { type JsonValue, isInternalUrl, t } from "../../../lib/utils/index.ts";
@@ -49,8 +49,8 @@ const resolveRegex = (query: string): RegExp => {
   let source = query,
     flags = "";
   if (literalMatch) {
-    source = literalMatch[1];
     flags = literalMatch[2];
+    source = literalMatch[1];
     if (!source) {
       throw new ToolInputError("query 正则内容不能为空");
     }
@@ -75,19 +75,13 @@ const resolveQuery = (value: JsonValue): string => {
 };
 
 const resolvePageContentItem = (
-  item: PageContentChunk | null | undefined,
+  item: PageContentChunk,
   index: number,
 ): PageContentItem => {
-  if (typeof item !== "object" || item === null || Array.isArray(item)) {
-    throw new Error(`pages[${String(index)}] 必须是对象`);
-  }
   const pageNumber = parseRequiredPositiveInteger(
-    item.pageNumber ?? null,
+    item.pageNumber,
     `pages[${String(index)}].pageNumber`,
   );
-  if (typeof item.content !== "string") {
-    throw new Error(`pages[${String(index)}].content 必须是字符串`);
-  }
   return {
     content: item.content,
     pageNumber,
@@ -95,11 +89,8 @@ const resolvePageContentItem = (
 };
 
 const resolvePageContentItems = (
-  response: GetAllPageContentResponse,
+  response: GetAllPageContentSuccessResponse,
 ): PageContentItem[] => {
-  if (!Array.isArray(response.pages)) {
-    throw new Error("页面分块数据缺失");
-  }
   return response.pages.map((item, index) =>
     resolvePageContentItem(item, index),
   );

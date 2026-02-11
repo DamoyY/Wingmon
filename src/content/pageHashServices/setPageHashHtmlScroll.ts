@@ -20,10 +20,10 @@ const resolveHtmlFallbackScrollMetrics = (
   pageNumber: number,
   totalPages: number,
 ): HtmlFallbackScrollMetrics => {
-  const resolvedTotalPages = resolvePageNumberInput(totalPages, "page_number");
+  const resolvedTotalPages = resolvePageNumberInput(totalPages, "totalPages");
   if (pageNumber > resolvedTotalPages) {
     throw new Error(
-      `page_number 超出范围：${String(pageNumber)}，总页数：${String(resolvedTotalPages)}`,
+      `pageNumber 超出范围：${String(pageNumber)}，总页数：${String(resolvedTotalPages)}`,
     );
   }
   const body = document.querySelector("body");

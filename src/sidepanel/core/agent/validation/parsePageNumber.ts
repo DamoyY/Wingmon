@@ -3,4 +3,4 @@ import ToolInputError from "../errors.ts";
 import { parseRequiredPositiveInteger } from "./positiveInteger.js";
 
 export const parsePageNumber = (value: JsonValue): number =>
-  parseRequiredPositiveInteger(value, "page_number", ToolInputError);
+  parseRequiredPositiveInteger(value, "pageNumber", ToolInputError);

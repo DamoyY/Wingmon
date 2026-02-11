@@ -21,6 +21,9 @@ type TabNavigationFailure = {
   url: string;
 };
 
+type ContentScriptSuccessResponse<TRequest extends ContentScriptRequest> =
+  Exclude<ContentScriptResponseByRequest<TRequest>, { error: string }>;
+
 const pendingWaits: Map<number, Set<PendingWaiter>> = new Map();
 const tabNavigationFailures: Map<number, TabNavigationFailure> = new Map();
 let listenersReady = false,
@@ -133,17 +136,17 @@ const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
     });
     registerNavigationListeners();
   },
-  resolveResponseErrorMessage = <TRequest extends ContentScriptRequest>(
+  isErrorResponse = <TRequest extends ContentScriptRequest>(
     response: ContentScriptResponseByRequest<TRequest>,
-  ): string | null => {
-    if (
+  ): response is Extract<
+    ContentScriptResponseByRequest<TRequest>,
+    { error: string }
+  > => {
+    return (
       "error" in response &&
       typeof response.error === "string" &&
-      response.error.trim()
-    ) {
-      return response.error;
-    }
-    return null;
+      response.error.trim().length > 0
+    );
   };
 
 export const initTabListeners = (): void => {
@@ -235,7 +238,7 @@ export const focusTab = async (tabId: number): Promise<void> => {
 export const sendMessageToTab = async <TRequest extends ContentScriptRequest>(
   tabId: number,
   payload: TRequest,
-): Promise<ContentScriptResponseByRequest<TRequest>> => {
+): Promise<ContentScriptSuccessResponse<TRequest>> => {
   await ensureTabConnectable(tabId);
   try {
     const response = await chrome.tabs.sendMessage<
@@ -245,9 +248,8 @@ export const sendMessageToTab = async <TRequest extends ContentScriptRequest>(
     if (response === null || response === undefined) {
       throw new Error("页面未返回结果");
     }
-    const responseErrorMessage = resolveResponseErrorMessage(response);
-    if (responseErrorMessage !== null) {
-      throw new Error(responseErrorMessage);
+    if (isErrorResponse(response)) {
+      throw new Error(response.error);
     }
     return response;
   } catch (error) {

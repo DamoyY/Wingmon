@@ -2,10 +2,7 @@ import {
   type GetPageContentRequest,
   type GetPageContentResponse,
 } from "../../shared/index.ts";
-import {
-  isPdfDocument,
-  resolveAliasedPageNumberInput,
-} from "../common/index.ts";
+import { isPdfDocument, resolvePageNumberInput } from "../common/index.ts";
 import convertPageContentToMarkdown from "../extractors/converter.js";
 import convertPdfToMarkdown from "../extractors/pdfConverter.js";
 import withPreparedBody from "./withPreparedBody.js";
@@ -46,27 +43,13 @@ const sendError = (sendResponse: SendResponse, message: string): void => {
 };
 
 const resolveMessagePageNumber = (message: GetPageContentRequest): number => {
-  return resolveAliasedPageNumberInput({
-    camelProvided: "pageNumber" in message,
-    camelValue: message.pageNumber ?? null,
-    defaultValue: 1,
-    mismatchMessage: "pageNumber 与 page_number 不一致",
-    snakeProvided: "page_number" in message,
-    snakeValue: message.page_number ?? null,
-  });
+  return resolvePageNumberInput(message.pageNumber ?? null, "pageNumber");
 };
 
 const resolveLocateViewportCenter = (
   message: GetPageContentRequest,
 ): boolean => {
-  const { locateViewportCenter } = message;
-  if (locateViewportCenter === undefined) {
-    return false;
-  }
-  if (typeof locateViewportCenter !== "boolean") {
-    throw new Error("locateViewportCenter 必须是布尔值");
-  }
-  return locateViewportCenter;
+  return message.locateViewportCenter === true;
 };
 
 const resolveUrlOrNull = (value: string, base?: string): URL | null => {
@@ -242,7 +225,7 @@ const buildGoogleSearchResponse = ({
   url: string;
 }): GetPageContentResponse => {
   if (pageNumber > 1) {
-    throw new Error(`page_number 超出范围：${String(pageNumber)}，总页数：1`);
+    throw new Error(`pageNumber 超出范围：${String(pageNumber)}，总页数：1`);
   }
   const items = resolveGoogleSearchItems();
   return {
