@@ -48,7 +48,7 @@ To achieve this goal, you need as many candidate URLs as possible.
     * Every page contains many links. Use nearby text to judge whether a link is high value.
   3. Google search:
     * You may access `https://www.google.com/search?as_q=%s` (replace `%s` with your query) to collect URLs from results.
-      - You must use English search terms.
+      - **You must use English search terms.**
       - Use different search terms and inspect the most relevant results each time.
     * Wrong behavior:
       - Only use the search engine but never open search results (this leads to insufficient or biased information; even when current results are poor, you should try new search terms)

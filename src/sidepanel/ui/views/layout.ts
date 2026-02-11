@@ -19,7 +19,7 @@ const updateChatBarSizes = (): void => {
       ),
       topHeight = topBarEl.offsetHeight,
       chatViewHeight = chatViewEl.offsetHeight,
-      bottomHeight = chatViewHeight * 0.25;
+      bottomHeight = chatViewHeight * 0.3;
     bottomBarEl.style.height = `${String(bottomHeight)}px`;
     chatViewEl.style.setProperty(
       "--chat-top-bar-height",
