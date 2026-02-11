@@ -17,12 +17,12 @@ import type { WarnFallbackToPageRatioScrollInput } from "./setPageHashTypes.js";
 import { scrollHtmlByChunkAnchors } from "./setPageHashChunkAnchorScroll.js";
 
 const warnFallbackToPageRatioScroll = ({
-  reason,
-  pageNumber,
-  totalPages,
+  anchorResult,
   chunkAnchorWeights,
   fallbackMetrics,
-  anchorResult,
+  pageNumber,
+  reason,
+  totalPages,
 }: WarnFallbackToPageRatioScrollInput): void => {
   console.warn("chunk anchor 滚动失败，已回退为比例滚动", {
     anchor: anchorResult,

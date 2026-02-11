@@ -7,26 +7,26 @@ type ConsoleSuccessPayload = {
 };
 
 type ConsoleErrorPayload = {
-  ok: false;
   error: string;
+  ok: false;
 };
 
 type ConsoleCommandReplyPayload = ConsoleSuccessPayload | ConsoleErrorPayload;
 
 type ConsoleResponsePayload =
   | (ConsoleSuccessPayload & {
-      type: typeof RESPONSE_TYPE;
       requestId: string;
+      type: typeof RESPONSE_TYPE;
     })
   | (ConsoleErrorPayload & {
-      type: typeof RESPONSE_TYPE;
       requestId: string;
+      type: typeof RESPONSE_TYPE;
     });
 
 type IncomingConsoleMessage = {
-  type: typeof REQUEST_TYPE;
   command: string;
   requestId: string;
+  type: typeof REQUEST_TYPE;
 };
 
 type ConsoleCommandReply = (payload: ConsoleCommandReplyPayload) => void;
