@@ -1,6 +1,6 @@
+import { parseIndicesKey, t } from "../../../../../lib/utils/index.ts";
 import type { MessageActionHandlers } from "../../actions.ts";
 import { createMaterialIconButton } from "../../../../../lib/domTools/index.ts";
-import { t } from "../../../../../lib/utils/index.ts";
 
 type MessageActionHandler = (indices: number[]) => Promise<void> | void;
 
@@ -10,7 +10,7 @@ type ActionButtonConfig = {
   icon: string;
   className: string;
   title: string;
-  onClick: () => Promise<void> | void;
+  onClick: (button: HTMLElement) => Promise<void> | void;
 };
 
 const resolveActionError = (error: unknown): Error => {
@@ -40,14 +40,26 @@ const toErrorHandler =
 
 const runAction = async (
   handler: MessageActionHandler,
-  indices: number[],
+  button: HTMLElement,
   onError: MessageErrorHandler,
 ): Promise<void> => {
   try {
-    await handler(indices);
+    await handler(resolveActionIndices(button));
   } catch (error) {
     onError(resolveActionError(error));
   }
+};
+
+const resolveActionIndices = (button: HTMLElement): number[] => {
+  const row = button.closest(".message-row");
+  if (!(row instanceof HTMLElement)) {
+    throw new Error("消息行容器无效");
+  }
+  const indicesKey = row.dataset.indices;
+  if (typeof indicesKey !== "string" || indicesKey.trim().length === 0) {
+    throw new Error("消息索引缺失");
+  }
+  return parseIndicesKey(indicesKey);
 };
 
 const createActionButton = ({
@@ -61,18 +73,17 @@ const createActionButton = ({
     icon,
     onClick: (event) => {
       event.stopPropagation();
-      void onClick();
+      if (!(event.currentTarget instanceof HTMLElement)) {
+        throw new Error("消息操作按钮无效");
+      }
+      void onClick(event.currentTarget);
     },
     title,
   });
 
 export const createMessageActions = (
-  indices: number[],
   handlers: MessageActionHandlers,
 ): HTMLDivElement => {
-  if (!Array.isArray(indices) || indices.length === 0) {
-    throw new Error("消息索引无效");
-  }
   const onCopy = toActionHandler(handlers.onCopy);
   const onDelete = toActionHandler(handlers.onDelete);
   const onError = toErrorHandler(handlers.onError);
@@ -81,13 +92,13 @@ export const createMessageActions = (
   const copyButton = createActionButton({
     className: "message-action message-copy",
     icon: "content_copy",
-    onClick: () => runAction(onCopy, indices, onError),
+    onClick: (button) => runAction(onCopy, button, onError),
     title: t("copy"),
   });
   const deleteButton = createActionButton({
     className: "message-action message-delete",
     icon: "delete",
-    onClick: () => runAction(onDelete, indices, onError),
+    onClick: (button) => runAction(onDelete, button, onError),
     title: t("delete"),
   });
   actions.append(copyButton, deleteButton);

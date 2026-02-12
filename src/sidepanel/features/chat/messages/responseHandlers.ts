@@ -58,11 +58,7 @@ export const applyStreamedResponse = (
     renderMessagesView();
     throw new Error("未收到有效回复");
   }
-  if (
-    assistantMessage.pending === true &&
-    hasText &&
-    !pendingToolCalls.length
-  ) {
+  if (assistantMessage.pending && hasText && !pendingToolCalls.length) {
     updateMessage(assistantIndex, { pending: false });
   }
   renderMessagesView();

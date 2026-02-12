@@ -2,6 +2,7 @@ import {
   createMessageRow,
   getMessageRenderedText,
   setMessageContent,
+  updateMessageRow,
   updateMessageStatusLine,
 } from "./components/index.ts";
 import {
@@ -17,11 +18,7 @@ export type RenderOptions = {
   animateIndices?: number[];
 };
 
-const MESSAGE_REANIMATE_WINDOW = 200;
 const STREAM_DELTA_CLASS_NAME = "stream-delta";
-
-let pendingAnimateKey: string | null = null;
-let pendingAnimateExpiresAt = 0;
 
 const requireMessagesElement = (): HTMLElement =>
     requireElementById("messages", "messagesEl", "消息容器未找到"),
@@ -49,58 +46,79 @@ const requireMessagesElement = (): HTMLElement =>
     return index;
   };
 
-const resolvePendingAnimateKey = (now: number): string | null => {
-  if (!pendingAnimateKey || now > pendingAnimateExpiresAt) {
-    pendingAnimateKey = null;
-    pendingAnimateExpiresAt = 0;
+const resolveAnimateKey = (options: RenderOptions): string | null => {
+  if (options.animateIndices === undefined) {
     return null;
   }
-  return pendingAnimateKey;
+  return resolveIndicesKey(options.animateIndices);
 };
 
-const resolveAnimationState = (
-  options: RenderOptions,
-): {
-  animateKey: string | null;
-  carryoverKey: string | null;
-  shouldRefreshCarryover: boolean;
-  animateKeys: Set<string>;
-} => {
-  const now = Date.now();
-  const animateKey =
-    options.animateIndices !== undefined
-      ? resolveIndicesKey(options.animateIndices)
-      : null;
-  const carryoverKey = resolvePendingAnimateKey(now);
-  const shouldRefreshCarryover = Boolean(carryoverKey) && !animateKey;
-  const animateKeys = new Set<string>();
-  if (animateKey) {
-    animateKeys.add(animateKey);
+const resolveMessageRenderKey = (message: DisplayMessage): string => {
+  if (typeof message.renderKey !== "string" || !message.renderKey.trim()) {
+    throw new Error("消息渲染键无效");
   }
-  if (carryoverKey) {
-    animateKeys.add(carryoverKey);
-  }
-  return {
-    animateKey,
-    animateKeys,
-    carryoverKey,
-    shouldRefreshCarryover,
-  };
+  return message.renderKey;
 };
 
-const updatePendingAnimateState = (
+const collectExistingRows = (
+  messagesEl: HTMLElement,
+): Map<string, HTMLDivElement> => {
+  const rows = messagesEl.querySelectorAll(":scope > .message-row");
+  const map = new Map<string, HTMLDivElement>();
+  rows.forEach((row) => {
+    if (!(row instanceof HTMLDivElement)) {
+      return;
+    }
+    const messageKey = row.dataset.messageKey;
+    if (typeof messageKey !== "string" || !messageKey.trim()) {
+      row.remove();
+      return;
+    }
+    if (map.has(messageKey)) {
+      row.remove();
+      return;
+    }
+    map.set(messageKey, row);
+  });
+  return map;
+};
+
+const reconcileMessageRows = (
+  messagesEl: HTMLElement,
+  displayMessages: DisplayMessage[],
+  handlers: MessageActionHandlers,
   animateKey: string | null,
-  shouldRefreshCarryover: boolean,
-): void => {
-  const now = Date.now();
-  if (animateKey) {
-    pendingAnimateKey = animateKey;
-    pendingAnimateExpiresAt = now + MESSAGE_REANIMATE_WINDOW;
-    return;
-  }
-  if (shouldRefreshCarryover) {
-    pendingAnimateExpiresAt = now + MESSAGE_REANIMATE_WINDOW;
-  }
+): HTMLElement[] => {
+  const existingRows = collectExistingRows(messagesEl);
+  const rowsToAnimate: HTMLElement[] = [];
+  let referenceNode: Element | null = messagesEl.firstElementChild;
+  displayMessages.forEach((message) => {
+    const messageKey = resolveMessageRenderKey(message);
+    const existingRow = existingRows.get(messageKey);
+    const row = existingRow ?? createMessageRow(message, handlers);
+    const isNewRow = existingRow === undefined;
+    if (existingRow) {
+      existingRows.delete(messageKey);
+      updateMessageRow(row, message, handlers);
+    }
+    if (referenceNode === row) {
+      referenceNode = referenceNode.nextElementSibling;
+    } else {
+      messagesEl.insertBefore(row, referenceNode);
+    }
+    if (
+      isNewRow &&
+      animateKey &&
+      typeof row.dataset.indices === "string" &&
+      row.dataset.indices === animateKey
+    ) {
+      rowsToAnimate.push(row);
+    }
+  });
+  existingRows.forEach((row) => {
+    row.remove();
+  });
+  return rowsToAnimate;
 };
 
 export const renderMessages = (
@@ -109,30 +127,20 @@ export const renderMessages = (
   options: RenderOptions = {},
 ): void => {
   const messagesEl = requireMessagesElement();
-  let hasVisibleMessages = false;
-  const { animateKey, shouldRefreshCarryover, animateKeys } =
-    resolveAnimationState(options);
-  const rowsToAnimate: HTMLElement[] = [];
-
-  messagesEl.innerHTML = "";
-  displayMessages.forEach((message) => {
-    hasVisibleMessages = true;
-    const row = createMessageRow(message, handlers);
-    messagesEl.appendChild(row);
-    if (animateKeys.size && row.dataset.indices) {
-      if (animateKeys.has(row.dataset.indices)) {
-        rowsToAnimate.push(row);
-      }
-    }
-  });
-
-  updatePendingAnimateState(animateKey, shouldRefreshCarryover);
+  const animateKey = resolveAnimateKey(options);
+  const rowsToAnimate = reconcileMessageRows(
+    messagesEl,
+    displayMessages,
+    handlers,
+    animateKey,
+  );
 
   messagesEl.scrollTop = messagesEl.scrollHeight;
   rowsToAnimate.forEach((row) => {
     animateMessageRowEnter(row);
   });
 
+  const hasVisibleMessages = displayMessages.length > 0;
   const button = requireNewChatButton();
   button.classList.toggle("hidden", !hasVisibleMessages);
   setEmptyStateVisible(!hasVisibleMessages);
@@ -178,6 +186,8 @@ export const updateLastAssistantMessage = (
   if (!(messageEl instanceof HTMLElement)) {
     throw new Error("消息容器无效");
   }
+  lastAssistantRow.dataset.indices = resolveIndicesKey(message.indices);
+  lastAssistantRow.dataset.messageKey = message.renderKey;
   updateMessageStatusLine(messageEl, message.status || "");
   messagesEl.scrollTop = messagesEl.scrollHeight;
   return true;

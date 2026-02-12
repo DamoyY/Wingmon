@@ -3,6 +3,7 @@ export { default as combineMessageContents } from "./combineMessageContents.ts";
 export { ensureElement, requireElementById } from "./ensureElement.ts";
 export {
   default as normalizeIndices,
+  parseIndicesKey,
   resolveIndicesKey,
 } from "./messageIndices.ts";
 export { default as parseJson } from "./json.ts";

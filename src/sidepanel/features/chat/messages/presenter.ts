@@ -48,6 +48,23 @@ const buildMessagesForView = (): DisplayMessage[] =>
     }
     return change.index;
   },
+  hasMessageContent = (message: MessageRecord | null | undefined): boolean => {
+    if (typeof message?.content !== "string") {
+      return false;
+    }
+    return message.content.trim().length > 0;
+  },
+  isPendingAssistantPlaceholder = (
+    message: MessageRecord | null | undefined,
+  ): boolean => {
+    if (!message || message.role !== "assistant") {
+      return false;
+    }
+    if (!message.pending || message.hidden) {
+      return false;
+    }
+    return !hasMessageContent(message);
+  },
   refreshMessages = (): void => {
     if (!actionHandlers) {
       throw new Error("消息操作处理器尚未初始化");
@@ -129,7 +146,8 @@ const buildMessagesForView = (): DisplayMessage[] =>
         shouldAnimate =
           change.message?.role === "user" ||
           (change.message?.role === "assistant" &&
-            previousRole !== "assistant");
+            previousRole !== "assistant" &&
+            !isPendingAssistantPlaceholder(change.message));
       renderMessagesFromState({
         animateIndices: shouldAnimate ? [changeIndex] : undefined,
       });

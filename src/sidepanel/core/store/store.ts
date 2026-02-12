@@ -9,12 +9,24 @@ type MessageFieldValue =
   | { [key: string]: MessageFieldValue }
   | undefined;
 
-export type MessageRecord = {
+export type MessageInput = {
+  id?: string;
   role?: string;
   content?: string;
   pending?: boolean;
   hidden?: boolean;
   groupId?: string;
+  tool_calls?: Array<{ [key: string]: MessageFieldValue }>;
+  [key: string]: MessageFieldValue;
+};
+
+export type MessageRecord = {
+  id: string;
+  role: string;
+  content: string;
+  pending: boolean;
+  hidden: boolean;
+  groupId: string;
   tool_calls?: Array<{ [key: string]: MessageFieldValue }>;
   [key: string]: MessageFieldValue;
 };
@@ -132,12 +144,11 @@ export const setStateValue = <K extends StateKey>(
   return value;
 };
 
-const hasMessageContent = (content: MessageRecord["content"]): boolean =>
-  typeof content === "string" && Boolean(content.trim());
+const hasMessageContent = (content: string): boolean => Boolean(content.trim());
 
 const isPendingAssistant = (
   message: MessageRecord | null | undefined,
-): boolean => message?.role === "assistant" && message.pending === true;
+): boolean => message?.role === "assistant" && message.pending;
 
 const resolveMessageHidden = (message: MessageRecord): boolean => {
   if (message.role === "tool") {
@@ -149,10 +160,76 @@ const resolveMessageHidden = (message: MessageRecord): boolean => {
   return false;
 };
 
-const normalizeMessage = <TMessage extends MessageRecord>(
-  message: TMessage,
-): TMessage => {
-  const normalized = { ...message };
+const resolveMessageId = (message: MessageInput): string => {
+  if (typeof message.id !== "string" || message.id.trim().length === 0) {
+    return createRandomId("msg");
+  }
+  return message.id;
+};
+
+const resolveMessageRole = (message: MessageInput): string => {
+  if (message.role === undefined) {
+    return "";
+  }
+  if (typeof message.role !== "string") {
+    throw new Error("消息角色无效");
+  }
+  return message.role;
+};
+
+const resolveMessageContent = (message: MessageInput): string => {
+  if (message.content === undefined) {
+    return "";
+  }
+  if (typeof message.content !== "string") {
+    throw new Error("消息内容无效");
+  }
+  return message.content;
+};
+
+const resolveMessagePending = (message: MessageInput): boolean => {
+  if (message.pending === undefined) {
+    return false;
+  }
+  if (typeof message.pending !== "boolean") {
+    throw new Error("消息 pending 标记无效");
+  }
+  return message.pending;
+};
+
+const resolveMessageGroupId = (message: MessageInput): string => {
+  if (message.groupId === undefined) {
+    return "";
+  }
+  if (typeof message.groupId !== "string") {
+    throw new Error("消息分组标识无效");
+  }
+  return message.groupId;
+};
+
+const resolveMessageToolCalls = (
+  message: MessageInput,
+): MessageRecord["tool_calls"] => {
+  if (message.tool_calls === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(message.tool_calls)) {
+    throw new Error("消息工具调用列表无效");
+  }
+  return message.tool_calls;
+};
+
+const normalizeMessage = (message: MessageInput): MessageRecord => {
+  const normalized: MessageRecord = {
+    ...message,
+    content: resolveMessageContent(message),
+    groupId: resolveMessageGroupId(message),
+    hidden: false,
+    id: resolveMessageId(message),
+    pending: resolveMessagePending(message),
+    role: resolveMessageRole(message),
+    tool_calls: resolveMessageToolCalls(message),
+  };
   if (Object.hasOwn(normalized, "status")) {
     delete normalized.status;
   }
@@ -166,9 +243,7 @@ const ensureMessageIndex = (index: number): void => {
   }
 };
 
-export const addMessage = <TMessage extends MessageRecord>(
-  message: TMessage,
-): TMessage => {
+export const addMessage = (message: MessageInput): MessageRecord => {
   const normalized = normalizeMessage(message);
   state.messages.push(normalized);
   notifyStateChange("messages", {
@@ -179,16 +254,16 @@ export const addMessage = <TMessage extends MessageRecord>(
   return normalized;
 };
 
-export const updateMessage = <TMessage extends MessageRecord = MessageRecord>(
+export const updateMessage = (
   index: number,
-  patch: Partial<TMessage> | ((message: TMessage) => TMessage),
-): TMessage => {
+  patch: Partial<MessageInput> | ((message: MessageRecord) => MessageInput),
+): MessageRecord => {
   ensureMessageIndex(index);
-  const current = state.messages[index] as TMessage;
+  const current = state.messages[index];
   const next =
     typeof patch === "function"
       ? patch({ ...current })
-      : ({ ...current, ...patch } as TMessage);
+      : { ...current, ...patch };
   const normalized = normalizeMessage(next);
   state.messages[index] = normalized;
   notifyStateChange("messages", {
@@ -215,7 +290,7 @@ export const removeMessage = (index: number): MessageRecord => {
   return removed;
 };
 
-export const setMessages = (messages: MessageRecord[]): void => {
+export const setMessages = (messages: MessageInput[]): void => {
   if (!Array.isArray(messages)) {
     throw new Error("messages 必须是数组");
   }
@@ -240,7 +315,7 @@ export const resetConversation = (): void => {
 
 export const loadConversationState = (
   id: string,
-  messages: MessageRecord[],
+  messages: MessageInput[],
   updatedAt: number,
 ): void => {
   setStateValue("conversationId", id, { type: "load" });

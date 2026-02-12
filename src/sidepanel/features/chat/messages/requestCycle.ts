@@ -86,7 +86,7 @@ const createAbortError = (): Error => {
       return null;
     }
     const message = state.messages.at(assistantIndex);
-    if (!message || message.role !== "assistant" || message.pending !== true) {
+    if (!message || message.role !== "assistant" || !message.pending) {
       return null;
     }
     return assistantIndex;
@@ -189,7 +189,7 @@ const createAbortError = (): Error => {
           const hasContent =
             typeof message.content === "string" &&
             message.content.trim().length > 0;
-          if (message.pending === true && !hasContent) {
+          if (message.pending && !hasContent) {
             updateMessage(assistantIndex, { pending: false });
           }
         },

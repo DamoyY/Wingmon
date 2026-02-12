@@ -1,20 +1,13 @@
+import type { MessageRecord } from "../../../core/store/index.ts";
 import { combineMessageContents } from "../../../lib/utils/index.ts";
 
-export type MessageEntry = {
-  role?: unknown;
-  content?: unknown;
-  hidden?: boolean;
-  pending?: boolean;
-  groupId?: unknown;
-};
-
-export type MessageList = Array<MessageEntry | null | undefined>;
-
-export type DisplayMessage = {
+type NormalizedMessage = {
+  id: string;
   role: string;
   content: string;
-  indices: number[];
-  status?: string;
+  pending: boolean;
+  hidden: boolean;
+  groupId: string;
 };
 
 type AssistantGroup = {
@@ -22,42 +15,30 @@ type AssistantGroup = {
   indices: number[];
   hasPending: boolean;
   groupId: string;
+  renderKey: string;
 };
 
-const resolveMessageRole = (role: unknown): string => {
-  if (role === null || role === undefined) {
-    return "";
-  }
-  if (typeof role !== "string") {
-    throw new Error("消息角色格式无效");
-  }
-  return role;
+export type DisplayMessage = {
+  renderKey: string;
+  role: string;
+  content: string;
+  indices: number[];
+  status?: string;
 };
 
-const resolveMessageContent = (content: unknown, role: string): string => {
-  if (content === null || content === undefined) {
-    return "";
-  }
-  if (typeof content !== "string") {
-    const label = role ? `：${role}` : "";
-    throw new Error(`消息内容格式无效${label}`);
-  }
-  return content;
-};
-
-const resolveMessageGroupId = (groupId: unknown, role: string): string => {
-  if (groupId === null || groupId === undefined) {
-    return "";
-  }
-  if (typeof groupId !== "string") {
-    const label = role ? `：${role}` : "";
-    throw new Error(`分组标识格式无效${label}`);
-  }
-  return groupId;
+const normalizeMessage = (message: MessageRecord): NormalizedMessage => {
+  return {
+    content: message.content,
+    groupId: message.groupId,
+    hidden: message.hidden,
+    id: message.id,
+    pending: message.pending,
+    role: message.role,
+  };
 };
 
 export const buildDisplayMessages = (
-  messages: MessageList,
+  messages: readonly MessageRecord[],
   activeStatus: string | null = null,
 ): DisplayMessage[] => {
   if (!Array.isArray(messages)) {
@@ -80,6 +61,7 @@ export const buildDisplayMessages = (
         entries.push({
           content,
           indices: assistantGroup.indices,
+          renderKey: assistantGroup.renderKey,
           role: "assistant",
         });
       }
@@ -90,42 +72,59 @@ export const buildDisplayMessages = (
       index: number,
       pending: boolean,
       groupId: string,
+      renderKey: string,
     ): void => {
       assistantGroup = {
         contents: [content],
         groupId,
         hasPending: pending,
         indices: [index],
+        renderKey,
       };
     };
-  messages.forEach((msg, index) => {
-    if (!msg || typeof msg !== "object") {
-      throw new Error("消息格式无效");
-    }
-    if (msg.hidden) {
+  messages.forEach((message: MessageRecord, index: number) => {
+    const normalized = normalizeMessage(message);
+    if (normalized.hidden) {
       return;
     }
-    const role = resolveMessageRole(msg.role);
-    const content = resolveMessageContent(msg.content, role);
-    if (role === "assistant") {
-      const isPending = msg.pending === true;
-      const groupId = resolveMessageGroupId(msg.groupId, role) || String(index);
+    if (normalized.role === "assistant") {
+      const groupId = normalized.groupId || normalized.id;
+      const renderKey = `assistant:${groupId}`;
       if (!assistantGroup) {
-        startAssistantGroup(content, index, isPending, groupId);
+        startAssistantGroup(
+          normalized.content,
+          index,
+          normalized.pending,
+          groupId,
+          renderKey,
+        );
         return;
       }
       if (assistantGroup.groupId === groupId) {
-        assistantGroup.contents.push(content);
-        assistantGroup.hasPending = assistantGroup.hasPending || isPending;
+        assistantGroup.contents.push(normalized.content);
+        assistantGroup.hasPending =
+          assistantGroup.hasPending || normalized.pending;
         assistantGroup.indices.push(index);
         return;
       }
       flushAssistantGroup();
-      startAssistantGroup(content, index, isPending, groupId);
+      startAssistantGroup(
+        normalized.content,
+        index,
+        normalized.pending,
+        groupId,
+        renderKey,
+      );
       return;
     }
     flushAssistantGroup();
-    entries.push({ content, indices: [index], role });
+    const renderRole = normalized.role.trim() || "message";
+    entries.push({
+      content: normalized.content,
+      indices: [index],
+      renderKey: `${renderRole}:${normalized.id}`,
+      role: normalized.role,
+    });
   });
   flushAssistantGroup();
   if (activeStatus) {

@@ -6,7 +6,7 @@ const isPendingAssistantAtIndex = (index: number): boolean => {
     if (!message || message.role !== "assistant") {
       return false;
     }
-    return message.pending === true;
+    return message.pending;
   },
   resolvePendingAssistantIndex = (
     assistantIndex: number | null,
@@ -47,7 +47,7 @@ export const clearPendingAssistant = (assistantIndex: number | null): void => {
     return;
   }
   const message = state.messages.at(resolvedAssistantIndex);
-  if (!message || message.role !== "assistant" || message.pending !== true) {
+  if (!message || message.role !== "assistant" || !message.pending) {
     return;
   }
   const hasContent =

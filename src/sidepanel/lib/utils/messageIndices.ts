@@ -19,4 +19,26 @@ const normalizeIndices = (indices: IndicesInput): number[] => {
 export const resolveIndicesKey = (indices: IndicesInput): string =>
   normalizeIndices(indices).join(",");
 
+export const parseIndicesKey = (key: string): number[] => {
+  if (typeof key !== "string" || key.trim().length === 0) {
+    throw new Error("消息索引键无效");
+  }
+  const values = key.split(",");
+  if (values.length === 0) {
+    throw new Error("消息索引键无效");
+  }
+  const parsed = values.map((value) => {
+    const normalized = value.trim();
+    if (!/^\d+$/u.test(normalized)) {
+      throw new Error("消息索引键无效");
+    }
+    const index = Number(normalized);
+    if (!Number.isInteger(index)) {
+      throw new Error("消息索引键无效");
+    }
+    return index;
+  });
+  return normalizeIndices(parsed);
+};
+
 export default normalizeIndices;

@@ -1,17 +1,5 @@
-import {
-  type MessageRecord,
-  addMessage,
-  state,
-  updateMessage,
-} from "./store.ts";
+import { addMessage, state, updateMessage } from "./store.ts";
 import { createRandomId } from "../../lib/utils/index.ts";
-
-const resolveMessageContent = (message: MessageRecord): string => {
-  if (message.content === undefined) {
-    return "";
-  }
-  return message.content;
-};
 
 export const appendAssistantDelta = (
   delta: string | null | undefined,
@@ -25,7 +13,7 @@ export const appendAssistantDelta = (
   let targetIndex: number | null = null;
   for (let i = state.messages.length - 1; i >= 0; i -= 1) {
     const message = state.messages[i];
-    if (message.role === "assistant" && message.pending === true) {
+    if (message.role === "assistant" && message.pending) {
       targetIndex = i;
       break;
     }
@@ -44,6 +32,6 @@ export const appendAssistantDelta = (
   }
   updateMessage(targetIndex, (current) => ({
     ...current,
-    content: `${resolveMessageContent(current)}${delta}`,
+    content: `${current.content}${delta}`,
   }));
 };
