@@ -3,19 +3,17 @@ import type {
   ClickButtonResponse,
 } from "../../shared/index.ts";
 import {
+  invalidateButtonChunkPageSnapshot,
+  resolveButtonChunkPageNumberFromSnapshot,
+} from "../extractors/converter.js";
+import {
   isButtonElement,
   llmControlVisibilityOptions,
 } from "../dom/editableElements.js";
 import { isPdfDocument, normalizeLlmId } from "../common/index.ts";
-import { convertPageContentToMarkdownPages } from "../extractors/converter.js";
-import { escapeControlMarkerField } from "../extractors/controlMarkers.ts";
 import { isElementVisible } from "../dom/visibility.js";
-import withPreparedBody from "./withPreparedBody.js";
 
 type SendResponse = (response: ClickButtonResponse) => void;
-
-const buildButtonIdMarker = (normalizedId: string): string =>
-  `| id: \`${escapeControlMarkerField(normalizedId)}\` >>`;
 
 const domStableDelayMs = 500,
   domStableMaxDelayMs = 5000,
@@ -43,37 +41,29 @@ const domStableDelayMs = 500,
     }
     return buttonMatches[0];
   },
-  resolveButtonChunkPageNumber = (normalizedId: string): number | null => {
+  resolveButtonChunkPageNumber = (
+    normalizedId: string,
+    url: string,
+  ): number | null => {
     if (isPdfDocument()) {
       return 1;
     }
-    const marker = buildButtonIdMarker(normalizedId);
     try {
-      const title = document.title || "",
-        url = window.location.href || "",
-        markdownPages = withPreparedBody((body) => {
-          return convertPageContentToMarkdownPages({
-            body,
-            locateViewportCenter: false,
-            pageNumber: null,
-            title,
-            url,
-          });
-        }),
-        matchedPage = markdownPages.pages.find((page) =>
-          page.content.includes(marker),
-        );
-      if (!matchedPage) {
-        console.error("按钮分片定位失败，未找到按钮标记", { id: normalizedId });
+      const pageNumber = resolveButtonChunkPageNumberFromSnapshot(
+        normalizedId,
+        url,
+      );
+      if (pageNumber === null) {
+        console.error("按钮分片定位失败，按钮分片记录不存在", {
+          id: normalizedId,
+          url,
+        });
         return null;
       }
-      if (
-        !Number.isInteger(matchedPage.pageNumber) ||
-        matchedPage.pageNumber <= 0
-      ) {
+      if (!Number.isInteger(pageNumber) || pageNumber <= 0) {
         throw new Error("按钮分片页码无效");
       }
-      return matchedPage.pageNumber;
+      return pageNumber;
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "按钮分片定位发生未知异常";
@@ -148,9 +138,11 @@ const domStableDelayMs = 500,
       sendResponse({ ok: false, reason: "not_found" });
       return;
     }
-    const pageNumber = resolveButtonChunkPageNumber(normalizedId);
+    const url = window.location.href || "";
+    const pageNumber = resolveButtonChunkPageNumber(normalizedId, url);
     target.click();
     await waitForDomStability();
+    invalidateButtonChunkPageSnapshot(url);
     if (pageNumber === null) {
       sendResponse({ ok: true });
       return;

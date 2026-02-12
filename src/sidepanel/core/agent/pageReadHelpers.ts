@@ -1,7 +1,9 @@
 import {
+  type ButtonChunkPage,
   type ChunkAnchorWeight,
   type GetPageContentRequest,
   type GetPageContentSuccessResponse,
+  type InputChunkPage,
   type SetPageHashRequest,
   type SupportedImageMimeType,
   resolveSupportedImageMimeType,
@@ -41,6 +43,16 @@ export type PageMarkdownData = PageReadMetadata & {
   url: string;
 };
 
+export type ButtonTabChunkLocation = {
+  pageNumber: number;
+  tabId: number;
+};
+
+export type InputTabChunkLocation = {
+  pageNumber: number;
+  tabId: number;
+};
+
 type FetchPageMarkdownDataOptions = {
   locateViewportCenter?: boolean;
 };
@@ -66,6 +78,18 @@ const pageContentRetryBaseDelayMs = 200,
     new Promise<void>((resolve) => {
       setTimeout(resolve, delayMs);
     });
+
+const buttonControlMarkerPattern =
+  /<< Button \| text: `[\s\S]*?` \| id: `([0-9a-z]+)` >>/gu;
+const inputControlMarkerPattern =
+  /<< Input \| text: `[\s\S]*?` \| id: `([0-9a-z]+)` >>/gu;
+
+const buttonTabChunkLocationByButtonId: Map<string, ButtonTabChunkLocation> =
+  new Map();
+const buttonIdsByTabId: Map<number, Set<string>> = new Map();
+const inputTabChunkLocationByInputId: Map<string, InputTabChunkLocation> =
+  new Map();
+const inputIdsByTabId: Map<number, Set<string>> = new Map();
 
 const imageBase64ChunkSize = 8192,
   resolveImageMimeTypeFromResponse = (
@@ -318,6 +342,273 @@ const parseChunkAnchorWeightItem = (
     };
   };
 
+type ControlChunkPage = {
+  id: string;
+  pageNumber: number;
+};
+
+type ControlChunkIndexState = {
+  idsByTabId: Map<number, Set<string>>;
+  locationById: Map<string, { pageNumber: number; tabId: number }>;
+  markerPattern: RegExp;
+  name: string;
+};
+
+const resolveControlChunkPageItem = (
+  item: ControlChunkPage,
+  fieldName: string,
+  index: number,
+): ControlChunkPage => {
+  if (typeof item.id !== "string") {
+    throw new Error(`${fieldName}[${String(index)}].id 必须是字符串`);
+  }
+  const id = item.id.trim().toLowerCase();
+  if (!id || !chunkAnchorIdPattern.test(id)) {
+    throw new Error(
+      `${fieldName}[${String(index)}].id 必须是非空字母数字字符串`,
+    );
+  }
+  const pageNumber = parseOptionalPositiveInteger(
+    item.pageNumber,
+    `${fieldName}[${String(index)}].pageNumber`,
+  );
+  if (pageNumber === undefined) {
+    throw new Error(`${fieldName}[${String(index)}].pageNumber 必须是正整数`);
+  }
+  return {
+    id,
+    pageNumber,
+  };
+};
+
+const parseOptionalControlChunkPages = (
+  value: readonly ControlChunkPage[] | undefined,
+  fieldName: string,
+): ControlChunkPage[] | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+  const usedIds = new Set<string>();
+  const controlChunkPages = value.map((item, index) =>
+    resolveControlChunkPageItem(item, fieldName, index),
+  );
+  controlChunkPages.forEach((controlChunkPage) => {
+    if (usedIds.has(controlChunkPage.id)) {
+      throw new Error(`${fieldName} 存在重复 id：${controlChunkPage.id}`);
+    }
+    usedIds.add(controlChunkPage.id);
+  });
+  return controlChunkPages;
+};
+
+const extractControlChunkPagesFromContent = (
+  content: string,
+  pageNumber: number,
+  state: Pick<ControlChunkIndexState, "markerPattern" | "name">,
+): ControlChunkPage[] => {
+  const normalizedPageNumber = parseOptionalPositiveInteger(
+    pageNumber,
+    "pageNumber",
+  );
+  if (normalizedPageNumber === undefined) {
+    throw new Error("pageNumber 必须是正整数");
+  }
+  const ids = new Set<string>();
+  const controlChunkPages: ControlChunkPage[] = [];
+  state.markerPattern.lastIndex = 0;
+  let markerMatch = state.markerPattern.exec(content);
+  while (markerMatch) {
+    const markerId = markerMatch[1];
+    if (typeof markerId !== "string") {
+      throw new Error(`${state.name}标记缺少 id`);
+    }
+    const normalizedId = markerId.trim().toLowerCase();
+    if (!normalizedId || !chunkAnchorIdPattern.test(normalizedId)) {
+      throw new Error(`${state.name}标记 id 无效：${markerId}`);
+    }
+    if (!ids.has(normalizedId)) {
+      ids.add(normalizedId);
+      controlChunkPages.push({
+        id: normalizedId,
+        pageNumber: normalizedPageNumber,
+      });
+    }
+    markerMatch = state.markerPattern.exec(content);
+  }
+  return controlChunkPages;
+};
+
+const clearControlChunkIndexForTab = (
+  tabId: number,
+  state: Pick<ControlChunkIndexState, "idsByTabId" | "locationById">,
+): void => {
+  const ids = state.idsByTabId.get(tabId);
+  if (!ids) {
+    return;
+  }
+  ids.forEach((id) => {
+    const location = state.locationById.get(id);
+    if (!location) {
+      return;
+    }
+    if (location.tabId === tabId) {
+      state.locationById.delete(id);
+    }
+  });
+  state.idsByTabId.delete(tabId);
+};
+
+const updateControlChunkIndexForTab = (
+  tabId: number,
+  controlChunkPages: readonly ControlChunkPage[],
+  state: Pick<ControlChunkIndexState, "idsByTabId" | "locationById" | "name">,
+): void => {
+  if (!Number.isInteger(tabId) || tabId <= 0) {
+    throw new Error("tabId 必须是正整数");
+  }
+  const nextLocations = controlChunkPages.map((controlChunkPage) => {
+    if (
+      !Number.isInteger(controlChunkPage.pageNumber) ||
+      controlChunkPage.pageNumber <= 0
+    ) {
+      throw new Error("controlChunkPages.pageNumber 必须是正整数");
+    }
+    const existingLocation = state.locationById.get(controlChunkPage.id);
+    if (existingLocation !== undefined && existingLocation.tabId !== tabId) {
+      throw new Error(`${state.name}索引冲突：id=${controlChunkPage.id}`);
+    }
+    return {
+      id: controlChunkPage.id,
+      pageNumber: controlChunkPage.pageNumber,
+    };
+  });
+  clearControlChunkIndexForTab(tabId, state);
+  const ids = new Set<string>();
+  nextLocations.forEach((nextLocation) => {
+    state.locationById.set(nextLocation.id, {
+      pageNumber: nextLocation.pageNumber,
+      tabId,
+    });
+    ids.add(nextLocation.id);
+  });
+  if (!ids.size) {
+    return;
+  }
+  state.idsByTabId.set(tabId, ids);
+};
+
+const resolveControlChunkPages = (
+  controlChunkPages: readonly ControlChunkPage[] | undefined,
+  content: string,
+  metadata: PageReadMetadata,
+  fieldName: string,
+  state: Pick<ControlChunkIndexState, "markerPattern" | "name">,
+): ControlChunkPage[] => {
+  const parsedControlChunkPages = parseOptionalControlChunkPages(
+    controlChunkPages,
+    fieldName,
+  );
+  const resolvedControlChunkPages =
+    parsedControlChunkPages ??
+    extractControlChunkPagesFromContent(content, metadata.pageNumber, state);
+  return resolvedControlChunkPages.map((controlChunkPage, index) => ({
+    id: controlChunkPage.id,
+    pageNumber: ensurePageInRange(
+      controlChunkPage.pageNumber,
+      `${fieldName}[${String(index)}].pageNumber`,
+      metadata.totalPages,
+    ),
+  }));
+};
+
+const resolveControlTabChunkLocation = (
+  id: string,
+  state: Pick<ControlChunkIndexState, "locationById" | "name">,
+): { pageNumber: number; tabId: number } | null => {
+  const normalizedId = id.trim().toLowerCase();
+  if (!normalizedId || !chunkAnchorIdPattern.test(normalizedId)) {
+    throw new Error(`${state.name} id 必须是非空字母数字字符串`);
+  }
+  const location = state.locationById.get(normalizedId);
+  if (!location) {
+    return null;
+  }
+  if (!Number.isInteger(location.tabId) || location.tabId <= 0) {
+    throw new Error(`${state.name}标签页记录 tabId 无效`);
+  }
+  if (!Number.isInteger(location.pageNumber) || location.pageNumber <= 0) {
+    throw new Error(`${state.name}标签页记录 pageNumber 无效`);
+  }
+  return {
+    pageNumber: location.pageNumber,
+    tabId: location.tabId,
+  };
+};
+
+const buttonChunkIndexState: ControlChunkIndexState = {
+  idsByTabId: buttonIdsByTabId,
+  locationById: buttonTabChunkLocationByButtonId,
+  markerPattern: buttonControlMarkerPattern,
+  name: "按钮",
+};
+
+const inputChunkIndexState: ControlChunkIndexState = {
+  idsByTabId: inputIdsByTabId,
+  locationById: inputTabChunkLocationByInputId,
+  markerPattern: inputControlMarkerPattern,
+  name: "输入框",
+};
+
+const resolveButtonChunkPages = (
+  pageData: GetPageContentSuccessResponse,
+  metadata: PageReadMetadata,
+): ButtonChunkPage[] =>
+  resolveControlChunkPages(
+    pageData.buttonChunkPages,
+    pageData.content,
+    metadata,
+    "buttonChunkPages",
+    buttonChunkIndexState,
+  );
+
+const resolveInputChunkPages = (
+  pageData: GetPageContentSuccessResponse,
+  metadata: PageReadMetadata,
+): InputChunkPage[] =>
+  resolveControlChunkPages(
+    pageData.inputChunkPages,
+    pageData.content,
+    metadata,
+    "inputChunkPages",
+    inputChunkIndexState,
+  );
+
+const updateButtonChunkIndexForTab = (
+  tabId: number,
+  buttonChunkPages: readonly ButtonChunkPage[],
+): void => {
+  updateControlChunkIndexForTab(tabId, buttonChunkPages, buttonChunkIndexState);
+};
+
+const updateInputChunkIndexForTab = (
+  tabId: number,
+  inputChunkPages: readonly InputChunkPage[],
+): void => {
+  updateControlChunkIndexForTab(tabId, inputChunkPages, inputChunkIndexState);
+};
+
+export const resolveButtonTabChunkLocation = (
+  id: string,
+): ButtonTabChunkLocation | null => {
+  return resolveControlTabChunkLocation(id, buttonChunkIndexState);
+};
+
+export const resolveInputTabChunkLocation = (
+  id: string,
+): InputTabChunkLocation | null => {
+  return resolveControlTabChunkLocation(id, inputChunkIndexState);
+};
+
 export const buildPageReadResult = ({
   headerLines,
   contentLabel,
@@ -332,10 +623,11 @@ export const buildPageReadResult = ({
 };
 
 const buildPageContentMessage = (
+  tabId: number,
   pageNumber: number | undefined,
   options: FetchPageMarkdownDataOptions,
 ): GetPageContentRequest => {
-  const message: GetPageContentRequest = { type: "getPageContent" };
+  const message: GetPageContentRequest = { tabId, type: "getPageContent" };
   if (pageNumber !== undefined) {
     message.pageNumber = resolvePageNumber(pageNumber);
   }
@@ -345,16 +637,20 @@ const buildPageContentMessage = (
   return message;
 };
 
-const buildPageHashMessage = (pageData?: {
-  chunkAnchorWeights?: readonly ChunkAnchorWeight[];
-  pageNumber?: number;
-  totalPages?: number;
-  viewportPage?: number;
-}): SetPageHashRequest => {
+const buildPageHashMessage = (
+  tabId: number,
+  pageData?: {
+    chunkAnchorWeights?: readonly ChunkAnchorWeight[];
+    pageNumber?: number;
+    totalPages?: number;
+    viewportPage?: number;
+  },
+): SetPageHashRequest => {
   const metadata = resolvePageMetadata(pageData ?? {});
   return {
     chunkAnchorWeights: metadata.chunkAnchorWeights,
     pageNumber: metadata.pageNumber,
+    tabId,
     totalPages: metadata.totalPages,
     type: "setPageHash",
   };
@@ -437,9 +733,13 @@ export const fetchPageMarkdownData = async (
     fetchOnce = async () => {
       const pageData: GetPageContentSuccessResponse = await sendMessageToTab(
         tabId,
-        buildPageContentMessage(pageNumber, options),
+        buildPageContentMessage(tabId, pageNumber, options),
       );
       const metadata = resolvePageMetadata(pageData, pageNumber);
+      const buttonChunkPages = resolveButtonChunkPages(pageData, metadata),
+        inputChunkPages = resolveInputChunkPages(pageData, metadata);
+      updateButtonChunkIndexForTab(tabId, buttonChunkPages);
+      updateInputChunkIndexForTab(tabId, inputChunkPages);
       return {
         content: pageData.content,
         title: pageData.title,
@@ -499,7 +799,7 @@ export const syncPageHash = async (
   await waitForContentScript(tabId);
   const response = await sendMessageToTab(
     tabId,
-    buildPageHashMessage(pageData),
+    buildPageHashMessage(tabId, pageData),
   );
   if (response.skipped) {
     return;

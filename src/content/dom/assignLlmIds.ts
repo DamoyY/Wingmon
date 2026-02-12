@@ -14,6 +14,7 @@ import {
   llmControlVisibilityOptions,
 } from "./editableElements.js";
 import { buildIdMap } from "../extractors/labels.js";
+import { parseRequiredPositiveInteger } from "../../shared/index.ts";
 import { resolveButtonLabel } from "../extractors/buttons.js";
 import { resolveInputLabel } from "../extractors/inputs.js";
 
@@ -119,7 +120,8 @@ const collectNamedControls = (
   return namedControls;
 };
 
-const assignLlmIds = (root: Element): void => {
+const assignLlmIds = (root: Element, tabId: number): void => {
+  const resolvedTabId = parseRequiredPositiveInteger(tabId, "tabId");
   clearAssignedLlmIds(root);
   markHiddenElementsForMarkdown(root);
   try {
@@ -142,7 +144,7 @@ const assignLlmIds = (root: Element): void => {
       totalTargets = namedControls.length,
       assignId = (element: Element): void => {
         const path = buildDomPath(element, root, llmIdPathErrorMessages),
-          id = hashDomPath(path, HASH_LENGTH);
+          id = hashDomPath(`${String(resolvedTabId)}:${path}`, HASH_LENGTH);
         if (usedIds.has(id)) {
           throw new Error(
             `控件 ID 冲突：${id}，控件总量：${String(totalTargets)}`,

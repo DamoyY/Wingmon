@@ -1,6 +1,7 @@
 import {
   type GetPageContentRequest,
   type GetPageContentResponse,
+  parseRequiredPositiveInteger,
 } from "../../shared/index.ts";
 import { isPdfDocument, resolvePageNumberInput } from "../common/index.ts";
 import convertPageContentToMarkdown from "../extractors/converter.js";
@@ -33,7 +34,8 @@ const handleGetPageContent = async (
     const title = document.title || "",
       url = window.location.href || "",
       pageNumber = resolveMessagePageNumber(message),
-      locateViewportCenter = resolveLocateViewportCenter(message);
+      locateViewportCenter = resolveLocateViewportCenter(message),
+      tabId = parseRequiredPositiveInteger(message.tabId, "tabId");
     if (isPdfDocument()) {
       const markdown = await convertPdfToMarkdown({ pageNumber, title, url });
       sendResponse(markdown);
@@ -58,7 +60,7 @@ const handleGetPageContent = async (
           url,
         });
       },
-      { includeViewportMarker: locateViewportCenter },
+      { includeViewportMarker: locateViewportCenter, tabId },
     );
     sendResponse(markdown);
   } catch (error) {

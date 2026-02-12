@@ -1,6 +1,7 @@
 import {
   type GetAllPageContentRequest,
   type GetAllPageContentResponse,
+  parseRequiredPositiveInteger,
 } from "../../shared/index.ts";
 import { convertPageContentToMarkdownPages } from "../extractors/converter.js";
 import { convertPdfToMarkdownPages } from "../extractors/pdfConverter.js";
@@ -15,12 +16,13 @@ const sendError = (sendResponse: SendResponse, message: string): void => {
 };
 
 const handleGetAllPageContent = async (
-  _message: GetAllPageContentRequest,
+  message: GetAllPageContentRequest,
   sendResponse: SendResponse,
 ): Promise<void> => {
   try {
     const title = document.title || "",
-      url = window.location.href || "";
+      url = window.location.href || "",
+      tabId = parseRequiredPositiveInteger(message.tabId, "tabId");
     if (isPdfDocument()) {
       const markdown = await convertPdfToMarkdownPages({ title, url });
       sendResponse({
@@ -31,15 +33,18 @@ const handleGetAllPageContent = async (
       });
       return;
     }
-    const markdown = withPreparedBody((body) => {
-      return convertPageContentToMarkdownPages({
-        body,
-        locateViewportCenter: false,
-        pageNumber: null,
-        title,
-        url,
-      });
-    });
+    const markdown = withPreparedBody(
+      (body) => {
+        return convertPageContentToMarkdownPages({
+          body,
+          locateViewportCenter: false,
+          pageNumber: null,
+          title,
+          url,
+        });
+      },
+      { tabId },
+    );
     sendResponse({
       pages: markdown.pages,
       title: markdown.title,

@@ -2,6 +2,7 @@ import {
   type SetPageHashRequest,
   type SetPageHashResponse,
   extractErrorMessage,
+  parseRequiredPositiveInteger,
 } from "../../shared/index.ts";
 import {
   isHtmlDocument,
@@ -52,7 +53,8 @@ const createSetPageHashErrorResponse = (
 const setPageHash = (message: SetPageHashRequest): SetPageHashResponse => {
   try {
     const pageNumber = resolveSetPageHashPageNumber(message),
-      chunkAnchorWeights = resolveSetPageHashChunkAnchorWeights(message);
+      chunkAnchorWeights = resolveSetPageHashChunkAnchorWeights(message),
+      tabId = parseRequiredPositiveInteger(message.tabId, "tabId");
     if (isHtmlDocument()) {
       const providedTotalPages = resolveSetPageHashTotalPages(message);
       if (providedTotalPages !== null && providedTotalPages <= 1) {
@@ -64,7 +66,7 @@ const setPageHash = (message: SetPageHashRequest): SetPageHashResponse => {
           totalPages: providedTotalPages,
         };
       }
-      const totalPages = providedTotalPages ?? resolveHtmlTotalPages();
+      const totalPages = providedTotalPages ?? resolveHtmlTotalPages(tabId);
       if (totalPages <= 1) {
         return {
           ok: true,

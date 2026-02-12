@@ -9,7 +9,7 @@ import {
 import { isInternalUrl, t } from "../../../lib/utils/index.ts";
 import type { ClickButtonToolResult } from "../toolResultTypes.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
-import { runTabAction } from "./tabActionRunner.ts";
+import { resolveButtonTabChunkLocation } from "../pageReadHelpers.ts";
 
 type BrowserTab = Awaited<
   ReturnType<ToolExecutionContext["getAllTabs"]>
@@ -70,91 +70,79 @@ const parameters = {
     { id }: ClickButtonArgs,
     context: ToolExecutionContext,
   ): Promise<ClickButtonToolResult> => {
+    const buttonLocation = resolveButtonTabChunkLocation(id);
+    if (buttonLocation === null) {
+      throw new Error(`未找到 id 为 ${id} 的按钮索引，请先读取页面`);
+    }
     const tabs: BrowserTab[] = await context.getAllTabs();
     if (!tabs.length) {
       throw new Error("未找到可用标签页");
     }
-    const connectableTabs = tabs.filter(isTabConnectable);
-    if (!connectableTabs.length) {
-      throw new Error("当前仅有浏览器内置页面，无法点击按钮");
+    const targetTab = tabs.find((tab) => tab.id === buttonLocation.tabId);
+    if (!targetTab) {
+      throw new Error(`按钮 id ${id} 的索引标签页不可用，请重新读取页面`);
     }
-    const finalState = await runTabAction({
-      buildErrorMessage: (error) =>
-        error instanceof Error ? error.message : "点击失败",
-      invalidResultMessage: "按钮点击返回结果异常",
-      onSuccess: async (tabId, clickResult) => {
-        const requestedPageNumber = clickResult.pageNumber;
-        if (requestedPageNumber === undefined) {
-          console.error("click_button 未返回按钮分片页码，已回退为默认分片");
-        }
-        let pageData: PageMarkdownData;
-        try {
-          pageData = await context.fetchPageMarkdownData(
-            tabId,
-            requestedPageNumber,
-          );
-        } catch (error) {
-          if (requestedPageNumber === undefined) {
-            throw error;
-          }
-          const errorMessage =
-            error instanceof Error ? error.message : "页面读取失败";
-          console.error("click_button 读取按钮分片失败，已回退默认分片", {
-            errorMessage,
-            requestedPageNumber,
-          });
-          pageData = await context.fetchPageMarkdownData(tabId);
-        }
-        const matchedTab = connectableTabs.find((tab) => tab.id === tabId),
-          resolvedUrl = pageData.url || matchedTab?.url || "",
-          internal = isInternalUrl(resolvedUrl),
-          result: ClickButtonToolResult = {
-            content: internal ? "" : pageData.content,
-            isInternal: internal,
-            tabId,
-            title: pageData.title,
-            url: resolvedUrl,
-          };
-        if (!internal) {
-          result.pageNumber = pageData.pageNumber;
-          result.totalPages = pageData.totalPages;
-        }
-        return result;
-      },
-      resolveResult: (candidate) => {
-        const response: ClickButtonMessage = candidate;
-        return {
-          ok: response.ok,
-          pageNumber: resolveClickButtonPageNumber(response),
-          reason: resolveClickButtonReason(response),
-        };
-      },
-      sendMessage: (tabId) => {
-        const message: ClickButtonRequest = {
-          id,
-          type: "clickButton",
-        };
-        return context.sendMessageToTab(tabId, message);
-      },
-      tabs: connectableTabs,
-      waitForContentScript: context.waitForContentScript,
-    });
-    if (finalState.done) {
-      if (!finalState.result) {
-        console.error("按钮点击结果缺少内容", finalState);
-        throw new Error("按钮点击结果无效");
+    if (!isTabConnectable(targetTab)) {
+      throw new Error("索引标签页为浏览器内置页面，无法点击按钮");
+    }
+    const tabId = buttonLocation.tabId;
+    await context.waitForContentScript(tabId);
+    const message: ClickButtonRequest = {
+      id,
+      type: "clickButton",
+    };
+    const response: ClickButtonMessage = await context.sendMessageToTab(
+      tabId,
+      message,
+    );
+    const clickResult = {
+      ok: response.ok,
+      pageNumber: resolveClickButtonPageNumber(response),
+      reason: resolveClickButtonReason(response),
+    };
+    if (!clickResult.ok) {
+      if (clickResult.reason === "not_found") {
+        throw new Error(`未在索引标签页找到 id 为 ${id} 的按钮`);
       }
-      return finalState.result;
+      throw new Error("按钮点击返回结果异常");
     }
-    if (finalState.errors.length) {
-      if (finalState.notFoundCount) {
-        throw new Error(
-          `未在任何标签页找到 id 为 ${id} 的按钮，且部分标签页发生错误：${finalState.errors.join("；")}`,
-        );
-      }
-      throw new Error(`所有标签页点击失败：${finalState.errors.join("；")}`);
+    const requestedPageNumber =
+      clickResult.pageNumber ?? buttonLocation.pageNumber;
+    if (clickResult.pageNumber === undefined) {
+      console.error("click_button 未返回按钮分片页码，已使用按钮索引分片", {
+        indexedPageNumber: buttonLocation.pageNumber,
+        tabId,
+      });
     }
-    throw new Error(`未找到 id 为 ${id} 的按钮`);
+    let pageData: PageMarkdownData;
+    try {
+      pageData = await context.fetchPageMarkdownData(
+        tabId,
+        requestedPageNumber,
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "页面读取失败";
+      console.error("click_button 读取按钮分片失败，已回退默认分片", {
+        errorMessage,
+        requestedPageNumber,
+      });
+      pageData = await context.fetchPageMarkdownData(tabId);
+    }
+    const resolvedUrl = pageData.url || targetTab.url || "",
+      internal = isInternalUrl(resolvedUrl),
+      result: ClickButtonToolResult = {
+        content: internal ? "" : pageData.content,
+        isInternal: internal,
+        tabId,
+        title: pageData.title,
+        url: resolvedUrl,
+      };
+    if (!internal) {
+      result.pageNumber = pageData.pageNumber;
+      result.totalPages = pageData.totalPages;
+    }
+    return result;
   };
 
 export default {

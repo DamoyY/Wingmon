@@ -1,6 +1,7 @@
 import type { HtmlFallbackScrollMetrics } from "./setPageHashTypes.js";
 import { assignLlmIds } from "../dom/index.js";
 import convertPageContentToMarkdown from "../extractors/converter.js";
+import { parseRequiredPositiveInteger } from "../../shared/index.ts";
 import { resolvePageNumberInput } from "../common/index.ts";
 
 const resolveScrollBehavior = (): ScrollBehavior => {
@@ -54,12 +55,12 @@ export const scrollHtmlByPage = (
   return metrics;
 };
 
-export const resolveHtmlTotalPages = (): number => {
+export const resolveHtmlTotalPages = (tabId: number): number => {
   const body = document.querySelector("body");
   if (!body) {
     throw new Error("页面没有可用的 body");
   }
-  assignLlmIds(body);
+  assignLlmIds(body, parseRequiredPositiveInteger(tabId, "tabId"));
   const markdown = convertPageContentToMarkdown({
     body,
     locateViewportCenter: false,

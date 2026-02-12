@@ -136,7 +136,10 @@ const parameters = {
     if (followMode) {
       await context.focusTab(tabId);
     }
-    const request: GetAllPageContentRequest = { type: "getAllPageContent" },
+    const request: GetAllPageContentRequest = {
+        tabId,
+        type: "getAllPageContent",
+      },
       response = await context.sendMessageToTab(tabId, request),
       pageItems = resolvePageContentItems(response),
       pages = buildFindPageResults(pageItems, regex);

@@ -12,6 +12,16 @@ export type ChunkAnchorWeight = {
   weight: number;
 };
 
+export type ButtonChunkPage = {
+  id: string;
+  pageNumber: number;
+};
+
+export type InputChunkPage = {
+  id: string;
+  pageNumber: number;
+};
+
 type ContentScriptErrorResponse = {
   error: string;
 };
@@ -24,6 +34,7 @@ export type PingResponse = { ok: true } | ContentScriptErrorResponse;
 
 export type GetPageContentRequest = {
   type: "getPageContent";
+  tabId: number;
   pageNumber?: number;
   locateViewportCenter?: boolean;
 };
@@ -36,6 +47,8 @@ export type GetPageContentSuccessResponse = {
   pageNumber: number;
   viewportPage: number;
   chunkAnchorWeights?: readonly ChunkAnchorWeight[];
+  buttonChunkPages?: readonly ButtonChunkPage[];
+  inputChunkPages?: readonly InputChunkPage[];
   totalTokens?: number;
 };
 
@@ -46,6 +59,7 @@ export type PageContentChunk = {
 
 export type GetAllPageContentRequest = {
   type: "getAllPageContent";
+  tabId: number;
 };
 
 export type GetAllPageContentSuccessResponse = {
@@ -57,6 +71,7 @@ export type GetAllPageContentSuccessResponse = {
 
 export type SetPageHashRequest = {
   type: "setPageHash";
+  tabId: number;
   pageNumber?: number;
   totalPages?: number;
   chunkAnchorWeights?: readonly ChunkAnchorWeight[];
@@ -158,12 +173,14 @@ const pingRequestKeys = new Set(["type"]);
 const getPageContentRequestKeys = new Set([
   "locateViewportCenter",
   "pageNumber",
+  "tabId",
   "type",
 ]);
-const getAllPageContentRequestKeys = new Set(["type"]);
+const getAllPageContentRequestKeys = new Set(["tabId", "type"]);
 const setPageHashRequestKeys = new Set([
   "chunkAnchorWeights",
   "pageNumber",
+  "tabId",
   "totalPages",
   "type",
 ]);
@@ -268,6 +285,9 @@ const isGetPageContentRequest = (
   ) {
     return false;
   }
+  if (!isPositiveInteger(value.tabId)) {
+    return false;
+  }
   if (
     !isOptionalFieldValid(value, "pageNumber", (fieldValue) =>
       isPositiveInteger(fieldValue),
@@ -283,10 +303,13 @@ const isGetPageContentRequest = (
 const isGetAllPageContentRequest = (
   value: MessageLike,
 ): value is GetAllPageContentRequest => {
-  return (
-    value.type === "getAllPageContent" &&
-    hasOnlyKeys(value, getAllPageContentRequestKeys)
-  );
+  if (
+    value.type !== "getAllPageContent" ||
+    !hasOnlyKeys(value, getAllPageContentRequestKeys)
+  ) {
+    return false;
+  }
+  return isPositiveInteger(value.tabId);
 };
 
 const isSetPageHashRequest = (
@@ -296,6 +319,9 @@ const isSetPageHashRequest = (
     value.type !== "setPageHash" ||
     !hasOnlyKeys(value, setPageHashRequestKeys)
   ) {
+    return false;
+  }
+  if (!isPositiveInteger(value.tabId)) {
     return false;
   }
   if (
