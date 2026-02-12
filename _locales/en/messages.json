@@ -135,16 +135,16 @@
     "message": "Tool call failed: $1"
   },
   "toolOpenPage": {
-    "message": "Open specific webpage in browser"
+    "message": "Supports HTML, PDF, JPEG, PNG, WebP."
   },
   "toolClickButton": {
-    "message": "Click the specified button"
+    "message": "Click specified button"
   },
   "toolEnterText": {
-    "message": "Enter text in the specified input field."
+    "message": "Enter text in specified input field."
   },
   "toolGetPage": {
-    "message": "Read content of page"
+    "message": "Supports HTML, PDF, JPEG, PNG, WebP."
   },
   "toolClosePage": {
     "message": "Close tab"
@@ -153,7 +153,7 @@
     "message": "Execute console command in Sandbox Page and get results"
   },
   "toolListTabs": {
-    "message": "List the titles, URLs, and Tab IDs of all tabs"
+    "message": "List titles, URLs, and Tab IDs of all tabs"
   },
   "toolShowHtml": {
     "message": "This tool will open the input HTML in user's browser while providing download options"

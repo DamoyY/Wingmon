@@ -135,19 +135,19 @@
     "message": "工具调用失败：$1"
   },
   "toolOpenPage": {
-    "message": "在当前浏览器打开指定网页"
+    "message": "仅支持 HTML、PDF、JPEG、PNG、WebP"
   },
   "toolClickButton": {
-    "message": "点击指定的 button"
+    "message": "点击指定的按钮"
   },
   "toolEnterText": {
     "message": "在指定的的输入框中输入文本"
   },
   "toolGetPage": {
-    "message": "读取页面内容"
+    "message": "仅支持 HTML、PDF、JPEG、PNG、WebP"
   },
   "toolClosePage": {
-    "message": "关闭标签页"
+    "message": "关闭指定标签页"
   },
   "toolRunConsole": {
     "message": "在 Sandbox Page 中执行控制台命令并获取结果"

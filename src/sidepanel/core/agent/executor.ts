@@ -1,4 +1,16 @@
 import {
+  type ApiType,
+  closeTab,
+  createTab,
+  focusTab,
+  getAllTabs,
+  getSettings,
+  saveHtmlPreview,
+  sendMessageToSandbox,
+  sendMessageToTab,
+  waitForContentScript,
+} from "../services/index.ts";
+import {
   type JsonValue,
   type ToolCall,
   type ToolExecutionContext,
@@ -12,16 +24,6 @@ import {
   toolNames,
 } from "./definitions.ts";
 import { buildToolErrorOutput, defaultToolSuccessOutput } from "./output.ts";
-import {
-  closeTab,
-  createTab,
-  focusTab,
-  getAllTabs,
-  saveHtmlPreview,
-  sendMessageToSandbox,
-  sendMessageToTab,
-  waitForContentScript,
-} from "../services/index.ts";
 import { extractErrorMessage, isRecord } from "../../../shared/index.ts";
 import {
   fetchPageMarkdownData,
@@ -46,6 +48,10 @@ type ToolMessage = {
 const sendMessageToSandboxWithType: ToolExecutionContext["sendMessageToSandbox"] =
     async (payload, timeoutMs) =>
       await sendMessageToSandbox(payload, timeoutMs),
+  getApiType: ToolExecutionContext["getApiType"] = async () => {
+    const settings = await getSettings();
+    return settings.apiType;
+  },
   saveHtmlPreviewWithType: ToolExecutionContext["saveHtmlPreview"] = async (
     args,
   ) => {
@@ -65,6 +71,7 @@ export const defaultToolExecutionContext: ToolExecutionContext = {
   fetchPageMarkdownData,
   focusTab,
   getAllTabs,
+  getApiType,
   getRuntimeUrl,
   saveHtmlPreview: saveHtmlPreviewWithType,
   sendMessageToSandbox: sendMessageToSandboxWithType,
@@ -76,6 +83,18 @@ export const defaultToolExecutionContext: ToolExecutionContext = {
 
 const resolveToolArguments = (rawArgs: string | JsonValue): JsonValue =>
     typeof rawArgs === "string" ? parseToolArguments(rawArgs || "{}") : rawArgs,
+  createToolExecutionContext = (
+    context: ToolExecutionContext,
+    apiType?: ApiType,
+  ): ToolExecutionContext => {
+    if (apiType === undefined) {
+      return context;
+    }
+    return {
+      ...context,
+      getApiType: () => Promise.resolve(apiType),
+    };
+  },
   serializeToolOutput = (output: unknown, name: string): string => {
     if (
       typeof output === "number" ||
@@ -252,13 +271,15 @@ export const handleToolCalls = async (
   toolCalls: ToolCall[],
   signal?: AbortSignal | null,
   context: ToolExecutionContext = defaultToolExecutionContext,
+  apiType?: ApiType,
 ): Promise<ToolMessage[]> => {
-  const messages: ToolMessage[] = [];
+  const executionContext = createToolExecutionContext(context, apiType),
+    messages: ToolMessage[] = [];
   for (const call of toolCalls) {
     if (signal?.aborted) {
       break;
     }
-    const message = await executeToolCallToMessage(call, context);
+    const message = await executeToolCallToMessage(call, executionContext);
     messages.push(message);
   }
   return messages;

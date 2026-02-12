@@ -7,6 +7,10 @@ import {
   getToolCallName,
 } from "./definitions.ts";
 import {
+  type ToolImageInput,
+  isSupportedPageImageMimeType,
+} from "./toolResultTypes.ts";
+import {
   collectPageReadDedupeSets,
   getToolOutputContent,
 } from "./toolMessageContext.ts";
@@ -45,21 +49,41 @@ type ChatToolCallForRequest = {
   type: "function";
 };
 
+type ChatTextContentPart = {
+  text: string;
+  type: "text";
+};
+
 type ChatRequestMessage =
   | {
       content: string;
       role: "system";
     }
   | {
-      content: string;
+      content: string | ChatTextContentPart[];
       role: "tool";
       tool_call_id: string;
+    }
+  | {
+      content: string | ChatTextContentPart[];
+      role: "user";
     }
   | {
       content?: string;
       role: string;
       tool_calls?: ChatToolCallForRequest[];
     };
+
+type ResponsesTextOutputItem = {
+  text: string;
+  type: "input_text";
+};
+
+type ResponsesImageOutputItem = {
+  detail: "auto";
+  image_url: string;
+  type: "input_image";
+};
 
 type ResponsesInputItem =
   | {
@@ -74,22 +98,43 @@ type ResponsesInputItem =
     }
   | {
       call_id: string;
-      output: string;
+      output:
+        | string
+        | Array<ResponsesTextOutputItem | ResponsesImageOutputItem>;
       type: "function_call_output";
+    };
+
+type AnthropicTextBlock = { type: "text"; text: string };
+type AnthropicImageBlock =
+  | {
+      source: { type: "url"; url: string };
+      type: "image";
+    }
+  | {
+      source: {
+        data: string;
+        media_type: "image/png" | "image/jpeg" | "image/webp";
+        type: "base64";
+      };
+      type: "image";
     };
 
 export type AnthropicMessageParam = {
   content:
     | string
     | Array<
-        | { type: "text"; text: string }
+        | AnthropicTextBlock
         | {
             id: string;
             input: JsonObject;
             name: string;
             type: "tool_use";
           }
-        | { type: "tool_result"; tool_use_id: string; content: string }
+        | {
+            type: "tool_result";
+            tool_use_id: string;
+            content: string | Array<AnthropicTextBlock | AnthropicImageBlock>;
+          }
       >;
   role: "user" | "assistant";
 };
@@ -109,6 +154,7 @@ type MessageIntermediate =
   | {
       callId: string;
       content: string;
+      imageInput?: ToolImageInput;
       kind: "toolResult";
     };
 
@@ -224,6 +270,98 @@ const isToolCall = (value: ToolCall | null): value is ToolCall =>
     });
     return entries;
   },
+  resolveToolImageInputFromContext = (
+    toolContext: Message["toolContext"],
+  ): ToolImageInput | undefined => {
+    if (!isRecord(toolContext)) {
+      return undefined;
+    }
+    const imageInputValue = toolContext.imageInput;
+    if (imageInputValue === undefined) {
+      return undefined;
+    }
+    if (!isRecord(imageInputValue)) {
+      throw new Error("toolContext.imageInput 无效");
+    }
+    const mimeTypeValue = imageInputValue.mimeType;
+    if (typeof mimeTypeValue !== "string") {
+      throw new Error("toolContext.imageInput.mimeType 无效");
+    }
+    if (!isSupportedPageImageMimeType(mimeTypeValue)) {
+      throw new Error("toolContext.imageInput.mimeType 不受支持");
+    }
+    const sourceType = imageInputValue.sourceType;
+    if (sourceType === "url") {
+      const urlValue = imageInputValue.url;
+      if (typeof urlValue !== "string" || !urlValue.trim()) {
+        throw new Error("toolContext.imageInput.url 无效");
+      }
+      return {
+        mimeType: mimeTypeValue,
+        sourceType: "url",
+        url: urlValue,
+      };
+    }
+    if (sourceType === "base64") {
+      const dataValue = imageInputValue.data;
+      if (typeof dataValue !== "string" || !dataValue.trim()) {
+        throw new Error("toolContext.imageInput.data 无效");
+      }
+      return {
+        data: dataValue,
+        mimeType: mimeTypeValue,
+        sourceType: "base64",
+      };
+    }
+    throw new Error("toolContext.imageInput.sourceType 无效");
+  },
+  resolveToolImageDataUrl = (imageInput: ToolImageInput): string =>
+    imageInput.sourceType === "url"
+      ? imageInput.url
+      : `data:${imageInput.mimeType};base64,${imageInput.data}`,
+  buildResponsesToolOutputItems = (
+    message: MessageIntermediate & {
+      kind: "toolResult";
+      imageInput: ToolImageInput;
+    },
+  ): Array<ResponsesTextOutputItem | ResponsesImageOutputItem> => {
+    const outputItems: Array<
+      ResponsesTextOutputItem | ResponsesImageOutputItem
+    > = [];
+    if (message.content.trim().length > 0) {
+      outputItems.push({
+        text: message.content,
+        type: "input_text",
+      });
+    }
+    outputItems.push({
+      detail: "auto",
+      image_url: resolveToolImageDataUrl(message.imageInput),
+      type: "input_image",
+    });
+    return outputItems;
+  },
+  buildAnthropicImageBlock = (
+    imageInput: ToolImageInput,
+  ): AnthropicImageBlock => {
+    if (imageInput.sourceType === "url") {
+      return {
+        source: {
+          type: "url",
+          url: imageInput.url,
+        },
+        type: "image",
+      };
+    }
+    return {
+      source: {
+        data: imageInput.data,
+        media_type: imageInput.mimeType,
+        type: "base64",
+      },
+      type: "image",
+    };
+  },
   hasTextContent = (message: Message): boolean =>
     typeof message.content === "string" && message.content.trim().length > 0,
   collectUserMessageIndices = (messages: Message[]): number[] => {
@@ -309,9 +447,13 @@ const isToolCall = (value: ToolCall | null): value is ToolCall =>
         if (removeToolCallIds.has(callId)) {
           return;
         }
+        const imageInput = resolveToolImageInputFromContext(
+          message.toolContext,
+        );
         intermediates.push({
           callId,
           content: getToolOutputContent(message, trimToolResponseIds),
+          ...(imageInput === undefined ? {} : { imageInput }),
           kind: "toolResult",
         });
         return;
@@ -379,10 +521,14 @@ const isToolCall = (value: ToolCall | null): value is ToolCall =>
     message: MessageIntermediate,
   ): ResponsesInputItem[] => {
     if (message.kind === "toolResult") {
+      const outputValue =
+        message.imageInput === undefined
+          ? message.content
+          : buildResponsesToolOutputItems(message);
       return [
         {
           call_id: message.callId,
-          output: message.content,
+          output: outputValue,
           type: "function_call_output",
         },
       ];
@@ -437,11 +583,29 @@ const isToolCall = (value: ToolCall | null): value is ToolCall =>
     message: MessageIntermediate,
   ): AnthropicMessageParam[] => {
     if (message.kind === "toolResult") {
+      const toolResultContentBlocks: Array<
+        AnthropicTextBlock | AnthropicImageBlock
+      > = [];
+      if (message.content.trim()) {
+        toolResultContentBlocks.push({
+          text: message.content,
+          type: "text",
+        });
+      }
+      if (message.imageInput !== undefined) {
+        toolResultContentBlocks.push(
+          buildAnthropicImageBlock(message.imageInput),
+        );
+      }
+      const toolResultContent =
+        toolResultContentBlocks.length === 0
+          ? message.content
+          : toolResultContentBlocks;
       return [
         {
           content: [
             {
-              content: message.content,
+              content: toolResultContent,
               tool_use_id: message.callId,
               type: "tool_result",
             },

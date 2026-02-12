@@ -1,11 +1,13 @@
-import type {
-  ClickButtonToolResult,
-  CloseBrowserPageToolResult,
-  EnterTextToolResult,
-  FindToolResult,
-  GetPageMarkdownToolResult,
-  OpenBrowserPageToolResult,
-  PageReadToolResult,
+import {
+  type ClickButtonToolResult,
+  type CloseBrowserPageToolResult,
+  type EnterTextToolResult,
+  type FindToolResult,
+  type GetPageMarkdownToolResult,
+  type OpenBrowserPageToolResult,
+  type PageReadToolResult,
+  type ToolImageInput,
+  isSupportedPageImageMimeType,
 } from "./toolResultTypes.ts";
 import type {
   ToolCall,
@@ -35,6 +37,7 @@ type NormalizedPageReadResult = {
   url: string;
   content: string;
   isInternal: boolean;
+  imageInput?: ToolImageInput;
 };
 
 export const AGENT_STATUS = {
@@ -51,7 +54,7 @@ export type AgentStatus = (typeof AGENT_STATUS)[keyof typeof AGENT_STATUS];
 
 const TOOL_STATUS_MAP: Partial<Record<string, AgentStatus>> = {
   click_button: AGENT_STATUS.operating,
-  close_page: AGENT_STATUS.operating,
+  close_tab: AGENT_STATUS.operating,
   enter_text: AGENT_STATUS.operating,
   find: AGENT_STATUS.searching,
   get_page: AGENT_STATUS.browsing,
@@ -91,10 +94,32 @@ const resolveOptionalOutputWithoutContent = (
   return normalized;
 };
 
+const resolveOptionalImageInput = (
+  value: PageReadToolResult["imageInput"],
+): ToolImageInput | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isSupportedPageImageMimeType(value.mimeType)) {
+    throw new Error("imageInput.mimeType 无效");
+  }
+  if (value.sourceType === "url") {
+    if (typeof value.url !== "string" || !value.url.trim()) {
+      throw new Error("imageInput.url 无效");
+    }
+    return { mimeType: value.mimeType, sourceType: "url", url: value.url };
+  }
+  if (typeof value.data !== "string" || !value.data.trim()) {
+    throw new Error("imageInput.data 无效");
+  }
+  return { data: value.data, mimeType: value.mimeType, sourceType: "base64" };
+};
+
 const resolvePageReadResult = (
   result: PageReadToolResult,
 ): NormalizedPageReadResult => ({
   content: ensureString(result.content, "content"),
+  imageInput: resolveOptionalImageInput(result.imageInput),
   isInternal: resolveBoolean(result.isInternal, "isInternal"),
   tabId: parseRequiredPositiveInteger(result.tabId, "Tab ID"),
   title: ensureString(result.title, "title"),
@@ -154,9 +179,7 @@ const buildPageReadEvent = (
   if (options.skipInternal && pageReadResult.isInternal) {
     return null;
   }
-  const pageReadEvent: ToolPageReadEvent = {
-    tabId: pageReadResult.tabId,
-  };
+  const pageReadEvent: ToolPageReadEvent = { tabId: pageReadResult.tabId };
   const pageNumber = parseOptionalPositiveInteger(
     result.pageNumber,
     "pageNumber",
@@ -178,7 +201,8 @@ const buildOptionalPageReadMessageContext = (
   result: PageReadToolResult,
   options: PageReadMessageContextOptions,
 ): ToolMessageContext | null => {
-  const pageReadEvent = buildPageReadEvent(result, options);
+  const pageReadResult = resolvePageReadResult(result),
+    pageReadEvent = buildPageReadEvent(result, options);
   if (pageReadEvent === null) {
     return null;
   }
@@ -189,6 +213,9 @@ const buildOptionalPageReadMessageContext = (
   if (outputWithoutContent !== undefined) {
     messageContext.outputWithoutContent = outputWithoutContent;
   }
+  if (pageReadResult.imageInput !== undefined) {
+    messageContext.imageInput = pageReadResult.imageInput;
+  }
   return messageContext;
 };
 
@@ -197,10 +224,11 @@ const buildRequiredPageReadMessageContext = (
   errorMessage: string,
   outputWithoutContent?: string,
 ): ToolMessageContext => {
-  const pageReadEvent = buildPageReadEvent(result, {
-    requirePageNumber: false,
-    skipInternal: false,
-  });
+  const pageReadResult = resolvePageReadResult(result),
+    pageReadEvent = buildPageReadEvent(result, {
+      requirePageNumber: false,
+      skipInternal: false,
+    });
   if (pageReadEvent === null) {
     throw new Error(errorMessage);
   }
@@ -209,6 +237,9 @@ const buildRequiredPageReadMessageContext = (
     messageContext: ToolMessageContext = { pageReadEvent };
   if (normalizedOutputWithoutContent !== undefined) {
     messageContext.outputWithoutContent = normalizedOutputWithoutContent;
+  }
+  if (pageReadResult.imageInput !== undefined) {
+    messageContext.imageInput = pageReadResult.imageInput;
   }
   return messageContext;
 };
@@ -258,7 +289,8 @@ const buildHeaderOnlyPageReadResult = (
   buildOpenBrowserPageOutputWithoutContent = (
     result: OpenBrowserPageToolResult,
   ): string => {
-    const { tabId, title, isInternal } = resolvePageReadResult(result),
+    const { tabId, title, isInternal, imageInput } =
+        resolvePageReadResult(result),
       headerLines = [
         t("statusOpenSuccess"),
         `${t("statusTitle")}：`,
@@ -268,6 +300,9 @@ const buildHeaderOnlyPageReadResult = (
       ];
     if (isInternal) {
       return buildHeaderOnlyPageReadResult(headerLines, true);
+    }
+    if (imageInput !== undefined) {
+      return buildHeaderOnlyPageReadResult(headerLines, false);
     }
     const { totalPages } = resolvePageChunk(result);
     return buildHeaderOnlyPageReadResult(
@@ -315,11 +350,24 @@ export const buildClickButtonMessageContext = (
 export const formatGetPageMarkdownResult = (
   result: GetPageMarkdownToolResult,
 ): string => {
-  const { title, url, content, isInternal } = resolvePageReadResult(result);
+  const { title, url, content, isInternal, imageInput } =
+    resolvePageReadResult(result);
   if (isInternal) {
     return buildInternalPageReadResult(
       [`${t("statusTitle")}：`, title, t("statusUrlPlain"), url],
       content,
+    );
+  }
+  if (imageInput !== undefined) {
+    return buildHeaderOnlyPageReadResult(
+      [
+        t("statusReadSuccess"),
+        `${t("statusTitle")}：`,
+        title,
+        t("statusUrlPlain"),
+        url,
+      ],
+      false,
     );
   }
   const { pageNumber, totalPages } = resolvePageChunk(result);
@@ -340,14 +388,18 @@ export const formatGetPageMarkdownResult = (
 export const formatOpenBrowserPageResult = (
   result: OpenBrowserPageToolResult,
 ): string => {
-  const { tabId, title, content, isInternal } = resolvePageReadResult(result);
-  const headerLines = [
-    t("statusOpenSuccess"),
-    `${t("statusTitle")}：`,
-    title,
-    `${t("statusTabId")}：`,
-    String(tabId),
-  ];
+  const { tabId, title, content, isInternal, imageInput } =
+      resolvePageReadResult(result),
+    headerLines = [
+      t("statusOpenSuccess"),
+      `${t("statusTitle")}：`,
+      title,
+      `${t("statusTabId")}：`,
+      String(tabId),
+    ];
+  if (imageInput !== undefined) {
+    return buildHeaderOnlyPageReadResult(headerLines, false);
+  }
   if (isInternal) {
     return buildInternalPageReadResult(headerLines, content);
   }
@@ -404,7 +456,7 @@ export const formatCloseBrowserPageResult = (
   result: CloseBrowserPageToolResult,
 ): string => {
   if (!Array.isArray(result.items)) {
-    throw new Error("close_page 响应 items 字段无效");
+    throw new Error("close_tab 响应 items 字段无效");
   }
   return result.items
     .map((item) => {

@@ -23,7 +23,11 @@ export {
   isDataUrl,
   isInternalUrl,
   isPdfUrl,
+  isSupportedImageUrl,
   isSvgUrl,
   normalizeUrl,
+  resolveSupportedImageMimeType,
+  resolveSupportedImageMimeTypeFromContentType,
 } from "../../../shared/index.ts";
+export type { SupportedImageMimeType } from "../../../shared/index.ts";
 export * from "./i18n.ts";

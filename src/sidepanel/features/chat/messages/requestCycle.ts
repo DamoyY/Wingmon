@@ -225,7 +225,12 @@ const createAbortError = (): Error => {
       if (!pendingToolCalls.length) {
         return;
       }
-      const toolMessages = await handleToolCalls(pendingToolCalls, signal);
+      const toolMessages = await handleToolCalls(
+        pendingToolCalls,
+        signal,
+        undefined,
+        settings.apiType,
+      );
       toolMessages.forEach((message) => addMessage(message));
       ensureNotAborted(signal);
       finalizeToolCallAssistant();

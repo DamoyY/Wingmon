@@ -2,9 +2,13 @@ export {
   isDataUrl,
   isInternalUrl,
   isPdfUrl,
+  isSupportedImageUrl,
   isSvgUrl,
   normalizeUrl,
+  resolveSupportedImageMimeType,
+  resolveSupportedImageMimeTypeFromContentType,
 } from "./url.ts";
+export type { SupportedImageMimeType } from "./url.ts";
 export {
   extractErrorMessage,
   type ErrorMessageOptions,

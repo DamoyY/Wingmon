@@ -76,7 +76,7 @@ After obtaining URLs of high-value pages, open those pages and read their conten
   - Wrong behavior:
     * Setting focus to pages opened only as temporary sources during information gathering.
 * After using this tool, you do not need to include that URL in your reply or tell the user to open it, because the page is already open and visible.
-### `close_page` tool:
+### `close_tab` tool:
 * Correct usage:
   - Proactively close **all or most** pages that you opened during information gathering.
     * These pages must be closed:

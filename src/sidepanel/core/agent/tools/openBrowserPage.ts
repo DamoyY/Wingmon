@@ -2,7 +2,15 @@ import {
   buildOpenBrowserPageMessageContext,
   formatOpenBrowserPageResult,
 } from "../toolResultFormatters.ts";
-import { isInternalUrl, t } from "../../../lib/utils/index.ts";
+import {
+  isInternalUrl,
+  resolveSupportedImageMimeType,
+  t,
+} from "../../../lib/utils/index.ts";
+import {
+  resolvePageImageInput,
+  resolvePageImageInputFromMarkdown,
+} from "../pageReadHelpers.ts";
 import type { OpenBrowserPageToolResult } from "../toolResultTypes.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 import ToolInputError from "../errors.ts";
@@ -42,7 +50,7 @@ const parameters = {
       return null;
     }
   },
-  resolveHttpUrl = (url: string): string => {
+  resolveHttpUrl = (url: string, supportsImageInput: boolean): string => {
     let parsedUrl: URL;
     try {
       parsedUrl = new URL(url);
@@ -50,20 +58,58 @@ const parameters = {
       console.error("URL 格式不正确", error);
       throw new ToolInputError("URL 格式不正确");
     }
+    if (parsedUrl.protocol === "file:") {
+      if (!supportsImageInput) {
+        throw new ToolInputError("URL 仅支持 http、https");
+      }
+      if (resolveSupportedImageMimeType(parsedUrl.toString()) === null) {
+        throw new ToolInputError("file:// URL 仅支持 PNG、JPEG、WebP 图片");
+      }
+      return parsedUrl.toString();
+    }
     if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-      throw new ToolInputError("URL 仅支持 http 或 https");
+      if (supportsImageInput) {
+        throw new ToolInputError("URL 仅支持 http、https，或 file:// 图片");
+      }
+      throw new ToolInputError("URL 仅支持 http、https");
     }
     return parsedUrl.toString();
+  },
+  resolveImagePageResult = async ({
+    tabId,
+    title,
+    url,
+  }: {
+    tabId: number;
+    title: string;
+    url: string;
+  }): Promise<OpenBrowserPageToolResult | null> => {
+    const imageInput = await resolvePageImageInput(url);
+    if (imageInput === null) {
+      return null;
+    }
+    return {
+      content: "",
+      imageInput,
+      isInternal: false,
+      pageNumber: 1,
+      tabId,
+      title,
+      totalPages: 1,
+      url,
+    };
   },
   fetchPageResult = async ({
     context,
     followMode,
+    supportsImageInput,
     tabId,
     fallbackUrl,
     requestedUrl,
   }: {
     context: ToolExecutionContext;
     followMode: boolean;
+    supportsImageInput: boolean;
     tabId: number;
     fallbackUrl: string;
     requestedUrl: string;
@@ -73,14 +119,33 @@ const parameters = {
       if (followMode) {
         await context.syncPageHash(tabId, pageData);
       }
+      const resolvedUrl = pageData.url || fallbackUrl;
+      if (supportsImageInput) {
+        const imageInput = await resolvePageImageInputFromMarkdown(
+          pageData.content,
+          resolvedUrl,
+        );
+        if (imageInput !== null) {
+          return {
+            content: "",
+            imageInput,
+            isInternal: false,
+            pageNumber: 1,
+            tabId,
+            title: pageData.title,
+            totalPages: 1,
+            url: resolvedUrl,
+          };
+        }
+      }
       return {
         content: pageData.content,
-        isInternal: isInternalUrl(pageData.url || fallbackUrl),
+        isInternal: isInternalUrl(resolvedUrl),
         pageNumber: pageData.pageNumber,
         tabId,
         title: pageData.title,
         totalPages: pageData.totalPages,
-        url: pageData.url || fallbackUrl,
+        url: resolvedUrl,
       };
     } catch (error) {
       const message = extractErrorMessage(error, {
@@ -99,7 +164,9 @@ const parameters = {
     { url, focus }: OpenPageArgs,
     context: ToolExecutionContext,
   ): Promise<OpenBrowserPageToolResult> => {
-    const normalizedUrl = resolveHttpUrl(url);
+    const apiType = await context.getApiType(),
+      supportsImageInput = apiType !== "chat",
+      normalizedUrl = resolveHttpUrl(url, supportsImageInput);
     const followMode = await context.shouldFollowMode(),
       shouldFocus = followMode || focus,
       tabs: BrowserTab[] = await context.getAllTabs(),
@@ -127,11 +194,22 @@ const parameters = {
           url: matchedUrl,
         };
       }
+      if (supportsImageInput) {
+        const imageResult = await resolveImagePageResult({
+          tabId: matchedTab.id,
+          title: matchedTab.title || "",
+          url: matchedUrl,
+        });
+        if (imageResult !== null) {
+          return imageResult;
+        }
+      }
       return fetchPageResult({
         context,
         fallbackUrl: matchedUrl,
         followMode,
         requestedUrl: normalizedUrl,
+        supportsImageInput,
         tabId: matchedTab.id,
       });
     }
@@ -149,11 +227,22 @@ const parameters = {
         url: normalizedUrl,
       };
     }
+    if (supportsImageInput) {
+      const imageResult = await resolveImagePageResult({
+        tabId: tab.id,
+        title: tab.title || "",
+        url: normalizedUrl,
+      });
+      if (imageResult !== null) {
+        return imageResult;
+      }
+    }
     return fetchPageResult({
       context,
       fallbackUrl: normalizedUrl,
       followMode,
       requestedUrl: normalizedUrl,
+      supportsImageInput,
       tabId: tab.id,
     });
   };

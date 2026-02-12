@@ -3,6 +3,10 @@ import {
   formatGetPageMarkdownResult,
 } from "../toolResultFormatters.ts";
 import { isInternalUrl, t } from "../../../lib/utils/index.ts";
+import {
+  resolvePageImageInput,
+  resolvePageImageInputFromMarkdown,
+} from "../pageReadHelpers.ts";
 import type { GetPageMarkdownToolResult } from "../toolResultTypes.ts";
 import { MARKDOWN_CHUNK_TOKENS } from "../../../../shared/index.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
@@ -44,6 +48,8 @@ const parameters = {
       throw new Error("标签页缺少 URL");
     }
     const followMode = await context.shouldFollowMode();
+    const apiType = await context.getApiType(),
+      supportsImageInput = apiType !== "chat";
     if (followMode) {
       await context.focusTab(tabId);
     }
@@ -57,9 +63,42 @@ const parameters = {
         url: targetTab.url,
       };
     }
+    if (supportsImageInput) {
+      const imageInput = await resolvePageImageInput(targetTab.url);
+      if (imageInput !== null) {
+        return {
+          content: "",
+          imageInput,
+          isInternal: false,
+          pageNumber: 1,
+          tabId,
+          title: targetTab.title || "",
+          totalPages: 1,
+          url: targetTab.url,
+        };
+      }
+    }
     const pageData = await context.fetchPageMarkdownData(tabId, pageNumber);
     if (followMode && preserveViewport !== true) {
       await context.syncPageHash(tabId, pageData);
+    }
+    if (supportsImageInput) {
+      const imageInput = await resolvePageImageInputFromMarkdown(
+        pageData.content,
+        pageData.url || targetTab.url,
+      );
+      if (imageInput !== null) {
+        return {
+          content: "",
+          imageInput,
+          isInternal: false,
+          pageNumber: 1,
+          tabId,
+          title: pageData.title,
+          totalPages: 1,
+          url: pageData.url || targetTab.url,
+        };
+      }
     }
     return {
       content: pageData.content,

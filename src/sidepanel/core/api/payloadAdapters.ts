@@ -1,5 +1,6 @@
 import type {
   ChatCompletionAssistantMessageParam,
+  ChatCompletionContentPartText,
   ChatCompletionMessageParam,
   ChatCompletionMessageToolCall,
   ChatCompletionTool,
@@ -114,26 +115,70 @@ const readStringField = (source: unknown, field: string): string | null => {
     }
     return value.map(toChatMessageToolCall);
   },
+  normalizeChatToolContent = (
+    value: unknown,
+  ): string | Array<ChatCompletionContentPartText> => {
+    if (typeof value === "string") {
+      return value;
+    }
+    if (!Array.isArray(value)) {
+      throw new Error("tool 消息 content 格式无效");
+    }
+    return value.map((item, index) => {
+      if (!isRecord(item)) {
+        throw new Error(`tool 消息 content[${String(index)}] 格式无效`);
+      }
+      if (item.type !== "text" || typeof item.text !== "string") {
+        throw new Error(`tool 消息 content[${String(index)}] 仅支持 text`);
+      }
+      return { text: item.text, type: "text" };
+    });
+  },
+  normalizeChatUserContent = (
+    value: unknown,
+  ): string | Array<ChatCompletionContentPartText> => {
+    if (typeof value === "string") {
+      return value;
+    }
+    if (!Array.isArray(value)) {
+      throw new Error("user 消息 content 格式无效");
+    }
+    return value.map((item, index) => {
+      if (!isRecord(item)) {
+        throw new Error(`user 消息 content[${String(index)}] 格式无效`);
+      }
+      if (item.type === "text") {
+        if (typeof item.text !== "string") {
+          throw new Error(`user 消息 content[${String(index)}].text 无效`);
+        }
+        return { text: item.text, type: "text" };
+      }
+      throw new Error(`user 消息 content[${String(index)}] 仅支持 text`);
+    });
+  },
   toChatMessageParam = (
     message: ReturnType<typeof buildChatMessages>[number],
   ): ChatCompletionMessageParam => {
     const role = message.role;
-    if (role === "system" || role === "developer" || role === "user") {
+    if (role === "system" || role === "developer") {
       if (typeof message.content !== "string") {
         throw new Error(`${role} 消息缺少 content`);
       }
       return { content: message.content, role } as ChatCompletionMessageParam;
     }
+    if (role === "user") {
+      return {
+        content: normalizeChatUserContent(message.content),
+        role: "user",
+      };
+    }
     if (role === "tool") {
-      if (typeof message.content !== "string") {
-        throw new Error("tool 消息缺少 content");
-      }
       const toolCallId = readStringField(message, "tool_call_id");
       if (toolCallId === null || toolCallId.length === 0) {
         throw new Error("tool 消息缺少 tool_call_id");
       }
       return {
-        content: message.content,
+        content: normalizeChatToolContent(message.content),
         role: "tool",
         tool_call_id: toolCallId,
       };

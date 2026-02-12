@@ -42,6 +42,6 @@ export default {
   execute,
   formatResult: formatCloseBrowserPageResult,
   key: "closeBrowserPage",
-  name: "close_page",
+  name: "close_tab",
   parameters,
 };

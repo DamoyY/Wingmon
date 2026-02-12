@@ -1,4 +1,5 @@
 import type {
+  ApiType,
   BrowserTab,
   CreatedBrowserTab,
   SandboxConsoleCommandRequest,
@@ -16,6 +17,7 @@ import {
   createToolArgsValidator,
 } from "./validation/index.js";
 import type { PageMarkdownData } from "./pageReadHelpers.ts";
+import type { ToolImageInput } from "./toolResultTypes.ts";
 import ToolInputError from "./errors.ts";
 import toolModules from "./tools/index.ts";
 
@@ -47,6 +49,7 @@ export type ToolPageReadEvent = {
 export type ToolMessageContext = {
   pageReadEvent?: ToolPageReadEvent;
   outputWithoutContent?: string;
+  imageInput?: ToolImageInput;
 };
 
 export type ToolPageHashData = {
@@ -57,6 +60,7 @@ export type ToolPageHashData = {
 };
 
 export type ToolExecutionContext = {
+  getApiType: () => Promise<ApiType>;
   closeTab: (tabId: number) => Promise<void>;
   createTab: (url: string, active: boolean) => Promise<CreatedBrowserTab>;
   fetchPageMarkdownData: (

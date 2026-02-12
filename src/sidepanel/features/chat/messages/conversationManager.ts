@@ -128,7 +128,7 @@ export class ConversationManager {
       await saveConversationState();
       ensureNotAborted(signal);
       if (includePage) {
-        await appendSharedPageContext({ signal });
+        await appendSharedPageContext({ apiType: settings.apiType, signal });
       }
       ensureNotAborted(signal);
       pendingAssistantIndex = createPendingAssistant();

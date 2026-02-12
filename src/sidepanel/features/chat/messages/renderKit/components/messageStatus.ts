@@ -25,6 +25,11 @@ const parseTrailingDots = (statusText: string): ParsedTrailingDots | null => {
   };
 };
 
+const isChineseLocale = (): boolean => {
+  const uiLanguage = chrome.i18n.getUILanguage();
+  return uiLanguage.startsWith("zh");
+};
+
 const createStatusDotSlot = (
   dotCount: number,
   slotWidth: number,
@@ -35,7 +40,9 @@ const createStatusDotSlot = (
     "--message-status-dot-slot-width",
     `${String(slotWidth)}ch`,
   );
-  dotSlot.textContent = ".".repeat(dotCount);
+  dotSlot.textContent = isChineseLocale()
+    ? " . ".repeat(dotCount).trim()
+    : ".".repeat(dotCount);
   return dotSlot;
 };
 

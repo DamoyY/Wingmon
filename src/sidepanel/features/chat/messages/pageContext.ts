@@ -1,4 +1,8 @@
-import { type BrowserTab, getActiveTab } from "../../../core/services/index.ts";
+import {
+  type ApiType,
+  type BrowserTab,
+  getActiveTab,
+} from "../../../core/services/index.ts";
 import {
   type PageMarkdownData,
   fetchPageMarkdownData,
@@ -31,6 +35,7 @@ type ViewportPlan = {
 };
 
 type ExecuteGetPageToolCallPayload = {
+  apiType?: ApiType;
   callId: string;
   pageNumber: number;
   signal?: AbortSignal;
@@ -108,6 +113,7 @@ const resolveTabId = (activeTab: BrowserTab): number => {
     type: "function",
   }),
   executeGetPageToolCall = async ({
+    apiType,
     callId,
     pageNumber,
     signal,
@@ -115,7 +121,12 @@ const resolveTabId = (activeTab: BrowserTab): number => {
   }: ExecuteGetPageToolCallPayload): Promise<ToolMessage> => {
     ensureNotAborted(signal);
     const toolCall = buildGetPageToolCall(callId, pageNumber, tabId),
-      toolMessages = await handleToolCalls([toolCall], signal);
+      toolMessages = await handleToolCalls(
+        [toolCall],
+        signal,
+        undefined,
+        apiType,
+      );
     ensureNotAborted(signal);
     if (toolMessages.length !== 1) {
       throw new Error("get_page 工具调用结果数量无效");
@@ -142,8 +153,9 @@ const resolveTabId = (activeTab: BrowserTab): number => {
     addMessage(toolMessage);
   },
   appendSharedPageContext = async ({
+    apiType,
     signal,
-  }: { signal?: AbortSignal } = {}): Promise<void> => {
+  }: { apiType?: ApiType; signal?: AbortSignal } = {}): Promise<void> => {
     const activeTab = await getActiveTab(),
       tabId = resolveTabId(activeTab);
     ensureNotAborted(signal);
@@ -163,6 +175,7 @@ const resolveTabId = (activeTab: BrowserTab): number => {
       ensureNotAborted(signal);
       const callId = createRandomId("local"),
         toolMessage = await executeGetPageToolCall({
+          apiType,
           callId,
           pageNumber,
           signal,
