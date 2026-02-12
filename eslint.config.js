@@ -5,7 +5,7 @@ import js from "@eslint/js";
 import path from "path";
 import prettierPlugin from "eslint-plugin-prettier/recommended";
 import tseslint from "typescript-eslint";
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig(
   {
     languageOptions: {
@@ -32,6 +32,7 @@ export default defineConfig(
       "import/extensions": "off",
       "max-lines": "off",
       "max-lines-per-function": "off",
+      "max-params": "off",
       "max-statements": "off",
       "no-console": "off",
       "no-magic-numbers": "off",
@@ -44,7 +45,7 @@ export default defineConfig(
     extends: [...tseslint.configs.strictTypeChecked],
     files: ["**/*.ts"],
     languageOptions: {
-      parserOptions: { projectService: true, tsconfigRootDir: __dirname },
+      parserOptions: { projectService: true, tsconfigRootDir: dirname },
     },
   },
   prettierPlugin,

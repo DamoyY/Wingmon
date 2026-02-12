@@ -1,12 +1,18 @@
 {
   "compilerOptions": {
-    "target": "ESNEXT",
-    "lib": ["DOM", "ESNEXT"],
+    "allowImportingTsExtensions": true,
+    "lib": [
+      "DOM",
+      "ESNEXT"
+    ],
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "strictNullChecks": true,
     "noEmit": true,
-    "allowImportingTsExtensions": true
+    "strictNullChecks": true,
+    "target": "ESNEXT"
   },
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "**/node_modules/*"
+  ]
 }

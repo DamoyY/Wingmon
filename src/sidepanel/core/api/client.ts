@@ -42,14 +42,14 @@ const extractStatusCode = (error: unknown): number | null => {
   return null;
 };
 
-async function executeRequest<TStream, TResponse>(
+const executeRequest = async <TStream, TResponse>(
   payload: RequestModelPayload,
   apiCall: (
     body: unknown,
     options: { signal: AbortSignal },
   ) => Promise<TStream | TResponse>,
   requestTagPrefix: string,
-): Promise<RequestModelResult> {
+): Promise<RequestModelResult> => {
   const {
     settings,
     systemPrompt,
@@ -73,10 +73,10 @@ async function executeRequest<TStream, TResponse>(
 
   try {
     const stream = (await requestWithRetry({
+      extractStatusCode,
       request: () => apiCall(streamRequestBody, { signal }),
       requestTag: `${requestTagPrefix}.stream`,
       signal,
-      extractStatusCode,
     })) as TStream;
 
     onStreamStart();
@@ -116,10 +116,10 @@ async function executeRequest<TStream, TResponse>(
     messages,
   );
   const response = (await requestWithRetry({
+    extractStatusCode,
     request: () => apiCall(nonStreamRequestBody, { signal }),
     requestTag: `${requestTagPrefix}.non_stream`,
     signal,
-    extractStatusCode,
   })) as TResponse;
 
   return {
@@ -129,7 +129,7 @@ async function executeRequest<TStream, TResponse>(
       response,
     ),
   };
-}
+};
 
 const requestModel = async (
   payload: RequestModelPayload,
