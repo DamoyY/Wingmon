@@ -95,6 +95,12 @@
   color: var(--md-sys-color-on-tertiary-fixed);
 }
 
+.message-status-dots {
+  display: inline-block;
+  width: var(--message-status-dot-slot-width, 3ch);
+  text-align: left;
+}
+
 .message p {
   margin: 0 0 8px;
 }

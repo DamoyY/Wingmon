@@ -1,4 +1,59 @@
 const MESSAGE_STATUS_SELECTOR = ".message-status";
+const TRAILING_DOT_PATTERN = /^(.*?)(\.+)$/u;
+const MIN_DOT_SLOT_WIDTH_CH = 3;
+
+type ParsedTrailingDots = {
+  baseText: string;
+  dotCount: number;
+  slotWidth: number;
+};
+
+const parseTrailingDots = (statusText: string): ParsedTrailingDots | null => {
+  const matched = TRAILING_DOT_PATTERN.exec(statusText);
+  if (!matched) {
+    return null;
+  }
+  const [, baseText, dots] = matched;
+  if (!dots) {
+    return null;
+  }
+  const dotCount = dots.length;
+  return {
+    baseText,
+    dotCount,
+    slotWidth: Math.max(dotCount, MIN_DOT_SLOT_WIDTH_CH),
+  };
+};
+
+const createStatusDotSlot = (
+  dotCount: number,
+  slotWidth: number,
+): HTMLSpanElement => {
+  const dotSlot = document.createElement("span");
+  dotSlot.className = "message-status-dots";
+  dotSlot.style.setProperty(
+    "--message-status-dot-slot-width",
+    `${String(slotWidth)}ch`,
+  );
+  dotSlot.textContent = ".".repeat(dotCount);
+  return dotSlot;
+};
+
+const setStatusLineContent = (
+  statusLine: HTMLDivElement | HTMLElement,
+  statusText: string,
+): void => {
+  const parsed = parseTrailingDots(statusText);
+  if (!parsed) {
+    statusLine.textContent = statusText;
+    return;
+  }
+  const baseText = document.createElement("span");
+  baseText.className = "message-status-text";
+  baseText.textContent = parsed.baseText;
+  const dotSlot = createStatusDotSlot(parsed.dotCount, parsed.slotWidth);
+  statusLine.replaceChildren(baseText, dotSlot);
+};
 
 export const createMessageStatusLine = (
   statusText: string,
@@ -8,7 +63,7 @@ export const createMessageStatusLine = (
   }
   const status = document.createElement("div");
   status.className = "message-status status md-typescale-label-small";
-  status.textContent = statusText;
+  setStatusLineContent(status, statusText);
   return status;
 };
 
@@ -33,7 +88,7 @@ export const updateMessageStatusLine = (
   }
   if (existing) {
     if (existing.textContent !== statusText) {
-      existing.textContent = statusText;
+      setStatusLineContent(existing, statusText);
     }
     return;
   }
