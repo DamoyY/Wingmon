@@ -7,6 +7,11 @@ type GoogleSearchItem = {
   snippet: string;
 };
 
+type GoogleSearchExtractionSnapshot = {
+  hasExtracted: boolean;
+  items: GoogleSearchItem[] | null;
+};
+
 const googleSearchHost = "www.google.com";
 const googleSearchPath = "/search";
 const googleResultLinkBlockedPaths = new Set<string>([
@@ -28,6 +33,10 @@ const googleResultTextPattern = /\s+/gu;
 const googleHostPattern = /^([\w-]+\.)*google\./iu;
 const googleSnippetIgnorePattern =
   /^(translate this page|about this result|翻译此页|关于这条结果|缓存)$/iu;
+const googleSearchExtractionSnapshot: GoogleSearchExtractionSnapshot = {
+  hasExtracted: false,
+  items: null,
+};
 
 const resolveUrlOrNull = (value: string, base?: string): URL | null => {
   try {
@@ -172,6 +181,23 @@ const resolveGoogleSearchItems = (): GoogleSearchItem[] => {
   return items;
 };
 
+const extractAndCacheGoogleSearchItems = (): GoogleSearchItem[] => {
+  const items = resolveGoogleSearchItems();
+  googleSearchExtractionSnapshot.items = items;
+  googleSearchExtractionSnapshot.hasExtracted = true;
+  return items;
+};
+
+const resolveCachedGoogleSearchItems = (): GoogleSearchItem[] => {
+  if (
+    googleSearchExtractionSnapshot.hasExtracted &&
+    googleSearchExtractionSnapshot.items !== null
+  ) {
+    return googleSearchExtractionSnapshot.items;
+  }
+  return extractAndCacheGoogleSearchItems();
+};
+
 const formatGoogleSearchItems = (items: GoogleSearchItem[]): string => {
   return items
     .map((item) => [item.title, item.link, item.snippet].join("\n"))
@@ -196,6 +222,29 @@ const isGoogleSearchPage = (url: string): boolean => {
   return parsedUrl.pathname === googleSearchPath && parsedUrl.search.length > 1;
 };
 
+const scheduleGoogleSearchExtraction = (): void => {
+  const currentUrl = window.location.href || "";
+  if (!isGoogleSearchPage(currentUrl)) {
+    return;
+  }
+  const runExtraction = (): void => {
+    try {
+      extractAndCacheGoogleSearchItems();
+    } catch (error) {
+      console.error("Google 搜索结果预提取失败", error);
+    }
+  };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", runExtraction, {
+      once: true,
+    });
+    return;
+  }
+  runExtraction();
+};
+
+scheduleGoogleSearchExtraction();
+
 const buildGoogleSearchResponse = ({
   pageNumber,
   title,
@@ -204,7 +253,7 @@ const buildGoogleSearchResponse = ({
   if (pageNumber > 1) {
     throw new Error(`pageNumber 超出范围：${String(pageNumber)}，总页数：1`);
   }
-  const items = resolveGoogleSearchItems();
+  const items = resolveCachedGoogleSearchItems();
   return {
     content: formatGoogleSearchItems(items),
     pageNumber: 1,
