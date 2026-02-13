@@ -9,13 +9,17 @@ import {
   showHistoryView,
 } from "../../ui/index.ts";
 import type { HistoryActionHandler } from "./listView.ts";
-import { getHistory } from "../../core/services/index.ts";
-import { state } from "../../core/store/index.ts";
+import { getHistory } from "../../../shared/index.ts";
+import { state } from "../../../shared/state/panelStateContext.ts";
 import { t } from "../../lib/utils/index.ts";
 
 type RefreshHistoryListOptions = {
   onSelect?: HistoryActionHandler;
   onDeleteRequest?: HistoryActionHandler;
+};
+
+type OpenHistoryOptions = {
+  animate?: boolean;
 };
 
 const refreshHistoryList = async ({
@@ -55,12 +59,14 @@ const refreshHistoryList = async ({
     });
   };
 
-export const handleOpenHistory = async (): Promise<void> => {
+export const handleOpenHistory = async ({
+  animate = true,
+}: OpenHistoryOptions = {}): Promise<void> => {
   await refreshHistoryList({
     onDeleteRequest: handleDeleteRequest,
     onSelect: handleSelectConversation,
   });
-  await showHistoryView({ animate: true });
+  await showHistoryView({ animate });
 };
 
 export const handleCloseHistory = async (): Promise<void> => {

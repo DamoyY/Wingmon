@@ -7,10 +7,11 @@ import {
   type StateChangePayload,
   state,
   subscribeState,
-} from "../../../core/store/index.ts";
+} from "../../../../shared/state/panelStateContext.ts";
 import {
   animateMessageRemoval,
   renderMessages,
+  restoreMessageRemoval,
   updateLastAssistantMessage,
 } from "../../../ui/index.ts";
 import createMessageActionHandlers, {
@@ -30,7 +31,8 @@ type MessagesStateChange = StateChangePayload<"messages"> & {
 let actionHandlers: MessageActionHandlers | null = null;
 let unsubscribeMessages: (() => void) | null = null;
 let unsubscribeActiveStatus: (() => void) | null = null;
-
+let hasRenderedMessageList = false;
+let renderedMessageKeys: string[] = [];
 const buildMessagesForView = (): DisplayMessage[] =>
     buildDisplayMessages(state.messages, state.activeStatus),
   resolveAssistantGroupId = (message: MessageRecord, index: number): string => {
@@ -48,40 +50,77 @@ const buildMessagesForView = (): DisplayMessage[] =>
     }
     return change.index;
   },
-  hasMessageContent = (message: MessageRecord | null | undefined): boolean => {
-    if (typeof message?.content !== "string") {
-      return false;
+  resolveLastDisplayMessage = (
+    displayMessages: readonly DisplayMessage[],
+  ): DisplayMessage | null => {
+    if (displayMessages.length === 0) {
+      return null;
     }
-    return message.content.trim().length > 0;
+    return displayMessages[displayMessages.length - 1];
   },
-  isPendingAssistantPlaceholder = (
-    message: MessageRecord | null | undefined,
-  ): boolean => {
-    if (!message || message.role !== "assistant") {
-      return false;
+  updateRenderedMessageState = (
+    displayMessages: readonly DisplayMessage[],
+  ): void => {
+    renderedMessageKeys = displayMessages.map((message) => message.renderKey);
+    hasRenderedMessageList = true;
+  },
+  resolveAppendedAnimateIndices = (
+    displayMessages: readonly DisplayMessage[],
+  ): number[] | undefined => {
+    const previousKeys = new Set(renderedMessageKeys);
+    const appendedEntries = displayMessages.filter(
+      (message) => !previousKeys.has(message.renderKey),
+    );
+    if (appendedEntries.length !== 1) {
+      return undefined;
     }
-    if (!message.pending || message.hidden) {
-      return false;
+    const appended = appendedEntries[0];
+    const lastEntry = resolveLastDisplayMessage(displayMessages);
+    if (!lastEntry || lastEntry.renderKey !== appended.renderKey) {
+      return undefined;
     }
-    return !hasMessageContent(message);
+    if (appended.role !== "assistant" && appended.role !== "user") {
+      return undefined;
+    }
+    return appended.indices;
+  },
+  resolveAutoAnimateIndices = (
+    displayMessages: readonly DisplayMessage[],
+    options?: RenderMessagesOptions,
+  ): number[] | undefined => {
+    if (options?.animateIndices !== undefined) {
+      return options.animateIndices;
+    }
+    if (!hasRenderedMessageList) {
+      return undefined;
+    }
+    return resolveAppendedAnimateIndices(displayMessages);
+  },
+  renderDisplayMessages = (
+    displayMessages: DisplayMessage[],
+    options?: RenderMessagesOptions,
+  ): void => {
+    const animateIndices = resolveAutoAnimateIndices(displayMessages, options);
+    renderMessages(displayMessages, ensureActionHandlers(), {
+      animateIndices,
+    });
+    updateRenderedMessageState(displayMessages);
   },
   refreshMessages = (): void => {
-    if (!actionHandlers) {
-      throw new Error("消息操作处理器尚未初始化");
-    }
-    renderMessages(buildMessagesForView(), actionHandlers);
+    renderMessagesFromState();
   },
   ensureActionHandlers = (): MessageActionHandlers => {
     if (!actionHandlers) {
       actionHandlers = createMessageActionHandlers(
         refreshMessages,
         animateMessageRemoval,
+        restoreMessageRemoval,
       );
     }
     return actionHandlers;
   },
   renderMessagesFromState = (options?: RenderMessagesOptions): void => {
-    renderMessages(buildMessagesForView(), ensureActionHandlers(), options);
+    renderDisplayMessages(buildMessagesForView(), options);
   },
   isInLastAssistantGroup = (index: number): boolean => {
     if (!Number.isInteger(index) || index < 0) {
@@ -146,8 +185,7 @@ const buildMessagesForView = (): DisplayMessage[] =>
         shouldAnimate =
           change.message?.role === "user" ||
           (change.message?.role === "assistant" &&
-            previousRole !== "assistant" &&
-            !isPendingAssistantPlaceholder(change.message));
+            previousRole !== "assistant");
       renderMessagesFromState({
         animateIndices: shouldAnimate ? [changeIndex] : undefined,
       });
@@ -164,30 +202,26 @@ const buildMessagesForView = (): DisplayMessage[] =>
       isInLastAssistantGroup(changeIndex)
     ) {
       const displayMessages = buildMessagesForView();
-      const lastEntry =
-        displayMessages.length > 0
-          ? displayMessages[displayMessages.length - 1]
-          : null;
+      const lastEntry = resolveLastDisplayMessage(displayMessages);
       const updated = updateLastAssistantMessage(lastEntry);
       if (updated) {
+        updateRenderedMessageState(displayMessages);
         return;
       }
-      renderMessages(displayMessages, ensureActionHandlers());
+      renderDisplayMessages(displayMessages);
       return;
     }
     renderMessagesFromState();
   },
   handleActiveStatusChange = (): void => {
     const displayMessages = buildMessagesForView();
-    const lastEntry =
-      displayMessages.length > 0
-        ? displayMessages[displayMessages.length - 1]
-        : null;
+    const lastEntry = resolveLastDisplayMessage(displayMessages);
     const updated = updateLastAssistantMessage(lastEntry);
     if (updated) {
+      updateRenderedMessageState(displayMessages);
       return;
     }
-    renderMessages(displayMessages, ensureActionHandlers());
+    renderDisplayMessages(displayMessages);
   },
   ensureStateSubscriptions = (): void => {
     if (unsubscribeMessages) {

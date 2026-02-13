@@ -1,4 +1,9 @@
-import { isInternalUrl, normalizeUrl } from "../shared/index.ts";
+import { ensureOffscreenDocument, startPanelServer } from "../server/index.ts";
+import {
+  isInternalUrl,
+  isOffscreenHeartbeatMessage,
+  normalizeUrl,
+} from "../shared/index.ts";
 
 type RuntimeResponse = { ok: true } | { error: string };
 type RuntimeMessageObject = {
@@ -324,6 +329,10 @@ const logError = (message: string, error: unknown = null): void => {
   },
   registerContentScriptReadyListener = (): void => {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (isOffscreenHeartbeatMessage(message)) {
+        sendResponse({ ok: true } satisfies RuntimeResponse);
+        return true;
+      }
       if (!isContentScriptReadyMessage(message)) {
         return false;
       }
@@ -371,6 +380,7 @@ const logError = (message: string, error: unknown = null): void => {
   ): Promise<void> => {
     await enablePanelBehavior();
     await registerShowHtmlContextMenu();
+    await ensureOffscreenDocument();
     if (details.reason !== "install" && details.reason !== "update") {
       return;
     }
@@ -379,8 +389,14 @@ const logError = (message: string, error: unknown = null): void => {
 
 void enablePanelBehavior();
 void registerShowHtmlContextMenu();
+void ensureOffscreenDocument();
+void startPanelServer();
 chrome.runtime.onInstalled.addListener((details) => {
   void handleExtensionInstalled(details);
+});
+chrome.runtime.onStartup.addListener(() => {
+  void ensureOffscreenDocument();
+  void startPanelServer();
 });
 chrome.action.onClicked.addListener((tab) => {
   void openPanelForTab(tab);

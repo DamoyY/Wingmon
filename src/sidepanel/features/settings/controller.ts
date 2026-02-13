@@ -1,8 +1,9 @@
 import {
   type Settings,
+  extractErrorMessage,
   getSettings,
   updateSettings,
-} from "../../core/services/settingsStorage.ts";
+} from "../../../shared/index.ts";
 import {
   type SettingsInput,
   buildThemePayload,
@@ -11,7 +12,6 @@ import {
   syncSettingsSnapshotState,
   validateRequiredSettings,
 } from "./model.ts";
-import { extractErrorMessage } from "../../../shared/index.ts";
 
 type SettingsControllerFailure = {
   success: false;

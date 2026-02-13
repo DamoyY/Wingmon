@@ -12,7 +12,8 @@
     "scripting",
     "webNavigation",
     "contextMenus",
-    "downloads"
+    "downloads",
+    "offscreen"
   ],
   "host_permissions": ["https://*/*", "http://*/*"],
   "action": {

@@ -1,17 +1,17 @@
 import {
   type MessageRecord,
-  removeMessage,
   state,
-} from "../../../core/store/index.ts";
+} from "../../../../shared/state/panelStateContext.ts";
 import {
   combineMessageContents,
   normalizeIndices,
   t,
 } from "../../../lib/utils/index.ts";
-import { persistConversationState } from "./conversationPersistence.ts";
+import { requestDeleteMessages } from "../../../core/server/index.ts";
 
 export type ActionIndices = number | readonly number[];
 type AnimateRemoval = (indices: ActionIndices) => Promise<boolean> | boolean;
+type RestoreRemoval = (indices: ActionIndices) => void;
 export type MessageActionError = Error;
 type RefreshMessages = () => void;
 
@@ -22,126 +22,90 @@ export type MessageActionHandlers = {
 };
 
 const resolveMessageContent = (message: MessageRecord): string => {
-    if (typeof message.content !== "string") {
-      return "";
+  if (typeof message.content !== "string") {
+    return "";
+  }
+  return message.content;
+};
+
+const resolveCombinedContent = (indices: number[]): string => {
+  const contents = indices.map((index) => {
+    const message = state.messages.at(index);
+    if (!message) {
+      throw new Error("消息索引无效");
     }
-    return message.content;
-  },
-  persistStateAfterMessageAction = async (): Promise<void> => {
-    await persistConversationState();
-  },
-  resolveCombinedContent = (indices: number[]): string => {
-    const contents = indices.map((index) => {
-      const message = state.messages.at(index);
-      if (!message) {
-        throw new Error("消息索引无效");
-      }
-      return resolveMessageContent(message);
+    return resolveMessageContent(message);
+  });
+  return combineMessageContents(contents);
+};
+
+const handleCopyMessage = async (indices: ActionIndices): Promise<void> => {
+  const normalized = normalizeIndices(indices);
+  const text = resolveCombinedContent(normalized);
+  await navigator.clipboard.writeText(text);
+};
+
+const handleDeleteMessage = async (
+  indices: ActionIndices,
+  refreshMessages: RefreshMessages,
+  animateRemoval?: AnimateRemoval,
+  restoreRemoval?: RestoreRemoval,
+): Promise<void> => {
+  if (state.sending) {
+    throw new Error(t("cannotDeleteDuringResponse"));
+  }
+  const normalized = normalizeIndices(indices);
+  let hasAnimatedRemoval = false;
+  if (typeof animateRemoval === "function") {
+    hasAnimatedRemoval = await Promise.resolve(
+      animateRemoval(normalized),
+    ).catch((error: unknown) => {
+      console.error("消息删除动画执行失败", error);
+      return false;
     });
-    return combineMessageContents(contents);
-  },
-  handleCopyMessage = async (indices: ActionIndices): Promise<void> => {
-    const normalized = normalizeIndices(indices);
-    const text = resolveCombinedContent(normalized);
-    await navigator.clipboard.writeText(text);
-  },
-  collectHiddenIndicesForward = (startIndex: number): number[] => {
-    const hiddenIndices: number[] = [];
-    for (let i = startIndex + 1; i < state.messages.length; i += 1) {
-      const message = state.messages.at(i);
-      if (!message) {
-        throw new Error("消息索引无效");
-      }
-      if (!message.hidden) {
-        break;
-      }
-      hiddenIndices.push(i);
+  }
+  try {
+    await requestDeleteMessages(normalized);
+  } catch (error) {
+    if (hasAnimatedRemoval && typeof restoreRemoval === "function") {
+      restoreRemoval(normalized);
+      refreshMessages();
     }
-    return hiddenIndices;
-  },
-  collectHiddenIndicesBackward = (startIndex: number): number[] => {
-    const hiddenIndices: number[] = [];
-    for (let i = startIndex - 1; i >= 0; i -= 1) {
-      const message = state.messages.at(i);
-      if (!message) {
-        throw new Error("消息索引无效");
-      }
-      if (!message.hidden) {
-        break;
-      }
-      hiddenIndices.push(i);
-    }
-    return hiddenIndices;
-  },
-  handleDeleteMessage = async (
-    indices: ActionIndices,
-    refreshMessages: RefreshMessages,
-    animateRemoval?: AnimateRemoval,
-  ): Promise<void> => {
-    if (state.sending) {
-      throw new Error(t("cannotDeleteDuringResponse"));
-    }
-    const normalized = normalizeIndices(indices);
-    const hiddenIndices = new Set<number>();
-    normalized.forEach((index) => {
-      const message = state.messages.at(index);
-      if (!message) {
-        throw new Error("消息索引无效");
-      }
-      if (message.role === "user") {
-        collectHiddenIndicesForward(index).forEach((hiddenIndex) => {
-          hiddenIndices.add(hiddenIndex);
-        });
-        return;
-      }
-      if (message.role === "assistant") {
-        collectHiddenIndicesBackward(index).forEach((hiddenIndex) => {
-          hiddenIndices.add(hiddenIndex);
-        });
-        if (Array.isArray(message.tool_calls) && message.tool_calls.length) {
-          collectHiddenIndicesForward(index).forEach((hiddenIndex) => {
-            hiddenIndices.add(hiddenIndex);
-          });
-        }
-      }
-    });
-    if (typeof animateRemoval === "function") {
-      await Promise.resolve(animateRemoval(normalized)).catch(
-        (error: unknown) => {
-          console.error("消息删除动画执行失败", error);
-        },
-      );
-    }
-    const combined = Array.from(
-      new Set([...normalized, ...Array.from(hiddenIndices)]),
-    ).sort((a, b) => b - a);
-    combined.forEach((index) => removeMessage(index));
-    refreshMessages();
-    await persistStateAfterMessageAction();
-  },
-  resolveErrorMessage = (error: MessageActionError): string => {
-    if (error.message) {
-      return error.message;
-    }
-    return t("actionFailed");
-  },
-  reportActionError = (error: MessageActionError): void => {
-    const message = resolveErrorMessage(error);
-    console.error(message, error);
-  },
-  createMessageActionHandlers = (
-    refreshMessages: RefreshMessages,
-    animateRemoval?: AnimateRemoval,
-  ): MessageActionHandlers => {
-    if (typeof refreshMessages !== "function") {
-      throw new Error("刷新消息回调缺失");
-    }
-    return {
-      onCopy: (indices) => handleCopyMessage(indices),
-      onDelete: (indices) =>
-        handleDeleteMessage(indices, refreshMessages, animateRemoval),
-      onError: reportActionError,
-    };
+    throw error;
+  }
+};
+
+const resolveErrorMessage = (error: MessageActionError): string => {
+  if (error.message) {
+    return error.message;
+  }
+  return t("actionFailed");
+};
+
+const reportActionError = (error: MessageActionError): void => {
+  const message = resolveErrorMessage(error);
+  console.error(message, error);
+};
+
+const createMessageActionHandlers = (
+  refreshMessages: RefreshMessages,
+  animateRemoval?: AnimateRemoval,
+  restoreRemoval?: RestoreRemoval,
+): MessageActionHandlers => {
+  if (typeof refreshMessages !== "function") {
+    throw new Error("刷新消息回调缺失");
+  }
+  return {
+    onCopy: (indices) => handleCopyMessage(indices),
+    onDelete: (indices) =>
+      handleDeleteMessage(
+        indices,
+        refreshMessages,
+        animateRemoval,
+        restoreRemoval,
+      ),
+    onError: reportActionError,
   };
+};
 
 export default createMessageActionHandlers;

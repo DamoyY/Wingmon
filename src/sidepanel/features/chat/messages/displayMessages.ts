@@ -1,4 +1,4 @@
-import type { MessageRecord } from "../../../core/store/index.ts";
+import type { MessageRecord } from "../../../../shared/state/panelStateContext.ts";
 import { combineMessageContents } from "../../../lib/utils/index.ts";
 
 type NormalizedMessage = {

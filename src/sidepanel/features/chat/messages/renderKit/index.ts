@@ -4,6 +4,7 @@ export {
   animateMessageRemoval,
   fadeOutMessages,
   resetMessagesFade,
+  restoreMessageRemoval,
 } from "./animations.ts";
 export { default as renderMessageContent } from "./contentRenderer.ts";
 export {

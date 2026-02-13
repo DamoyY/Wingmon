@@ -1,5 +1,4 @@
-import { extractErrorMessage } from "../../../../shared/index.ts";
-import { getActiveTab } from "../../../core/services/index.ts";
+import { extractErrorMessage, getActiveTab } from "../../../../shared/index.ts";
 import { isInternalUrl } from "../../../lib/utils/index.ts";
 import { updateSendWithPageButtonState } from "../../../ui/index.ts";
 

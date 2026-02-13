@@ -1,12 +1,14 @@
 import {
+  type ApiType,
+  type Settings,
+  normalizeSettings as normalizeSharedSettings,
+  parseBodyOverrideRules,
+} from "../../../shared/index.ts";
+import {
   normalizeTheme,
   normalizeThemeColor,
-  normalizeThemeColorSafe,
   normalizeThemeVariant,
 } from "../../lib/utils/index.ts";
-import { parseBodyOverrideRules } from "../../../shared/index.ts";
-
-type ApiType = "chat" | "responses" | "messages" | "gemini";
 
 export type SettingsInput = {
   apiKey?: string;
@@ -22,16 +24,17 @@ export type SettingsInput = {
 
 type SettingsInputOrNull = SettingsInput | null | undefined;
 
-type NormalizedSettings = {
-  apiKey: string;
-  baseUrl: string;
-  model: string;
-  apiType: ApiType;
-  requestBodyOverrides: string;
-  theme: string;
-  themeColor: string;
-  themeVariant: string;
-};
+type NormalizedSettings = Pick<
+  Settings,
+  | "apiKey"
+  | "apiType"
+  | "baseUrl"
+  | "model"
+  | "requestBodyOverrides"
+  | "theme"
+  | "themeColor"
+  | "themeVariant"
+>;
 
 type ValidationResult =
   | {
@@ -58,32 +61,21 @@ const ensureSettingsInput = (settings: SettingsInputOrNull): SettingsInput =>
     settings ?? {},
   trimString = (value: string | null | undefined): string =>
     typeof value === "string" ? value.trim() : "",
-  normalizeRequestBodyOverrides = (value: string | null | undefined): string =>
-    typeof value === "string" ? value.replaceAll("\r\n", "\n").trim() : "",
-  normalizeApiType = (value: string | undefined): ApiType => {
-    if (value === "responses") {
-      return "responses";
-    }
-    if (value === "messages") {
-      return "messages";
-    }
-    if (value === "gemini") {
-      return "gemini";
-    }
-    return "chat";
-  },
-  normalizeSettings = (settings: SettingsInput): NormalizedSettings => ({
-    apiKey: trimString(settings.apiKey),
-    apiType: normalizeApiType(settings.apiType),
-    baseUrl: trimString(settings.baseUrl),
-    model: trimString(settings.model),
-    requestBodyOverrides: normalizeRequestBodyOverrides(
-      settings.requestBodyOverrides,
-    ),
-    theme: normalizeTheme(settings.theme ?? "auto"),
-    themeColor: normalizeThemeColorSafe(settings.themeColor ?? null),
-    themeVariant: normalizeThemeVariant(settings.themeVariant ?? "neutral"),
-  });
+  normalizeSettings = (settings: SettingsInput): NormalizedSettings => {
+    const normalized = normalizeSharedSettings(settings, {
+      themeColorMode: "safe",
+    });
+    return {
+      apiKey: normalized.apiKey,
+      apiType: normalized.apiType,
+      baseUrl: normalized.baseUrl,
+      model: normalized.model,
+      requestBodyOverrides: normalized.requestBodyOverrides,
+      theme: normalized.theme,
+      themeColor: normalized.themeColor,
+      themeVariant: normalized.themeVariant,
+    };
+  };
 
 export const syncSettingsSnapshotState = (
   settings: SettingsInput,
@@ -117,15 +109,16 @@ export const ensureSettingsReady = (settings: SettingsInputOrNull): boolean => {
 
 const buildRequiredSettingsPayload = (
   formValues: SettingsInput,
-): RequiredSettingsPayload => ({
-  apiKey: trimString(formValues.apiKey),
-  apiType: normalizeApiType(formValues.apiType),
-  baseUrl: trimString(formValues.baseUrl),
-  model: trimString(formValues.model),
-  requestBodyOverrides: normalizeRequestBodyOverrides(
-    formValues.requestBodyOverrides,
-  ),
-});
+): RequiredSettingsPayload => {
+  const normalized = normalizeSettings(formValues);
+  return {
+    apiKey: normalized.apiKey,
+    apiType: normalized.apiType,
+    baseUrl: normalized.baseUrl,
+    model: normalized.model,
+    requestBodyOverrides: normalized.requestBodyOverrides,
+  };
+};
 
 export const validateRequiredSettings = (
   formValues: SettingsInput,

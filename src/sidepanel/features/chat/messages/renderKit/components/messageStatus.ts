@@ -27,6 +27,18 @@ const parseTrailingDots = (statusText: string): ParsedTrailingDots | null => {
   };
 };
 
+const resolveStatusDotParts = (statusText: string): ParsedTrailingDots => {
+  const parsed = parseTrailingDots(statusText);
+  if (parsed) {
+    return parsed;
+  }
+  return {
+    baseText: statusText,
+    dotCount: 1,
+    slotWidth: MIN_DOT_SLOT_WIDTH_CH,
+  };
+};
+
 const isChineseLocale = (): boolean =>
   getCurrentLocale().toLowerCase().startsWith("zh");
 
@@ -50,11 +62,7 @@ const setStatusLineContent = (
   statusLine: HTMLDivElement | HTMLElement,
   statusText: string,
 ): void => {
-  const parsed = parseTrailingDots(statusText);
-  if (!parsed) {
-    statusLine.textContent = statusText;
-    return;
-  }
+  const parsed = resolveStatusDotParts(statusText);
   const baseText = document.createElement("span");
   baseText.className = "message-status-text";
   baseText.textContent = parsed.baseText;

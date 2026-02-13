@@ -17,7 +17,7 @@ const toModuleName = (file: string): string => {
 };
 
 export const getToolIndexPlugin = async (): Promise<Plugin> => {
-  const toolsDir = path.join(rootDir, "src/sidepanel/core/agent/tools");
+  const toolsDir = path.join(rootDir, "src/server/agent/tools");
   const toolsIndexPath = path.join(toolsDir, "index.ts");
   const toolExtensions = new Set([".js", ".ts", ".tsx"]);
   const excludedToolBases = new Set([

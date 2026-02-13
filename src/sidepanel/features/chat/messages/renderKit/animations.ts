@@ -13,9 +13,14 @@ const MESSAGE_EXIT_DURATION = 200;
 
 let activeAnimation: Animation | null = null;
 let fadePromise: Promise<void> | null = null;
+const pendingRemovalIndicesKeys = new Set<string>();
 
 const ensureMessagesElement = (): (typeof elements)["messagesEl"] =>
   elements.messagesEl;
+
+const resolvePendingRemovalKey = (
+  indices: number | readonly number[],
+): string => resolveIndicesKey(indices);
 
 const resolveMessageRowEdgeOffset = (
   row: HTMLElement,
@@ -128,6 +133,36 @@ export const resetMessagesFade = (): void => {
   container.style.opacity = "";
 };
 
+export const isMessageRemovalPending = (
+  indices: number | readonly number[],
+): boolean => pendingRemovalIndicesKeys.has(resolvePendingRemovalKey(indices));
+
+export const restoreMessageRemoval = (
+  indices: number | readonly number[],
+): void => {
+  const key = resolvePendingRemovalKey(indices);
+  pendingRemovalIndicesKeys.delete(key);
+  const container = ensureMessagesElement();
+  const row = container.querySelector(`.message-row[data-indices="${key}"]`);
+  if (!(row instanceof HTMLElement)) {
+    return;
+  }
+  row.style.opacity = "";
+  row.style.pointerEvents = "";
+  row.style.transform = "";
+};
+
+export const pruneMessageRemovalPending = (
+  activeIndicesKeys: readonly string[],
+): void => {
+  const activeSet = new Set(activeIndicesKeys);
+  pendingRemovalIndicesKeys.forEach((key) => {
+    if (!activeSet.has(key)) {
+      pendingRemovalIndicesKeys.delete(key);
+    }
+  });
+};
+
 export const animateMessageRemoval = async (
   indices: number | readonly number[],
 ): Promise<boolean> => {
@@ -135,16 +170,19 @@ export const animateMessageRemoval = async (
   if (prefersReducedMotion()) {
     return false;
   }
-  const key = resolveIndicesKey(indices);
+  const key = resolvePendingRemovalKey(indices);
   const row = container.querySelector(`.message-row[data-indices="${key}"]`);
   if (!(row instanceof HTMLElement)) {
     return false;
   }
+  pendingRemovalIndicesKeys.add(key);
   try {
     await animateMessageRowExit(row);
   } catch (error) {
     const resolvedError = error instanceof Error ? error : null;
     console.error("消息删除动画执行失败", resolvedError);
   }
+  row.style.opacity = "0";
+  row.style.pointerEvents = "none";
   return true;
 };

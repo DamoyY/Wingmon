@@ -1,7 +1,4 @@
-import {
-  AGENT_STATUS,
-  type AgentStatus,
-} from "../../../core/agent/toolResultFormatters.ts";
+import { AGENT_STATUS, type AgentStatus } from "../../../../shared/index.ts";
 import {
   clearPromptInput,
   setComposerSending,
@@ -13,10 +10,15 @@ import {
   setText,
   showKeyView,
 } from "../../../ui/index.ts";
+import {
+  setStateValue,
+  state,
+  subscribeState,
+} from "../../../../shared/state/panelStateContext.ts";
 import { clearPromptContent } from "../composerState.ts";
 import { renderMessagesView } from "./presenter.ts";
-import { setStateValue } from "../../../core/store/index.ts";
 import { t } from "../../../lib/utils/index.ts";
+import { subscribePanelAgentStatus } from "../../../core/server/index.ts";
 
 type SettingsFormValues = Parameters<typeof fillSettingsForm>[0];
 
@@ -37,6 +39,8 @@ const STATUS_TEXT_KEY_MAP: Record<ActiveAgentStatus, string> = {
 let activeStatus: AgentStatus = AGENT_STATUS.idle;
 let dotCount = 0;
 let dotTimer: ReturnType<typeof setInterval> | null = null;
+let unsubscribeSendingState: (() => void) | null = null;
+let unsubscribePanelAgentStatus: (() => void) | null = null;
 
 const stopStatusAnimation = (): void => {
   if (dotTimer === null) {
@@ -103,6 +107,15 @@ const updateStatus = (status: AgentStatus): void => {
   startStatusAnimation();
 };
 
+const bindAgentStatusToStore = (): void => {
+  if (unsubscribePanelAgentStatus) {
+    return;
+  }
+  unsubscribePanelAgentStatus = subscribePanelAgentStatus((status) => {
+    updateStatus(status);
+  });
+};
+
 export const reportSendStatus = (status: AgentStatus): void => {
   updateStatus(status);
 };
@@ -124,4 +137,15 @@ export const syncComposerAfterSend = (): void => {
 
 export const setSendUiState = (sending: boolean): void => {
   setComposerSending(sending);
+};
+
+export const bindSendStateToStore = (): void => {
+  bindAgentStatusToStore();
+  if (unsubscribeSendingState) {
+    return;
+  }
+  unsubscribeSendingState = subscribeState("sending", () => {
+    setComposerSending(state.sending);
+  });
+  setComposerSending(state.sending);
 };

@@ -1,4 +1,9 @@
 import {
+  animateMessageRowEnter,
+  isMessageRemovalPending,
+  pruneMessageRemovalPending,
+} from "./animations.ts";
+import {
   createMessageRow,
   getMessageRenderedText,
   setMessageContent,
@@ -11,7 +16,6 @@ import {
 } from "../../../../lib/utils/index.ts";
 import type { DisplayMessage } from "../displayMessages.ts";
 import type { MessageActionHandlers } from "../actions.ts";
-import { animateMessageRowEnter } from "./animations.ts";
 import { wrapTrailingText } from "../../../../lib/domTools/index.ts";
 
 export type RenderOptions = {
@@ -89,14 +93,25 @@ const reconcileMessageRows = (
   handlers: MessageActionHandlers,
   animateKey: string | null,
 ): HTMLElement[] => {
+  pruneMessageRemovalPending(
+    displayMessages.map((message) => resolveIndicesKey(message.indices)),
+  );
   const existingRows = collectExistingRows(messagesEl);
   const rowsToAnimate: HTMLElement[] = [];
   let referenceNode: Element | null = messagesEl.firstElementChild;
   displayMessages.forEach((message) => {
     const messageKey = resolveMessageRenderKey(message);
     const existingRow = existingRows.get(messageKey);
+    if (isMessageRemovalPending(message.indices)) {
+      if (existingRow) {
+        existingRows.delete(messageKey);
+        if (referenceNode === existingRow) {
+          referenceNode = referenceNode.nextElementSibling;
+        }
+      }
+      return;
+    }
     const row = existingRow ?? createMessageRow(message, handlers);
-    const isNewRow = existingRow === undefined;
     if (existingRow) {
       existingRows.delete(messageKey);
       updateMessageRow(row, message, handlers);
@@ -107,7 +122,6 @@ const reconcileMessageRows = (
       messagesEl.insertBefore(row, referenceNode);
     }
     if (
-      isNewRow &&
       animateKey &&
       typeof row.dataset.indices === "string" &&
       row.dataset.indices === animateKey

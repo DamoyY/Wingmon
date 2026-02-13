@@ -3,51 +3,67 @@ import {
   applyTypography,
   elements,
   fillSettingsForm,
-  getSandboxWindow,
+  getStoredPanelPrimaryView,
   initElements,
   setupChatLayout,
   showChatView,
   showKeyView,
 } from "../../ui/index.ts";
 import {
-  getSettings,
-  initTabListeners,
-  registerSandboxWindowProvider,
-} from "../../core/services/index.ts";
-import {
+  bindSendStateToStore,
   refreshSendWithPageButton,
   renderMessagesView,
 } from "../../features/chat/messages/index.ts";
 import { setLocale, translateDOM } from "../../lib/utils/index.ts";
 import { bindPanelEvents } from "../controllers/index.ts";
+import { getSettings } from "../../../shared/index.ts";
+import { handleOpenHistory } from "../../features/history/index.ts";
 import { initMarkdownRenderer } from "../../lib/markdown/index.ts";
+import { initPanelServerClient } from "../../core/server/index.ts";
 import { syncSettingsSnapshot } from "../../features/settings/index.ts";
 import { updateComposerButtonsState } from "../../features/chat/index.ts";
 
-const initPanel = async () => {
-  initTabListeners();
+const initPanel = async (): Promise<void> => {
   const settingsPromise = getSettings();
+  const markdownPromise = initMarkdownRenderer();
+  const storedPrimaryViewPromise = getStoredPanelPrimaryView();
+
+  const settings = await settingsPromise;
+  applyTheme(settings.theme, settings.themeColor, settings.themeVariant);
 
   await initElements();
-  registerSandboxWindowProvider(getSandboxWindow);
-  await initMarkdownRenderer();
+  elements.keyView.classList.add("hidden");
+  elements.historyView.classList.add("hidden");
+  elements.chatView.classList.add("hidden");
+  elements.followModeSwitch.selected = settings.followMode;
+
   applyTypography();
-  const settings = await settingsPromise;
   await setLocale(settings.language || "en");
+  const stateSyncPromise = initPanelServerClient();
   translateDOM();
   fillSettingsForm(settings);
-  applyTheme(settings.theme, settings.themeColor, settings.themeVariant);
-  elements.followModeSwitch.selected = settings.followMode;
   syncSettingsSnapshot(settings);
   setupChatLayout();
-  if (settings.apiKey && settings.baseUrl && settings.model) {
-    await showChatView();
-  } else {
+  const hasCompleteSettings = Boolean(
+    settings.apiKey && settings.baseUrl && settings.model,
+  );
+  const storedPrimaryView = await storedPrimaryViewPromise;
+  if (!hasCompleteSettings) {
     await showKeyView({ isFirstUse: true });
+  } else if (storedPrimaryView === "key") {
+    await showKeyView({ isFirstUse: false });
+  } else if (storedPrimaryView === "history") {
+    await handleOpenHistory({ animate: false });
+  } else {
+    await showChatView();
   }
+  await stateSyncPromise;
+  await markdownPromise;
+  bindSendStateToStore();
   renderMessagesView();
   bindPanelEvents();
   updateComposerButtonsState();
   await refreshSendWithPageButton();
 };
+
 export default initPanel;

@@ -1,7 +1,4 @@
-import {
-  getHtmlPreview,
-  normalizePreviewHtml,
-} from "../../core/services/index.ts";
+import { getHtmlPreview, normalizePreviewHtml } from "../../../shared/index.ts";
 
 const buildRenderHtmlMessage = (html) => ({
   html,

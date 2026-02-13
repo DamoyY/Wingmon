@@ -20,6 +20,9 @@ export const buildBundles = async (): Promise<void> => {
   const showHtmlEntryPoint = await resolveEntryPath(
     path.join(rootDir, "src/sidepanel/pages/show-html/index"),
   );
+  const offscreenEntryPoint = await resolveEntryPath(
+    path.join(rootDir, "src/offscreen/index"),
+  );
   const contentEntryPoint = await resolveEntryPath(
     path.join(rootDir, "src/content/index"),
   );
@@ -72,6 +75,27 @@ export const buildBundles = async (): Promise<void> => {
   }
   if (shouldObfuscateBuild(showHtmlBuildResult.metafile)) {
     await obfuscateFile(showHtmlBundlePath);
+  }
+
+  const offscreenBundlePath = path.join(outputPublicDir, "offscreen.bundle.js");
+  ensureFlattenTarget(offscreenBundlePath, "build:offscreen.bundle.js");
+  const offscreenBuildResult = await build({
+    bundle: true,
+    entryPoints: [offscreenEntryPoint],
+    format: "iife",
+    legalComments: "none",
+    metafile: true,
+    minify: true,
+    outfile: offscreenBundlePath,
+    platform: "browser",
+    target: "esnext",
+    loader,
+  });
+  if (!offscreenBuildResult.metafile) {
+    throw new Error("offscreen 构建结果缺少 metafile");
+  }
+  if (shouldObfuscateBuild(offscreenBuildResult.metafile)) {
+    await obfuscateFile(offscreenBundlePath);
   }
 
   const contentBundlePath = path.join(outputPublicDir, "content.bundle.js");

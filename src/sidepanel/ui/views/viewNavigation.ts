@@ -5,11 +5,33 @@ import {
 } from "../foundation/index.ts";
 
 const ANIMATION_DURATION = 320,
-  ANIMATION_EASING = "cubic-bezier(0.2, 0, 0, 1)";
+  ANIMATION_EASING = "cubic-bezier(0.2, 0, 0, 1)",
+  PANEL_PRIMARY_VIEW_STORAGE_KEY = "panel_primary_view";
+
+type PanelPrimaryView = "chat" | "key" | "history";
 
 let isAnimating = false;
 
-const resetViewStyles = (view: HTMLElement): void => {
+const persistPanelPrimaryView = (view: PanelPrimaryView): void => {
+    void chrome.storage.local
+      .set({ [PANEL_PRIMARY_VIEW_STORAGE_KEY]: view })
+      .catch((error: unknown) => {
+        console.error("持久化侧边栏视图状态失败", error);
+      });
+  },
+  resolvePanelPrimaryView = (
+    value: string | undefined,
+  ): PanelPrimaryView | null => {
+    if (value === undefined) {
+      return null;
+    }
+    if (value === "chat" || value === "key" || value === "history") {
+      return value;
+    }
+    console.error("侧边栏视图状态无效", { value });
+    return null;
+  },
+  resetViewStyles = (view: HTMLElement): void => {
     const target = view,
       { style } = target;
     style.transform = "";
@@ -28,16 +50,22 @@ const resetViewStyles = (view: HTMLElement): void => {
     cancelSettings.classList.toggle("hidden", isFirstUse);
   },
   resolveActiveView = (): HTMLElement => {
-    const { historyView, keyView } = elements as Partial<typeof elements>;
+    const { historyView, keyView, chatView } = elements as Partial<
+      typeof elements
+    >;
     if (historyView && !historyView.classList.contains("hidden")) {
       return historyView;
     }
     if (keyView && !keyView.classList.contains("hidden")) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       return keyView;
     }
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return keyView!;
+    if (chatView && !chatView.classList.contains("hidden")) {
+      return chatView;
+    }
+    if (!chatView) {
+      throw new Error("聊天视图元素未初始化");
+    }
+    return chatView;
   },
   animateSwap = async ({
     incoming,
@@ -114,6 +142,19 @@ const resetViewStyles = (view: HTMLElement): void => {
     }
   };
 
+export const getStoredPanelPrimaryView =
+  async (): Promise<PanelPrimaryView | null> => {
+    try {
+      const storage = await chrome.storage.local.get<
+        Record<typeof PANEL_PRIMARY_VIEW_STORAGE_KEY, string | undefined>
+      >(PANEL_PRIMARY_VIEW_STORAGE_KEY);
+      return resolvePanelPrimaryView(storage[PANEL_PRIMARY_VIEW_STORAGE_KEY]);
+    } catch (error) {
+      console.error("读取侧边栏视图状态失败", error);
+      return null;
+    }
+  };
+
 export const showKeyView = ({
   isFirstUse = false,
   animate = false,
@@ -124,6 +165,7 @@ export const showKeyView = ({
   if (!keyView || !chatView || !historyView || !keyStatus) {
     throw new Error("视图元素未初始化");
   }
+  persistPanelPrimaryView("key");
   if (!animate) {
     keyView.classList.remove("hidden");
     chatView.classList.add("hidden");
@@ -154,6 +196,7 @@ export const showChatView = ({
   if (!keyView || !historyView || !chatView || !promptEl) {
     throw new Error("视图元素未初始化");
   }
+  persistPanelPrimaryView("chat");
   if (animate) {
     const outgoingView = resolveActiveView();
     return animateSwap({
@@ -185,6 +228,7 @@ export const showHistoryView = ({
   if (!keyView || !historyView || !chatView) {
     throw new Error("视图元素未初始化");
   }
+  persistPanelPrimaryView("history");
   if (!animate) {
     historyView.classList.remove("hidden");
     chatView.classList.add("hidden");
