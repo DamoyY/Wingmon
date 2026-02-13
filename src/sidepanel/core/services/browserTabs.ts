@@ -80,38 +80,6 @@ const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
     }
     return tab.windowId;
   },
-  resolveAssistantTabWindowId = async (
-    tabId: number,
-  ): Promise<number | null> => {
-    try {
-      const tab = await chrome.tabs.get(tabId);
-      return resolveTabWindowId(tab);
-    } catch (error) {
-      console.error("获取助手标签页窗口失败", { tabId }, error);
-      assistantOpenedTabIds.delete(tabId);
-      return null;
-    }
-  },
-  collectAssistantTabIdsByWindow = async (
-    windowId: number,
-    excludeTabId: number,
-  ): Promise<number[]> => {
-    const tabIds: number[] = [];
-    for (const candidateTabId of assistantOpenedTabIds) {
-      if (candidateTabId === excludeTabId) {
-        continue;
-      }
-      const candidateWindowId =
-        await resolveAssistantTabWindowId(candidateTabId);
-      if (candidateWindowId === null) {
-        continue;
-      }
-      if (candidateWindowId === windowId) {
-        tabIds.push(candidateTabId);
-      }
-    }
-    return tabIds;
-  },
   renameAssistantTabGroup = async (groupId: number): Promise<void> => {
     try {
       await chrome.tabGroups.update(groupId, { title: "Wingmon" });
@@ -137,25 +105,6 @@ const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
     }
     await renameAssistantTabGroup(groupId);
     assistantTabGroup = { groupId, windowId };
-    const existingTabIds = await collectAssistantTabIdsByWindow(
-      windowId,
-      tabId,
-    );
-    if (existingTabIds.length === 0) {
-      return;
-    }
-    try {
-      await chrome.tabs.group({ groupId, tabIds: existingTabIds });
-    } catch (error) {
-      console.error(
-        "将已有助手标签页加入分组失败",
-        { groupId, tabIds: existingTabIds },
-        error,
-      );
-      throw error instanceof Error
-        ? error
-        : new Error("将已有助手标签页加入分组失败");
-    }
   },
   addTabToAssistantGroup = async (
     tabId: number,
