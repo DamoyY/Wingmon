@@ -1,3 +1,5 @@
+import { getCurrentLocale } from "../../../../../lib/utils/index.ts";
+
 const MESSAGE_STATUS_SELECTOR = ".message-status";
 const TRAILING_DOT_PATTERN = /^(.*?)(\.+)$/u;
 const MIN_DOT_SLOT_WIDTH_CH = 3;
@@ -25,10 +27,8 @@ const parseTrailingDots = (statusText: string): ParsedTrailingDots | null => {
   };
 };
 
-const isChineseLocale = (): boolean => {
-  const uiLanguage = chrome.i18n.getUILanguage();
-  return uiLanguage.startsWith("zh");
-};
+const isChineseLocale = (): boolean =>
+  getCurrentLocale().toLowerCase().startsWith("zh");
 
 const createStatusDotSlot = (
   dotCount: number,
@@ -41,7 +41,7 @@ const createStatusDotSlot = (
     `${String(slotWidth)}ch`,
   );
   dotSlot.textContent = isChineseLocale()
-    ? " . ".repeat(dotCount).trim()
+    ? `\u00A0${". ".repeat(dotCount).trimEnd()}`
     : ".".repeat(dotCount);
   return dotSlot;
 };

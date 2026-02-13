@@ -26,6 +26,11 @@
   --chat-bottom-bar-height: 200px;
 }
 
+#key-view {
+  padding: 0;
+  --settings-top-bar-height: 56px;
+}
+
 .hidden {
   visibility: hidden !important;
   pointer-events: none !important;

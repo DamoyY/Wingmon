@@ -78,6 +78,12 @@
   min-height: var(--message-content-single-line-height);
 }
 
+.message-content,
+.message-content * {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 .message-content:empty {
   min-height: 0;
 }

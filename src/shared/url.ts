@@ -196,10 +196,11 @@ const internalPrefixes = [
 ];
 
 const storePrefixes = [
-  "https://chromewebstore.google.com",
-  "http://chromewebstore.google.com",
-  "https://microsoftedge.microsoft.com",
-  "http://microsoftedge.microsoft.com",
+  "https://chrome.google.com/webstore/",
+  "https://chromewebstore.google.com/",
+  "http://chromewebstore.google.com/",
+  "https://microsoftedge.microsoft.com/",
+  "http://microsoftedge.microsoft.com/",
 ];
 
 const hasMatchingPrefix = (url: string, prefixes: string[]): boolean =>

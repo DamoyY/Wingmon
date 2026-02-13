@@ -10,8 +10,11 @@
   height: 0;
 }
 
-body {
+body,
+#app {
   margin: 0;
   background: var(--md-sys-color-surface-bright);
   color: var(--md-sys-color-on-surface);
+  user-select: none;
+  -webkit-user-select: none;
 }

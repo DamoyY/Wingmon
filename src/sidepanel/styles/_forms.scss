@@ -3,6 +3,15 @@ md-filled-text-field {
   width: 100%;
 }
 
+md-outlined-text-field,
+md-filled-text-field,
+input,
+textarea,
+[contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 #prompt {
   resize: none;
   --md-filled-text-field-container-color: color-mix(
@@ -39,7 +48,7 @@ md-filled-select {
   min-height: 0;
   overflow-y: auto;
   justify-content: flex-start;
-  padding-block: 50px;
+  padding: calc(var(--settings-top-bar-height) + 16px) 16px 16px;
 }
 
 .key-content md-filled-text-field,

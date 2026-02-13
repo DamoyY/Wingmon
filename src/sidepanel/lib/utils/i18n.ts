@@ -2,6 +2,10 @@ type LocaleMessage = { message: string };
 type LocaleMessages = Record<string, LocaleMessage>;
 type RawLocaleMessages = Record<string, { message: string | null }>;
 
+const normalizeLocale = (locale: string): string =>
+  locale.trim().replaceAll("-", "_");
+
+let currentLocale = normalizeLocale(chrome.i18n.getUILanguage());
 let currentLocaleMessages: LocaleMessages | null = null;
 
 const normalizeLocaleMessages = (
@@ -33,11 +37,17 @@ const loadLocaleMessages = async (locale: string): Promise<void> => {
 };
 
 export async function setLocale(locale: string): Promise<void> {
-  if (locale === chrome.i18n.getUILanguage().replace("-", "_")) {
+  const normalizedLocale = normalizeLocale(locale);
+  currentLocale = normalizedLocale;
+  if (normalizedLocale === normalizeLocale(chrome.i18n.getUILanguage())) {
     currentLocaleMessages = null;
     return;
   }
-  await loadLocaleMessages(locale);
+  await loadLocaleMessages(normalizedLocale);
+}
+
+export function getCurrentLocale(): string {
+  return currentLocale;
 }
 
 export function t(
