@@ -8,6 +8,7 @@
     "storage",
     "sidePanel",
     "tabs",
+    "tabGroups",
     "scripting",
     "webNavigation",
     "contextMenus",

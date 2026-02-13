@@ -8,6 +8,7 @@ import {
   saveHtmlPreview,
   sendMessageToSandbox,
   sendMessageToTab,
+  setTabGroupCollapsed,
   waitForContentScript,
 } from "../services/index.ts";
 import {
@@ -76,6 +77,7 @@ export const defaultToolExecutionContext: ToolExecutionContext = {
   saveHtmlPreview: saveHtmlPreviewWithType,
   sendMessageToSandbox: sendMessageToSandboxWithType,
   sendMessageToTab,
+  setTabGroupCollapsed,
   shouldFollowMode,
   syncPageHash,
   waitForContentScript,

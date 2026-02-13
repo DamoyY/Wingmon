@@ -72,6 +72,7 @@ export type ToolExecutionContext = {
   getAllTabs: () => Promise<BrowserTab[]>;
   getRuntimeUrl: (path: string) => string;
   saveHtmlPreview: (args: { code: string }) => Promise<string>;
+  setTabGroupCollapsed: (tabId: number, collapsed: boolean) => Promise<void>;
   sendMessageToSandbox: (
     payload: SandboxConsoleCommandRequest,
     timeoutMs?: number,

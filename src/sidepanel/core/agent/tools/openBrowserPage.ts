@@ -217,6 +217,7 @@ const parameters = {
     if (shouldFocus) {
       await context.focusTab(tab.id);
     }
+    await context.setTabGroupCollapsed(tab.id, !followMode);
     const initialInternal = isInternalUrl(normalizedUrl);
     if (initialInternal) {
       return {

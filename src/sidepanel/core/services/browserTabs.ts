@@ -21,13 +21,20 @@ type TabNavigationFailure = {
   url: string;
 };
 
+type AssistantTabGroup = {
+  groupId: number;
+  windowId: number;
+};
+
 type ContentScriptSuccessResponse<TRequest extends ContentScriptRequest> =
   Exclude<ContentScriptResponseByRequest<TRequest>, { error: string }>;
 
 const pendingWaits: Map<number, Set<PendingWaiter>> = new Map();
 const tabNavigationFailures: Map<number, TabNavigationFailure> = new Map();
+const assistantOpenedTabIds: Set<number> = new Set();
 let listenersReady = false,
-  navigationListenersReady = false;
+  navigationListenersReady = false,
+  assistantTabGroup: AssistantTabGroup | null = null;
 
 const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
   normalizeError = (error: unknown, fallback: string): Error => {
@@ -60,6 +67,130 @@ const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
     url: string,
   ): void => {
     tabNavigationFailures.set(tabId, { error, url });
+  },
+  removeAssistantTabTracking = (tabId: number): void => {
+    assistantOpenedTabIds.delete(tabId);
+    if (assistantOpenedTabIds.size === 0) {
+      assistantTabGroup = null;
+    }
+  },
+  resolveTabWindowId = (tab: BrowserTab): number => {
+    if (typeof tab.windowId !== "number") {
+      throw new Error("标签页缺少窗口 ID");
+    }
+    return tab.windowId;
+  },
+  resolveAssistantTabWindowId = async (
+    tabId: number,
+  ): Promise<number | null> => {
+    try {
+      const tab = await chrome.tabs.get(tabId);
+      return resolveTabWindowId(tab);
+    } catch (error) {
+      console.error("获取助手标签页窗口失败", { tabId }, error);
+      assistantOpenedTabIds.delete(tabId);
+      return null;
+    }
+  },
+  collectAssistantTabIdsByWindow = async (
+    windowId: number,
+    excludeTabId: number,
+  ): Promise<number[]> => {
+    const tabIds: number[] = [];
+    for (const candidateTabId of assistantOpenedTabIds) {
+      if (candidateTabId === excludeTabId) {
+        continue;
+      }
+      const candidateWindowId =
+        await resolveAssistantTabWindowId(candidateTabId);
+      if (candidateWindowId === null) {
+        continue;
+      }
+      if (candidateWindowId === windowId) {
+        tabIds.push(candidateTabId);
+      }
+    }
+    return tabIds;
+  },
+  renameAssistantTabGroup = async (groupId: number): Promise<void> => {
+    try {
+      await chrome.tabGroups.update(groupId, { title: "Wingmon" });
+    } catch (error) {
+      console.error("设置助手标签页分组标题失败", { groupId }, error);
+      throw error instanceof Error
+        ? error
+        : new Error("设置助手标签页分组标题失败");
+    }
+  },
+  createAssistantTabGroup = async (
+    tabId: number,
+    windowId: number,
+  ): Promise<void> => {
+    let groupId = 0;
+    try {
+      groupId = await chrome.tabs.group({ tabIds: [tabId] });
+    } catch (error) {
+      console.error("创建助手标签页分组失败", { tabId }, error);
+      throw error instanceof Error
+        ? error
+        : new Error("创建助手标签页分组失败");
+    }
+    await renameAssistantTabGroup(groupId);
+    assistantTabGroup = { groupId, windowId };
+    const existingTabIds = await collectAssistantTabIdsByWindow(
+      windowId,
+      tabId,
+    );
+    if (existingTabIds.length === 0) {
+      return;
+    }
+    try {
+      await chrome.tabs.group({ groupId, tabIds: existingTabIds });
+    } catch (error) {
+      console.error(
+        "将已有助手标签页加入分组失败",
+        { groupId, tabIds: existingTabIds },
+        error,
+      );
+      throw error instanceof Error
+        ? error
+        : new Error("将已有助手标签页加入分组失败");
+    }
+  },
+  addTabToAssistantGroup = async (
+    tabId: number,
+    windowId: number,
+  ): Promise<boolean> => {
+    if (assistantTabGroup === null) {
+      return false;
+    }
+    if (assistantTabGroup.windowId !== windowId) {
+      return false;
+    }
+    try {
+      await chrome.tabs.group({
+        groupId: assistantTabGroup.groupId,
+        tabIds: [tabId],
+      });
+      await renameAssistantTabGroup(assistantTabGroup.groupId);
+      return true;
+    } catch (error) {
+      console.error(
+        "将标签页加入助手分组失败",
+        { groupId: assistantTabGroup.groupId, tabId },
+        error,
+      );
+      assistantTabGroup = null;
+      return false;
+    }
+  },
+  ensureAssistantTabGroup = async (tab: CreatedBrowserTab): Promise<void> => {
+    const windowId = resolveTabWindowId(tab);
+    const isAdded = await addTabToAssistantGroup(tab.id, windowId);
+    if (isAdded) {
+      return;
+    }
+    await createAssistantTabGroup(tab.id, windowId);
   },
   registerNavigationListeners = (): void => {
     if (navigationListenersReady) {
@@ -132,6 +263,7 @@ const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
     });
     chrome.tabs.onRemoved.addListener((tabId) => {
       clearTabNavigationFailure(tabId);
+      removeAssistantTabTracking(tabId);
       resolvePendingWaits(tabId, false);
     });
     registerNavigationListeners();
@@ -192,9 +324,44 @@ export const createTab = async (
     if (typeof tab.id !== "number") {
       throw new Error("创建标签页失败：缺少 Tab ID");
     }
-    return { ...tab, id: tab.id };
+    const createdTab: CreatedBrowserTab = { ...tab, id: tab.id };
+    assistantOpenedTabIds.add(createdTab.id);
+    await ensureAssistantTabGroup(createdTab);
+    return createdTab;
   } catch (error) {
     throw logAndNormalizeError(error, "无法创建标签页");
+  }
+};
+
+export const setTabGroupCollapsed = async (
+  tabId: number,
+  collapsed: boolean,
+): Promise<void> => {
+  if (typeof tabId !== "number") {
+    const error = new Error("Tab ID 必须是数字");
+    console.error(error.message);
+    throw error;
+  }
+  let tab: BrowserTab;
+  try {
+    tab = await chrome.tabs.get(tabId);
+  } catch (error) {
+    throw logAndNormalizeError(error, "无法获取标签页");
+  }
+  if (typeof tab.groupId !== "number") {
+    const error = new Error("标签页缺少分组 ID");
+    console.error(error.message);
+    throw error;
+  }
+  if (tab.groupId < 0) {
+    const error = new Error("标签页未加入分组");
+    console.error(error.message, { groupId: tab.groupId, tabId });
+    throw error;
+  }
+  try {
+    await chrome.tabGroups.update(tab.groupId, { collapsed });
+  } catch (error) {
+    throw logAndNormalizeError(error, "无法更新标签页分组折叠状态");
   }
 };
 
@@ -308,7 +475,7 @@ export const waitForContentScript = async (
         };
       timeoutId = setTimeout(() => {
         const error = new Error(
-          `页面在 ${String(timeoutMs)}ms 内未完成加载，继续尝试抓取`,
+          `${String(timeoutMs)}ms 内未加载完成，不再等待直接抓取`,
         );
         console.error(error.message);
         waiter.resolve(false);
