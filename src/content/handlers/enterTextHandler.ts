@@ -41,6 +41,47 @@ const dispatchInputEvents = (target: HTMLElement): void => {
   target.dispatchEvent(new Event("change", { bubbles: true }));
 };
 
+const resolveInputForm = (target: Element): HTMLFormElement | null => {
+  if (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    target instanceof HTMLButtonElement
+  ) {
+    return target.form;
+  }
+  if (!(target instanceof HTMLElement)) {
+    throw new Error("输入目标节点无效");
+  }
+  const closestForm = target.closest("form");
+  if (!(closestForm instanceof HTMLFormElement)) {
+    return null;
+  }
+  return closestForm;
+};
+
+const trySubmitByRequestSubmit = (target: Element): boolean => {
+  const form = resolveInputForm(target);
+  if (!form) {
+    return false;
+  }
+  if (typeof form.requestSubmit !== "function") {
+    console.warn("当前页面不支持 requestSubmit，回退键盘事件提交");
+    return false;
+  }
+  try {
+    form.requestSubmit();
+    return true;
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "requestSubmit 提交失败";
+    console.warn("requestSubmit 提交失败，回退键盘事件提交", {
+      errorMessage,
+    });
+    return false;
+  }
+};
+
 const dispatchCtrlEnterEvents = (target: Element): void => {
   if (!(target instanceof HTMLElement)) {
     throw new Error("输入目标节点无效");
@@ -124,6 +165,16 @@ const fillInput = (target: Element, value: string): void => {
   setEditableText(target, value);
 };
 
+const submitDelayMs = 100;
+
+const waitForSubmitDelay = (): Promise<void> => {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(() => {
+      resolve();
+    }, submitDelayMs);
+  });
+};
+
 const handleEnterText = async (
   message: EnterTextRequest,
   sendResponse: (response: EnterTextResponse) => void,
@@ -141,7 +192,11 @@ const handleEnterText = async (
     }
     fillInput(target, content);
     if (pressEnter) {
-      dispatchCtrlEnterEvents(target);
+      await waitForSubmitDelay();
+      const submittedByForm = trySubmitByRequestSubmit(target);
+      if (!submittedByForm) {
+        dispatchCtrlEnterEvents(target);
+      }
       await waitForDomStability();
     }
     sendResponse({ ok: true });
