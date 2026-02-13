@@ -6,7 +6,7 @@ import {
 } from "../../lib/utils/index.ts";
 import { parseBodyOverrideRules } from "../../../shared/index.ts";
 
-type ApiType = "chat" | "responses" | "messages";
+type ApiType = "chat" | "responses" | "messages" | "gemini";
 
 export type SettingsInput = {
   apiKey?: string;
@@ -66,6 +66,9 @@ const ensureSettingsInput = (settings: SettingsInputOrNull): SettingsInput =>
     }
     if (value === "messages") {
       return "messages";
+    }
+    if (value === "gemini") {
+      return "gemini";
     }
     return "chat";
   },

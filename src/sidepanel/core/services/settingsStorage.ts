@@ -7,7 +7,7 @@ import {
 type StoredSettingValue = string | boolean | undefined;
 type StoredSettings = Record<string, StoredSettingValue>;
 
-export type ApiType = "chat" | "responses" | "messages";
+export type ApiType = "chat" | "responses" | "messages" | "gemini";
 
 export type Settings = {
   apiKey: string;
@@ -38,11 +38,13 @@ const settingsKeys = {
   },
   endpointPathMap: Record<ApiType, string> = {
     chat: "/chat/completions",
+    gemini: "/v1beta/models",
     messages: "/v1/messages",
     responses: "/responses",
   },
   endpointPathEntries: Array<{ apiType: ApiType; path: string }> = [
     { apiType: "chat", path: endpointPathMap.chat },
+    { apiType: "gemini", path: endpointPathMap.gemini },
     { apiType: "responses", path: endpointPathMap.responses },
     { apiType: "messages", path: endpointPathMap.messages },
   ],
@@ -52,6 +54,9 @@ const settingsKeys = {
     }
     if (value === "messages") {
       return "messages";
+    }
+    if (value === "gemini") {
+      return "gemini";
     }
     return "chat";
   },

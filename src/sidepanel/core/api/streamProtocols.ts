@@ -16,9 +16,11 @@ import {
 } from "../agent/toolCallNormalization.ts";
 import type {
   ChatApiStrategy,
+  GeminiApiStrategy,
   MessagesApiStrategy,
   ResponsesApiStrategy,
 } from "./apiContracts.ts";
+import type { FunctionCall, GenerateContentResponse } from "@google/genai";
 import {
   extractResponsesText,
   getChatDeltaText,
@@ -31,6 +33,7 @@ import {
 import type Anthropic from "@anthropic-ai/sdk";
 import type { ChatCompletion } from "openai/resources/chat/completions";
 import type { Response } from "openai/resources/responses/responses";
+import type { ToolCall } from "../agent/definitions.ts";
 
 type ChatProtocolHandlers = Pick<
   ChatApiStrategy,
@@ -42,6 +45,10 @@ type MessagesProtocolHandlers = Pick<
 >;
 type ResponsesProtocolHandlers = Pick<
   ResponsesApiStrategy,
+  "stream" | "extractReply" | "extractToolCalls"
+>;
+type GeminiProtocolHandlers = Pick<
+  GeminiApiStrategy,
   "stream" | "extractReply" | "extractToolCalls"
 >;
 
@@ -56,7 +63,48 @@ const toChatExtractionPayload = (data: ChatCompletion): ChatCompletionData => {
     output: data.output,
   }),
   extractChatReply = (data: ChatCompletion): string =>
-    data.choices.at(0)?.message.content?.trim() || "";
+    data.choices.at(0)?.message.content?.trim() || "",
+  serializeGeminiFunctionArguments = (args: unknown): string => {
+    if (typeof args === "string") {
+      return args;
+    }
+    try {
+      const serialized = JSON.stringify(args ?? {});
+      if (typeof serialized !== "string") {
+        throw new Error("Gemini 工具参数序列化结果无效");
+      }
+      return serialized;
+    } catch (error) {
+      console.error("Gemini 工具参数序列化失败", error);
+      throw new Error("Gemini 工具参数序列化失败");
+    }
+  },
+  toGeminiToolCall = (call: FunctionCall, index: number): ToolCall | null => {
+    if (typeof call.name !== "string" || call.name.length === 0) {
+      return null;
+    }
+    const callId =
+      typeof call.id === "string" && call.id.length > 0
+        ? call.id
+        : `gemini_${String(index)}_${call.name}`;
+    return {
+      call_id: callId,
+      function: {
+        arguments: serializeGeminiFunctionArguments(call.args),
+        name: call.name,
+      },
+      id: callId,
+    };
+  },
+  extractGeminiToolCalls = (data: GenerateContentResponse): ToolCall[] => {
+    const functionCalls = data.functionCalls;
+    if (!Array.isArray(functionCalls)) {
+      return [];
+    }
+    return functionCalls
+      .map((call, index) => toGeminiToolCall(call, index))
+      .filter((call): call is ToolCall => call !== null);
+  };
 
 export const chatProtocolHandlers: ChatProtocolHandlers = {
   extractReply: (data) => extractChatReply(data),
@@ -130,5 +178,28 @@ export const responsesProtocolHandlers: ResponsesProtocolHandlers = {
       onChunk({ delta, toolCalls });
     }
     return finalizeResponsesToolCalls(collector);
+  },
+};
+
+export const geminiProtocolHandlers: GeminiProtocolHandlers = {
+  extractReply: (data) => data.text?.trim() ?? "",
+  extractToolCalls: (data) => extractGeminiToolCalls(data),
+  stream: async (stream, { onDelta, onChunk }) => {
+    const collectedToolCalls = new Map<string, ToolCall>();
+    for await (const chunk of stream) {
+      const delta = chunk.text ?? "",
+        toolCalls = extractGeminiToolCalls(chunk);
+      if (delta !== "") {
+        onDelta(delta);
+      }
+      toolCalls.forEach((call) => {
+        const callId = call.call_id;
+        if (typeof callId === "string" && callId.length > 0) {
+          collectedToolCalls.set(callId, call);
+        }
+      });
+      onChunk({ delta, toolCalls });
+    }
+    return Array.from(collectedToolCalls.values());
   },
 };

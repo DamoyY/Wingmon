@@ -8,10 +8,16 @@ import type {
 import type {
   ChatFallbackRequestBody,
   ChatRequestBody,
+  GeminiFallbackRequestBody,
+  GeminiRequestBody,
   MessagesApiStrategy,
   ResponsesFallbackRequestBody,
   ResponsesRequestBody,
 } from "./apiContracts.ts";
+import {
+  FunctionCallingConfigMode,
+  type Tool as GeminiTool,
+} from "@google/genai";
 import type {
   ResponseInputItem,
   Tool as ResponsesTool,
@@ -19,9 +25,10 @@ import type {
 import { applyBodyOverrideRules, isRecord } from "../../../shared/index.ts";
 import {
   buildChatMessages,
+  buildGeminiContents,
   buildMessagesInput,
   buildResponsesInput,
-} from "../agent/message-builders.ts";
+} from "../agent/requestMessageBuilders.ts";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { Settings } from "../services/index.ts";
 import type { ToolDefinition } from "../agent/definitions.ts";
@@ -183,29 +190,26 @@ const readStringField = (source: unknown, field: string): string | null => {
         tool_call_id: toolCallId,
       };
     }
-    if (role === "assistant") {
-      const entry: ChatCompletionAssistantMessageParam = {
-          role: "assistant",
-        },
-        toolCalls = normalizeChatToolCallList(message.tool_calls);
-      if (
-        typeof message.content === "string" &&
-        message.content.trim().length > 0
-      ) {
-        entry.content = message.content;
-      }
-      if (toolCalls.length > 0) {
-        entry.tool_calls = toolCalls;
-      }
-      if (
-        entry.content === undefined &&
-        (entry.tool_calls === undefined || entry.tool_calls.length === 0)
-      ) {
-        throw new Error("assistant 消息缺少 content 和 tool_calls");
-      }
-      return entry;
+    const entry: ChatCompletionAssistantMessageParam = {
+        role: "assistant",
+      },
+      toolCalls = normalizeChatToolCallList(message.tool_calls);
+    if (
+      typeof message.content === "string" &&
+      message.content.trim().length > 0
+    ) {
+      entry.content = message.content;
     }
-    throw new Error(`不支持的 Chat 消息角色：${role}`);
+    if (toolCalls.length > 0) {
+      entry.tool_calls = toolCalls;
+    }
+    if (
+      entry.content === undefined &&
+      (entry.tool_calls === undefined || entry.tool_calls.length === 0)
+    ) {
+      throw new Error("assistant 消息缺少 content 和 tool_calls");
+    }
+    return entry;
   },
   toResponsesInputItem = (
     item: ReturnType<typeof buildResponsesInput>[number],
@@ -261,6 +265,18 @@ const readStringField = (source: unknown, field: string): string | null => {
       description: t.description,
       input_schema: t.parameters as Anthropic.Tool.InputSchema,
       name: t.name,
+    };
+  },
+  toGeminiTool = (tool: ToolDefinition): GeminiTool => {
+    const t = "function" in tool ? tool.function : tool;
+    return {
+      functionDeclarations: [
+        {
+          description: t.description,
+          name: t.name,
+          parametersJsonSchema: t.parameters as Record<string, unknown>,
+        },
+      ],
     };
   };
 
@@ -348,4 +364,50 @@ export const buildResponsesNonStreamRequestBody = (
     stream: false,
     tools: tools.map(toResponsesTool),
     ...(systemPrompt ? { instructions: systemPrompt } : {}),
+  });
+
+const buildGeminiRequestConfig = ({
+  systemPrompt,
+  tools,
+}: {
+  systemPrompt: string;
+  tools: ToolDefinition[];
+}): GeminiRequestBody["config"] => ({
+  toolConfig: {
+    functionCallingConfig: {
+      mode: FunctionCallingConfigMode.AUTO,
+    },
+  },
+  tools: tools.map(toGeminiTool),
+  ...(systemPrompt
+    ? {
+        systemInstruction: {
+          parts: [{ text: systemPrompt }],
+        },
+      }
+    : {}),
+});
+
+export const buildGeminiStreamRequestBody = (
+  settings: Settings,
+  systemPrompt: string,
+  tools: ToolDefinition[],
+  messages: Parameters<typeof buildGeminiContents>[0],
+): GeminiRequestBody =>
+  applySettingsRequestBodyOverrides(settings, {
+    config: buildGeminiRequestConfig({ systemPrompt, tools }),
+    contents: buildGeminiContents(messages),
+    model: settings.model,
+  });
+
+export const buildGeminiNonStreamRequestBody = (
+  settings: Settings,
+  systemPrompt: string,
+  tools: ToolDefinition[],
+  messages: Parameters<typeof buildGeminiContents>[0],
+): GeminiFallbackRequestBody =>
+  applySettingsRequestBodyOverrides(settings, {
+    config: buildGeminiRequestConfig({ systemPrompt, tools }),
+    contents: buildGeminiContents(messages),
+    model: settings.model,
   });

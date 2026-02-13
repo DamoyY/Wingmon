@@ -5,6 +5,10 @@ import type {
   ChatCompletionCreateParamsStreaming,
 } from "openai/resources/chat/completions";
 import type {
+  GenerateContentParameters,
+  GenerateContentResponse,
+} from "@google/genai";
+import type {
   Response,
   ResponseCreateParamsNonStreaming,
   ResponseCreateParamsStreaming,
@@ -25,6 +29,8 @@ export type ChatRequestBody = ChatCompletionCreateParamsStreaming;
 export type ChatFallbackRequestBody = ChatCompletionCreateParamsNonStreaming;
 export type ResponsesRequestBody = ResponseCreateParamsStreaming;
 export type ResponsesFallbackRequestBody = ResponseCreateParamsNonStreaming;
+export type GeminiRequestBody = GenerateContentParameters;
+export type GeminiFallbackRequestBody = GenerateContentParameters;
 
 export type BaseApiStrategy<TStream, TResponse, TBody, TFallbackBody> = {
   buildStreamRequestBody: (
@@ -68,13 +74,22 @@ export type MessagesApiStrategy = BaseApiStrategy<
   Anthropic.MessageCreateParamsNonStreaming
 >;
 
+export type GeminiApiStrategy = BaseApiStrategy<
+  GenerateContentResponse,
+  GenerateContentResponse,
+  GeminiRequestBody,
+  GeminiFallbackRequestBody
+>;
+
 export type ApiStrategyMap = {
   chat: ChatApiStrategy;
   responses: ResponsesApiStrategy;
   messages: MessagesApiStrategy;
+  gemini: GeminiApiStrategy;
 };
 
 export type ApiStrategy =
   | ChatApiStrategy
   | ResponsesApiStrategy
-  | MessagesApiStrategy;
+  | MessagesApiStrategy
+  | GeminiApiStrategy;

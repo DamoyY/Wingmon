@@ -2,6 +2,8 @@ import type { ApiStrategy, ApiStrategyMap } from "./apiContracts.ts";
 import {
   buildChatNonStreamRequestBody,
   buildChatStreamRequestBody,
+  buildGeminiNonStreamRequestBody,
+  buildGeminiStreamRequestBody,
   buildMessagesNonStreamRequestBody,
   buildMessagesStreamRequestBody,
   buildResponsesNonStreamRequestBody,
@@ -9,6 +11,7 @@ import {
 } from "./payloadAdapters.ts";
 import {
   chatProtocolHandlers,
+  geminiProtocolHandlers,
   messagesProtocolHandlers,
   responsesProtocolHandlers,
 } from "./streamProtocols.ts";
@@ -26,6 +29,9 @@ export type {
   ResponsesFallbackRequestBody,
   ResponsesRequestBody,
   StreamEventHandlers,
+  GeminiApiStrategy,
+  GeminiRequestBody,
+  GeminiFallbackRequestBody,
 } from "./apiContracts.ts";
 
 const createApiStrategies = (): ApiStrategyMap => ({
@@ -33,6 +39,11 @@ const createApiStrategies = (): ApiStrategyMap => ({
     buildNonStreamRequestBody: buildChatNonStreamRequestBody,
     buildStreamRequestBody: buildChatStreamRequestBody,
     ...chatProtocolHandlers,
+  },
+  gemini: {
+    buildNonStreamRequestBody: buildGeminiNonStreamRequestBody,
+    buildStreamRequestBody: buildGeminiStreamRequestBody,
+    ...geminiProtocolHandlers,
   },
   messages: {
     buildNonStreamRequestBody: buildMessagesNonStreamRequestBody,
@@ -55,6 +66,8 @@ export default function getApiStrategy(apiType: ApiType): ApiStrategy {
       return strategyMap.responses;
     case "messages":
       return strategyMap.messages;
+    case "gemini":
+      return strategyMap.gemini;
     default:
       throw new Error(`Unsupported API type: ${String(apiType)}`);
   }

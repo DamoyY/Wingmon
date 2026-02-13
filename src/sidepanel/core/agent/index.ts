@@ -1,6 +1,6 @@
 export * from "./definitions.ts";
 export { default as ToolInputError } from "./errors.ts";
-export * from "./message-builders.ts";
+export * from "./requestMessageBuilders.ts";
 export * from "./toolMessageContext.ts";
 export * from "./toolResultFormatters.ts";
 export * from "./toolResultTypes.ts";
