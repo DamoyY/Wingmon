@@ -50,6 +50,9 @@
   "statusClickSuccess": {
     "message": "**点击成功**"
   },
+  "statusEnterTextSuccess": {
+    "message": "**输入成功**"
+  },
   "statusFindSuccess": {
     "message": "**查找成功**"
   },
@@ -184,6 +187,9 @@
   },
   "toolParamContent": {
     "message": "要输入的文本"
+  },
+  "toolParamPressCtrlEnter": {
+    "message": "输入后是否按 Enter 键发送"
   },
   "toolParamCode": {
     "message": "HTML 代码"

@@ -50,6 +50,9 @@
   "statusClickSuccess": {
     "message": "**Click succeeded**"
   },
+  "statusEnterTextSuccess": {
+    "message": "**Input succeeded**"
+  },
   "statusFindSuccess": {
     "message": "**Find succeeded**"
   },
@@ -184,6 +187,9 @@
   },
   "toolParamContent": {
     "message": "The text to enter"
+  },
+  "toolParamPressCtrlEnter": {
+    "message": "Whether to press Enter Key after entering text"
   },
   "toolParamCode": {
     "message": "HTML code"

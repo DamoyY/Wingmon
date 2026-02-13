@@ -105,6 +105,7 @@ export type EnterTextRequest = {
   type: "enterText";
   id: string;
   content: string;
+  pressEnter: boolean;
 };
 
 export type EnterTextResponse =
@@ -185,7 +186,7 @@ const setPageHashRequestKeys = new Set([
   "type",
 ]);
 const clickButtonRequestKeys = new Set(["id", "type"]);
-const enterTextRequestKeys = new Set(["content", "id", "type"]);
+const enterTextRequestKeys = new Set(["content", "id", "pressEnter", "type"]);
 const chunkAnchorWeightKeys = new Set(["id", "weight"]);
 
 const isMessageLike = (value: RuntimeValue): value is MessageLike => {
@@ -360,7 +361,10 @@ const isEnterTextRequest = (value: MessageLike): value is EnterTextRequest => {
   if (!isValidLlmId(value.id)) {
     return false;
   }
-  return typeof value.content === "string";
+  if (typeof value.content !== "string") {
+    return false;
+  }
+  return typeof value.pressEnter === "boolean";
 };
 
 export const isContentScriptRequest = (

@@ -317,6 +317,24 @@ const buildHeaderOnlyPageReadResult = (
     return buildHeaderOnlyPageReadResult([t("statusClickSuccess")], isInternal);
   };
 
+type EnterTextPageReadResult = PageReadToolResult & { ok: true };
+
+const isEnterTextPageReadResult = (
+  result: EnterTextToolResult,
+): result is EnterTextPageReadResult => {
+  return "tabId" in result;
+};
+
+const buildEnterTextOutputWithoutContent = (
+  result: EnterTextPageReadResult,
+): string => {
+  const { isInternal } = resolvePageReadResult(result);
+  return buildHeaderOnlyPageReadResult(
+    [t("statusEnterTextSuccess")],
+    isInternal,
+  );
+};
+
 export const buildGetPageMarkdownMessageContext = (
   _args: unknown,
   result: GetPageMarkdownToolResult,
@@ -346,6 +364,26 @@ export const buildClickButtonMessageContext = (
     "click_button 缺少页面读取事件",
     buildClickButtonOutputWithoutContent(result),
   );
+
+export const buildEnterTextMessageContext = (
+  args: { pressEnter: boolean },
+  result: EnterTextToolResult,
+): ToolMessageContext | null => {
+  if (!args.pressEnter) {
+    return null;
+  }
+  if (!resolveBoolean(result.ok, "ok")) {
+    return null;
+  }
+  if (!isEnterTextPageReadResult(result)) {
+    return null;
+  }
+  return buildRequiredPageReadMessageContext(
+    result,
+    "enter_text 缺少页面读取事件",
+    buildEnterTextOutputWithoutContent(result),
+  );
+};
 
 export const formatGetPageMarkdownResult = (
   result: GetPageMarkdownToolResult,
@@ -447,9 +485,19 @@ export const formatFindResult = (result: FindToolResult): string => {
 };
 
 export const formatEnterTextResult = (result: EnterTextToolResult): string => {
-  return resolveBoolean(result.ok, "ok")
-    ? t("statusSuccess")
-    : t("statusFailed");
+  if (!resolveBoolean(result.ok, "ok")) {
+    return t("statusFailed");
+  }
+  if (!isEnterTextPageReadResult(result)) {
+    return t("statusEnterTextSuccess");
+  }
+  const { content, isInternal } = resolvePageReadResult(result);
+  return buildPageReadResult({
+    content,
+    contentLabel: `${t("statusContent")}：`,
+    headerLines: [t("statusEnterTextSuccess")],
+    isInternal,
+  });
 };
 
 export const formatCloseBrowserPageResult = (

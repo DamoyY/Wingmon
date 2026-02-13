@@ -8,6 +8,7 @@ import {
 } from "../dom/editableElements.js";
 import { isElementVisible } from "../dom/visibility.js";
 import { normalizeLlmId } from "../common/index.ts";
+import { waitForDomStability } from "./clickButtonHandler.js";
 
 const findSingleInput = (normalizedId: string): Element | null => {
   const win = document.defaultView;
@@ -38,6 +39,34 @@ const findSingleInput = (normalizedId: string): Element | null => {
 const dispatchInputEvents = (target: HTMLElement): void => {
   target.dispatchEvent(new Event("input", { bubbles: true }));
   target.dispatchEvent(new Event("change", { bubbles: true }));
+};
+
+const dispatchCtrlEnterEvents = (target: Element): void => {
+  if (!(target instanceof HTMLElement)) {
+    throw new Error("输入目标节点无效");
+  }
+  const ownerWindow = target.ownerDocument.defaultView;
+  if (!ownerWindow) {
+    throw new Error("无法获取窗口对象");
+  }
+  target.focus();
+  const keyboardEventInit: KeyboardEventInit = {
+      bubbles: true,
+      cancelable: true,
+      code: "Enter",
+      ctrlKey: true,
+      key: "Enter",
+    },
+    keyboardEventNames: Array<"keydown" | "keypress" | "keyup"> = [
+      "keydown",
+      "keypress",
+      "keyup",
+    ];
+  keyboardEventNames.forEach((eventName) => {
+    target.dispatchEvent(
+      new ownerWindow.KeyboardEvent(eventName, keyboardEventInit),
+    );
+  });
 };
 
 const setInputValue = (
@@ -95,13 +124,14 @@ const fillInput = (target: Element, value: string): void => {
   setEditableText(target, value);
 };
 
-const handleEnterText = (
+const handleEnterText = async (
   message: EnterTextRequest,
   sendResponse: (response: EnterTextResponse) => void,
-): void => {
+): Promise<void> => {
   try {
     const normalizedId = normalizeLlmId(message.id),
       content = message.content,
+      pressEnter = message.pressEnter,
       target = findSingleInput(normalizedId);
     if (!target) {
       const warnMessage = `未找到 id 为 ${normalizedId} 的输入框`;
@@ -110,6 +140,10 @@ const handleEnterText = (
       return;
     }
     fillInput(target, content);
+    if (pressEnter) {
+      dispatchCtrlEnterEvents(target);
+      await waitForDomStability();
+    }
     sendResponse({ ok: true });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "输入失败";

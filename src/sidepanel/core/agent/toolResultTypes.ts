@@ -43,9 +43,16 @@ export type FindToolResult = {
   pages: FindToolPageResult[];
 };
 
-export type EnterTextToolResult = {
-  ok: boolean;
-};
+export type EnterTextToolResult =
+  | {
+      ok: false;
+    }
+  | {
+      ok: true;
+    }
+  | ({
+      ok: true;
+    } & PageReadToolResult);
 
 export type CloseBrowserPageItemToolResult = {
   tabId: number;

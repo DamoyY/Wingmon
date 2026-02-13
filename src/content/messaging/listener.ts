@@ -19,8 +19,8 @@ const contentScriptHandlers: ContentScriptRpcHandlerMap = {
   clickButton: (message, sendResponse) => {
     return handleClickButton(message, sendResponse);
   },
-  enterText: (message, sendResponse): void => {
-    handleEnterText(message, sendResponse);
+  enterText: (message, sendResponse) => {
+    return handleEnterText(message, sendResponse);
   },
   getAllPageContent: (message, sendResponse) => {
     return handleGetAllPageContent(message, sendResponse);
