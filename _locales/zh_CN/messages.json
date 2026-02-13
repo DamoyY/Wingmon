@@ -189,7 +189,7 @@
     "message": "要输入的文本"
   },
   "toolParamPressCtrlEnter": {
-    "message": "输入后是否按 Enter 键发送"
+    "message": "输入后是否 发送/提交"
   },
   "toolParamCode": {
     "message": "HTML 代码"
@@ -328,5 +328,11 @@
   },
   "failed": {
     "message": "失败"
+  },
+  "toolWait": {
+    "message": "等待指定时长"
+  },
+  "toolParamDuration": {
+    "message": "单位：秒"
   }
 }

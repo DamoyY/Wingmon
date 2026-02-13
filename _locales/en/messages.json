@@ -189,7 +189,7 @@
     "message": "The text to enter"
   },
   "toolParamPressCtrlEnter": {
-    "message": "Whether to press Enter Key after entering text"
+    "message": "Whether to send/submit after entering"
   },
   "toolParamCode": {
     "message": "HTML code"
@@ -328,5 +328,11 @@
   },
   "failed": {
     "message": "Failed"
+  },
+  "toolWait": {
+    "message": "Wait for the specified duration"
+  },
+  "toolParamDuration": {
+    "message": "Unit: second"
   }
 }

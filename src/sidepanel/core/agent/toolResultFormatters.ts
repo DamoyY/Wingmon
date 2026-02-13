@@ -61,6 +61,7 @@ const TOOL_STATUS_MAP: Partial<Record<string, AgentStatus>> = {
   list_tabs: AGENT_STATUS.browsing,
   run_console: AGENT_STATUS.coding,
   show_html: AGENT_STATUS.coding,
+  wait: AGENT_STATUS.thinking,
 };
 
 const resolveBoolean = (value: boolean, fieldName: string): boolean => {

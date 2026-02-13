@@ -15,6 +15,7 @@ import listTabs from "./listTabs.ts";
 import openBrowserPage from "./openBrowserPage.ts";
 import runConsoleCommand from "./runConsoleCommand.ts";
 import showHtml from "./showHtml.ts";
+import wait from "./wait.ts";
 
 type ToolParameterSchema = ToolJsonSchema;
 
@@ -46,6 +47,7 @@ const toolModules: ToolModuleEntry[] = [
   find,
   runConsoleCommand,
   showHtml,
+  wait,
 ];
 
 export default toolModules;
