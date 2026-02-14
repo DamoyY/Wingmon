@@ -500,14 +500,14 @@ export const startPanelServer = async (): Promise<void> => {
   }
   panelServerReady = true;
   initTabListeners();
+  registerStateSubscriptions();
+  registerPortListener();
+  registerCommandListener();
   try {
     await ensureOffscreenDocument();
   } catch (error) {
     console.error("初始化 offscreen 文档失败", error);
   }
-  registerStateSubscriptions();
-  registerPortListener();
-  registerCommandListener();
   await restorePersistedSnapshot();
   broadcastSnapshot();
   schedulePersistSnapshot();
