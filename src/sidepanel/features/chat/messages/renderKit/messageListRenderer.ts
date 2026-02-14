@@ -20,6 +20,7 @@ import { wrapTrailingText } from "../../../../lib/domTools/index.ts";
 
 export type RenderOptions = {
   animateIndices?: number[];
+  showNewChatButton?: boolean;
 };
 
 const STREAM_DELTA_CLASS_NAME = "stream-delta";
@@ -156,7 +157,9 @@ export const renderMessages = (
 
   const hasVisibleMessages = displayMessages.length > 0;
   const button = requireNewChatButton();
-  button.classList.toggle("hidden", !hasVisibleMessages);
+  const shouldShowNewChatButton =
+    hasVisibleMessages && options.showNewChatButton !== false;
+  button.classList.toggle("hidden", !shouldShowNewChatButton);
   setEmptyStateVisible(!hasVisibleMessages);
 };
 

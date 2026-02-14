@@ -31,6 +31,7 @@ type MessagesStateChange = StateChangePayload<"messages"> & {
 let actionHandlers: MessageActionHandlers | null = null;
 let unsubscribeMessages: (() => void) | null = null;
 let unsubscribeActiveStatus: (() => void) | null = null;
+let unsubscribeSending: (() => void) | null = null;
 let hasRenderedMessageList = false;
 let renderedMessageKeys: string[] = [];
 const buildMessagesForView = (): DisplayMessage[] =>
@@ -103,6 +104,7 @@ const buildMessagesForView = (): DisplayMessage[] =>
     const animateIndices = resolveAutoAnimateIndices(displayMessages, options);
     renderMessages(displayMessages, ensureActionHandlers(), {
       animateIndices,
+      showNewChatButton: !state.sending,
     });
     updateRenderedMessageState(displayMessages);
   },
@@ -223,18 +225,22 @@ const buildMessagesForView = (): DisplayMessage[] =>
     }
     renderDisplayMessages(displayMessages);
   },
+  handleSendingChange = (): void => {
+    renderMessagesFromState();
+  },
   ensureStateSubscriptions = (): void => {
-    if (unsubscribeMessages) {
-      if (unsubscribeActiveStatus) {
-        return;
-      }
-    } else {
+    if (!unsubscribeMessages) {
       unsubscribeMessages = subscribeState("messages", handleMessagesChange);
     }
-    unsubscribeActiveStatus = subscribeState(
-      "activeStatus",
-      handleActiveStatusChange,
-    );
+    if (!unsubscribeActiveStatus) {
+      unsubscribeActiveStatus = subscribeState(
+        "activeStatus",
+        handleActiveStatusChange,
+      );
+    }
+    if (!unsubscribeSending) {
+      unsubscribeSending = subscribeState("sending", handleSendingChange);
+    }
   };
 
 export const renderMessagesView = (): void => {
