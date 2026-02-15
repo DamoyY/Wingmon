@@ -46,8 +46,12 @@ type CommandDataMap = {
 };
 
 type StateSubscriptionCleanup = () => void;
+type ActionIconPathSize = 16 | 32 | 48 | 128;
+type ActionIconPathMap = Record<ActionIconPathSize, string>;
 
 const PANEL_STATE_STORAGE_KEY = "panel_server_state";
+const actionIconFrameCount = 12;
+const actionIconIntervalMs = 200;
 
 const panelPorts = new Set<chrome.runtime.Port>();
 const stateSubscriptionCleanups: StateSubscriptionCleanup[] = [];
@@ -59,6 +63,9 @@ let portListenerReady = false;
 let activeAbortController: AbortController | null = null;
 let persistTimerId: number | null = null;
 let activeAgentStatus: PanelAgentStatus = AGENT_STATUS.idle;
+let actionIconTimerId: number | null = null;
+let actionIconFrameIndex = 0;
+let actionIconStopRequested = false;
 
 const normalizeErrorMessage = (error: unknown, fallback: string): string => {
   if (error instanceof Error && error.message.trim()) {
@@ -68,6 +75,75 @@ const normalizeErrorMessage = (error: unknown, fallback: string): string => {
     return error;
   }
   return fallback;
+};
+
+const createActionIconPathMap = (frame: number): ActionIconPathMap => ({
+  16: `public/${String(frame)}.16.png`,
+  32: `public/${String(frame)}.32.png`,
+  48: `public/${String(frame)}.48.png`,
+  128: `public/${String(frame)}.128.png`,
+});
+
+const applyActionIconFrame = (frame: number): void => {
+  chrome.action.setIcon({ path: createActionIconPathMap(frame) }, () => {
+    const runtimeError = chrome.runtime.lastError;
+    if (!runtimeError) {
+      return;
+    }
+    console.error(
+      `设置扩展图标失败，帧序号：${String(frame)}`,
+      runtimeError.message,
+    );
+  });
+};
+
+const clearActionIconTimer = (): void => {
+  if (actionIconTimerId === null) {
+    return;
+  }
+  clearInterval(actionIconTimerId);
+  actionIconTimerId = null;
+};
+
+const startActionIconCycle = (): void => {
+  actionIconStopRequested = false;
+  if (actionIconTimerId !== null) {
+    return;
+  }
+  actionIconFrameIndex = 0;
+  applyActionIconFrame(actionIconFrameIndex);
+  actionIconTimerId = setInterval(() => {
+    actionIconFrameIndex = (actionIconFrameIndex + 1) % actionIconFrameCount;
+    applyActionIconFrame(actionIconFrameIndex);
+    if (!actionIconStopRequested || actionIconFrameIndex !== 0) {
+      return;
+    }
+    clearActionIconTimer();
+    actionIconStopRequested = false;
+  }, actionIconIntervalMs);
+};
+
+const stopActionIconCycle = (): void => {
+  if (actionIconTimerId === null) {
+    actionIconStopRequested = false;
+    actionIconFrameIndex = 0;
+    applyActionIconFrame(actionIconFrameIndex);
+    return;
+  }
+  if (actionIconFrameIndex === 0) {
+    clearActionIconTimer();
+    actionIconStopRequested = false;
+    return;
+  }
+  actionIconStopRequested = true;
+};
+
+const syncActionIconCycle = (sending: boolean): void => {
+  if (sending) {
+    startActionIconCycle();
+    return;
+  }
+  stopActionIconCycle();
 };
 
 const cloneMessageRecord = (message: MessageRecord): PanelMessageRecord => {
@@ -143,6 +219,9 @@ const registerStateSubscriptions = (): void => {
   }
   const subscribe = (key: keyof typeof state): void => {
     const cleanup = subscribeState(key, () => {
+      if (key === "sending") {
+        syncActionIconCycle(state.sending);
+      }
       broadcastSnapshot();
       schedulePersistSnapshot();
     });
@@ -509,6 +588,7 @@ export const startPanelServer = async (): Promise<void> => {
     console.error("初始化 offscreen 文档失败", error);
   }
   await restorePersistedSnapshot();
+  syncActionIconCycle(state.sending);
   broadcastSnapshot();
   schedulePersistSnapshot();
 };
