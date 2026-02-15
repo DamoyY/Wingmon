@@ -159,7 +159,7 @@
     "message": "列出所有当前已打开的标签页的标题、URL 和 Tab ID"
   },
   "toolShowHtml": {
-    "message": "该工具会将输入的 HTML 在用户的浏览器中打开，同时为用户提供下载方式"
+    "message": "该工具会将输入的 HTML 代码在用户的浏览器中打开，同时为用户提供下载方式。不支持读写 localStorage。"
   },
   "toolFind": {
     "message": "在指定标签页中查找文本"

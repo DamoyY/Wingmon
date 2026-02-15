@@ -159,7 +159,7 @@
     "message": "List titles, URLs, and Tab IDs of all tabs"
   },
   "toolShowHtml": {
-    "message": "This tool will open the input HTML in user's browser while providing download options"
+    "message": "This tool will open the input HTML in user's browser while providing download options. Does not support reading / writing localStorage"
   },
   "toolFind": {
     "message": "Find text in the specified tab"
