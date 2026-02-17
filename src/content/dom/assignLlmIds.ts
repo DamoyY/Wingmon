@@ -41,6 +41,25 @@ type NamedControlResolver = {
   labelResolver: (element: Element) => string;
 };
 
+const pushChildrenInReverse = (
+  stack: Element[],
+  children: HTMLCollection,
+): void => {
+  for (let index = children.length - 1; index >= 0; index -= 1) {
+    const child = children.item(index);
+    if (child) {
+      stack.push(child);
+    }
+  }
+};
+
+const pushComposedChildren = (stack: Element[], element: Element): void => {
+  pushChildrenInReverse(stack, element.children);
+  if (element instanceof HTMLElement && element.shadowRoot) {
+    pushChildrenInReverse(stack, element.shadowRoot.children);
+  }
+};
+
 const collectVisibleControls = (
   root: Element,
   matcher: (element: Element) => boolean,
@@ -51,25 +70,23 @@ const collectVisibleControls = (
     throw new Error("无法获取窗口对象");
   }
   const controls: Element[] = [];
-  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
-    acceptNode: (node: Node) => {
-      const element = node as Element;
-      if (skippedTraversalTags.has(element.tagName)) {
-        return NodeFilter.FILTER_REJECT;
-      }
-      return NodeFilter.FILTER_ACCEPT;
-    },
-  });
-  let node = walker.nextNode();
-  while (node) {
-    const element = node as Element;
+  const stack: Element[] = [];
+  pushComposedChildren(stack, root);
+  while (stack.length > 0) {
+    const element = stack.pop();
+    if (!element) {
+      continue;
+    }
+    if (skippedTraversalTags.has(element.tagName)) {
+      continue;
+    }
     if (
       matcher(element) &&
       isElementVisible(element, win, llmControlVisibilityOptions)
     ) {
       controls.push(element);
     }
-    node = walker.nextNode();
+    pushComposedChildren(stack, element);
   }
   return controls;
 };
@@ -79,10 +96,15 @@ const collectVisibleButtons = (root: Element): Element[] =>
   collectVisibleControls(root, isButtonElement);
 
 const clearAssignedLlmIds = (root: Element): void => {
-  const targets = [root, ...Array.from(root.querySelectorAll("[data-llm-id]"))];
-  targets.forEach((target) => {
-    target.removeAttribute("data-llm-id");
-  });
+  const stack: Element[] = [root];
+  while (stack.length > 0) {
+    const element = stack.pop();
+    if (!element) {
+      continue;
+    }
+    element.removeAttribute("data-llm-id");
+    pushComposedChildren(stack, element);
+  }
 };
 
 const resolveLabelSafely = (resolver: () => string, kind: string): string => {
