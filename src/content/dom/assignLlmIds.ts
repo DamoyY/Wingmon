@@ -13,12 +13,14 @@ import {
   isEditableElement,
   llmControlVisibilityOptions,
 } from "./editableElements.js";
-import { buildIdMap } from "../extractors/labels.js";
+import { normalizeText } from "../extractors/labels.js";
 import { parseRequiredPositiveInteger } from "../../shared/index.ts";
 import { resolveButtonLabel } from "../extractors/buttons.js";
 import { resolveInputLabel } from "../extractors/inputs.js";
 
 const HASH_LENGTH = 6;
+const llmIdAttribute = "data-llm-id";
+const llmLabelAttribute = "data-llm-label";
 const llmIdPathErrorMessages: DomPathErrorMessages = {
   emptyPath: "无法生成控件的 DOM 路径",
   invalidElement: "控件节点无效",
@@ -39,6 +41,10 @@ type NamedControlResolver = {
   controls: Element[];
   kind: string;
   labelResolver: (element: Element) => string;
+};
+type NamedControl = {
+  element: Element;
+  label: string;
 };
 
 const pushChildrenInReverse = (
@@ -102,7 +108,8 @@ const clearAssignedLlmIds = (root: Element): void => {
     if (!element) {
       continue;
     }
-    element.removeAttribute("data-llm-id");
+    element.removeAttribute(llmIdAttribute);
+    element.removeAttribute(llmLabelAttribute);
     pushComposedChildren(stack, element);
   }
 };
@@ -120,23 +127,28 @@ const resolveLabelSafely = (resolver: () => string, kind: string): string => {
 
 const collectNamedControls = (
   resolvers: readonly NamedControlResolver[],
-): Element[] => {
-  const namedControls: Element[] = [];
+): NamedControl[] => {
+  const namedControls: NamedControl[] = [];
   const namedControlSet = new Set<Element>();
   resolvers.forEach((resolver) => {
     resolver.controls.forEach((control) => {
       if (namedControlSet.has(control)) {
         return;
       }
-      const label = resolveLabelSafely(
-        () => resolver.labelResolver(control),
-        resolver.kind,
+      const label = normalizeText(
+        resolveLabelSafely(
+          () => resolver.labelResolver(control),
+          resolver.kind,
+        ),
       );
       if (!label) {
         return;
       }
       namedControlSet.add(control);
-      namedControls.push(control);
+      namedControls.push({
+        element: control,
+        label,
+      });
     });
   });
   return namedControls;
@@ -149,23 +161,26 @@ const assignLlmIds = (root: Element, tabId: number): void => {
   try {
     const buttons = collectVisibleButtons(root),
       inputs = collectVisibleInputs(root),
-      idMap = buildIdMap(root),
       namedControls = collectNamedControls([
         {
           controls: buttons,
           kind: "按钮",
-          labelResolver: (control) => resolveButtonLabel(idMap, control),
+          labelResolver: (control) => resolveButtonLabel(control),
         },
         {
           controls: inputs,
           kind: "输入框",
-          labelResolver: (control) => resolveInputLabel(root, idMap, control),
+          labelResolver: (control) => resolveInputLabel(control),
         },
       ]),
       usedIds = new Set<string>(),
       totalTargets = namedControls.length,
-      assignId = (element: Element): void => {
-        const path = buildDomPath(element, root, llmIdPathErrorMessages),
+      assignId = (namedControl: NamedControl): void => {
+        const path = buildDomPath(
+            namedControl.element,
+            root,
+            llmIdPathErrorMessages,
+          ),
           id = hashDomPath(`${String(resolvedTabId)}:${path}`, HASH_LENGTH);
         if (usedIds.has(id)) {
           throw new Error(
@@ -173,10 +188,14 @@ const assignLlmIds = (root: Element, tabId: number): void => {
           );
         }
         usedIds.add(id);
-        element.setAttribute("data-llm-id", id);
+        namedControl.element.setAttribute(llmIdAttribute, id);
+        namedControl.element.setAttribute(
+          llmLabelAttribute,
+          namedControl.label,
+        );
       };
-    namedControls.forEach((control) => {
-      assignId(control);
+    namedControls.forEach((namedControl) => {
+      assignId(namedControl);
     });
   } catch (error) {
     clearHiddenElementsForMarkdown(root);

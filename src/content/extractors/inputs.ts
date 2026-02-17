@@ -1,49 +1,19 @@
-import { buildIdMap, normalizeText, resolveElementLabel } from "./labels.js";
+import { normalizeText, resolveElementAccessibleName } from "./labels.js";
 import { buildControlMarker } from "./controlMarkers.ts";
 import { isEditableCandidateElement } from "../dom/editableElements.js";
 
-const getLabelFromAssociatedLabel = (
-  root: Element,
-  element: Element,
-): string => {
-  const htmlElement = element as HTMLElement;
-  const wrappingLabel = htmlElement.closest("label");
-  if (wrappingLabel) {
-    const text = normalizeText(wrappingLabel.textContent);
-    if (text) {
-      return text;
-    }
-  }
-  const id = htmlElement.getAttribute("id");
-  if (id) {
-    const labels = Array.from(root.getElementsByTagName("label"));
-    const label = labels.find(
-      (candidate) =>
-        candidate.getAttribute("for") === id || candidate.htmlFor === id,
-    );
-    const text = normalizeText(label?.textContent);
-    if (text) {
-      return text;
-    }
-  }
-  return "";
+const resolveInputFallbackLabel = (input: Element): string => {
+  return (
+    normalizeText(input.getAttribute("placeholder")) ||
+    normalizeText(input.getAttribute("title"))
+  );
 };
 
-const resolveInputLabel = (
-  root: Element,
-  idMap: Map<string, Element>,
-  input: Element,
-): string =>
-  resolveElementLabel(
-    idMap,
-    input,
-    [() => getLabelFromAssociatedLabel(root, input)],
-    [
-      () => normalizeText(input.getAttribute("placeholder")),
-      () => normalizeText(input.getAttribute("title")),
-    ],
-    "aria-labelledby 为空，无法解析输入框名称",
+const resolveInputLabel = (input: Element): string => {
+  return (
+    resolveElementAccessibleName(input) || resolveInputFallbackLabel(input)
   );
+};
 
 const isInputCandidate = (element: Element): boolean =>
   isEditableCandidateElement(element);
@@ -67,8 +37,7 @@ const removeInputNode = (input: Element): void => {
 };
 
 const replaceInputs = (root: Element): void => {
-  const idMap = buildIdMap(root),
-    candidates = Array.from(root.getElementsByTagName("*"));
+  const candidates = Array.from(root.getElementsByTagName("*"));
   candidates.forEach((inputNode) => {
     if (!inputNode.hasAttribute("data-llm-id")) {
       return;
@@ -80,8 +49,9 @@ const replaceInputs = (root: Element): void => {
     if (!id) {
       throw new Error("输入框缺少 data-llm-id");
     }
-    const text = resolveInputLabel(root, idMap, inputNode);
+    const text = normalizeText(inputNode.getAttribute("data-llm-label"));
     if (!text) {
+      console.error(`输入框缺少 data-llm-label：${id}`);
       removeInputNode(inputNode);
       return;
     }

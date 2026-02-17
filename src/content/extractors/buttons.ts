@@ -1,32 +1,9 @@
-import { buildIdMap, normalizeText, resolveElementLabel } from "./labels.js";
+import { normalizeText, resolveElementAccessibleName } from "./labels.js";
 import { buildControlMarker } from "./controlMarkers.ts";
 import { isButtonElement } from "../dom/editableElements.js";
 
-const resolveButtonLabel = (
-  idMap: Map<string, Element>,
-  button: Element,
-): string =>
-  resolveElementLabel(
-    idMap,
-    button,
-    [
-      () => {
-        const directText =
-          button instanceof HTMLInputElement
-            ? button.value
-            : button.textContent;
-        return normalizeText(directText);
-      },
-    ],
-    [
-      () => normalizeText(button.getAttribute("title")),
-      () => normalizeText(button.querySelector("img")?.getAttribute("alt")),
-      () => normalizeText(button.querySelector("svg title")?.textContent),
-      () =>
-        normalizeText(button.querySelector("svg")?.getAttribute("aria-label")),
-    ],
-    "aria-labelledby 为空，无法解析按钮名称",
-  );
+const resolveButtonLabel = (button: Element): string =>
+  resolveElementAccessibleName(button);
 
 const applyReplacementToButton = (
   button: Element,
@@ -50,18 +27,18 @@ const removeButtonNode = (button: Element): void => {
 };
 
 const replaceButtons = (root: Element): void => {
-  const idMap = buildIdMap(root),
-    buttons = Array.from(root.querySelectorAll("[data-llm-id]")).filter(
-      (button) => isButtonElement(button),
-    );
+  const buttons = Array.from(root.querySelectorAll("[data-llm-id]")).filter(
+    (button) => isButtonElement(button),
+  );
   buttons.forEach((buttonNode) => {
     const button = buttonNode,
       id = normalizeText(button.getAttribute("data-llm-id"));
     if (!id) {
       throw new Error("按钮缺少 data-llm-id");
     }
-    const text = resolveButtonLabel(idMap, button);
+    const text = normalizeText(button.getAttribute("data-llm-label"));
     if (!text) {
+      console.error(`按钮缺少 data-llm-label：${id}`);
       removeButtonNode(button);
       return;
     }
