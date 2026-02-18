@@ -1,6 +1,7 @@
 import {
   buildBundles,
   buildManifest,
+  buildPolicyWebsite,
   buildStyles,
   copyAssets,
   outputPublicDir,
@@ -15,3 +16,4 @@ await buildManifest();
 await copyAssets();
 await buildStyles();
 await buildBundles();
+await buildPolicyWebsite();

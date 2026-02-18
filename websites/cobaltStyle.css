@@ -1,0 +1,221 @@
+:root {
+  color-scheme: light dark;
+  --bg-start: #e7ecf5;
+  --bg-end: #f5f7fb;
+  --shell-bg: rgb(255 255 255 / 76%);
+  --shell-border: rgb(255 255 255 / 52%);
+  --text-main: #111827;
+  --text-subtle: #5b6473;
+  --section-border: #d7deea;
+  --section-bg: rgb(255 255 255 / 58%);
+  --card-bg: rgb(238 244 255 / 72%);
+  --accent: #3f5fa8;
+  --accent-soft: #c9d7f8;
+  --shadow: 0 24px 70px rgb(44 55 86 / 18%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-start: #0c1221;
+    --bg-end: #151e31;
+    --shell-bg: rgb(16 26 44 / 78%);
+    --shell-border: rgb(149 172 220 / 22%);
+    --text-main: #e7edf8;
+    --text-subtle: #a1b0ca;
+    --section-border: #314263;
+    --section-bg: rgb(20 33 55 / 62%);
+    --card-bg: rgb(36 54 83 / 64%);
+    --accent: #8ba6ef;
+    --accent-soft: #223766;
+    --shadow: 0 28px 80px rgb(2 6 15 / 42%);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-image:
+    radial-gradient(circle at 9% 5%, rgb(145 176 252 / 26%), transparent 38%),
+    linear-gradient(138deg, var(--bg-start), var(--bg-end));
+  color: var(--text-main);
+  font-family:
+    "Inter",
+    "SF Pro Text",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+.frost-shell {
+  width: min(980px, calc(100% - 32px));
+  margin: 24px auto 34px;
+  padding: 22px 24px 34px;
+  border: 1px solid var(--shell-border);
+  border-radius: 24px;
+  background: var(--shell-bg);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px) saturate(128%);
+}
+
+.masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #4dc8f9);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent-soft) 62%, transparent);
+}
+
+.brand-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.brand-meta {
+  margin: 3px 0 0;
+  font-size: 13px;
+  color: var(--text-subtle);
+}
+
+.locale-switch {
+  display: inline-flex;
+  border: 1px solid var(--section-border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--section-bg) 78%, transparent);
+}
+
+.locale-switch button {
+  border: 0;
+  margin: 0;
+  padding: 10px 16px;
+  color: var(--text-main);
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.locale-switch button + button {
+  border-left: 1px solid var(--section-border);
+}
+
+.locale-switch button:hover {
+  background: color-mix(in srgb, var(--accent-soft) 55%, transparent);
+}
+
+.locale-switch button.active {
+  background: var(--accent);
+  color: #f8fbff;
+}
+
+.policy-root {
+  display: grid;
+  gap: 16px;
+}
+
+.policy-title {
+  margin: 8px 0 0;
+  font-size: clamp(27px, 3.7vw, 34px);
+  letter-spacing: -0.02em;
+}
+
+.policy-updated-time {
+  margin: 2px 0 0;
+  color: var(--text-subtle);
+  font-size: 13px;
+}
+
+.policy-introduction {
+  margin: 6px 0 4px;
+  color: var(--text-main);
+}
+
+.policy-section {
+  border: 1px solid var(--section-border);
+  border-radius: 18px;
+  background: var(--section-bg);
+  padding: 18px;
+}
+
+.policy-heading {
+  margin: 20px 0 10px;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+
+.policy-paragraph {
+  margin: 0;
+  color: var(--text-main);
+}
+
+.policy-paragraph + .policy-paragraph {
+  margin-top: 10px;
+}
+
+.policy-list {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.policy-list li {
+  margin: 8px 0;
+  color: var(--text-main);
+}
+
+.policy-card-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.info-card {
+  border: 1px solid color-mix(in srgb, var(--section-border) 72%, transparent);
+  border-radius: 14px;
+  background: var(--card-bg);
+  padding: 12px 13px;
+}
+
+.info-card-title {
+  margin: 0 0 4px;
+  font-weight: 640;
+}
+
+.info-card-text {
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .frost-shell {
+    width: min(980px, calc(100% - 18px));
+    border-radius: 18px;
+    margin-top: 12px;
+    padding: 18px 14px 24px;
+  }
+
+  .masthead {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
