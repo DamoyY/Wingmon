@@ -21,29 +21,29 @@
     "default_title": "Wingmon"
   },
   "icons": {
-    "16": "public/icons/0.16.png",
-    "32": "public/icons/0.32.png",
-    "48": "public/icons/0.48.png",
-    "128": "public/icons/0.128.png"
+    "16": "0.16.png",
+    "32": "0.32.png",
+    "48": "0.48.png",
+    "128": "0.128.png"
   },
   "background": {
     "service_worker": "background/index.js",
     "type": "module"
   },
   "sandbox": {
-    "pages": ["public/sandbox.html"]
+    "pages": ["sandbox.html"]
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval' http://localhost:* http://127.0.0.1:*; object-src 'self';",
     "sandbox": "sandbox allow-scripts; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:;"
   },
   "side_panel": {
-    "default_path": "public/panel.html"
+    "default_path": "panel.html"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["public/content.bundle.js"],
+      "js": ["content.bundle.js"],
       "run_at": "document_end"
     }
   ]

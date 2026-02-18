@@ -6,4 +6,4 @@ export const rootDir = path.resolve(
   "../../..",
 );
 export const outputRoot = path.resolve(rootDir, "..", "dst");
-export const outputPublicDir = path.join(outputRoot, "public");
+export const outputPublicDir = outputRoot;

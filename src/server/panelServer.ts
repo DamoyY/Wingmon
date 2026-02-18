@@ -54,7 +54,7 @@ type ActionIconImageDataMap = Record<ActionIconPathSize, ImageData>;
 const PANEL_STATE_STORAGE_KEY = "panel_server_state";
 const actionIconFrameCount = 12;
 const actionIconIntervalMs = 200;
-const answerNotificationIconPath = "public/0.128.png";
+const answerNotificationIconPath = "0.128.png";
 
 const panelPorts = new Set<chrome.runtime.Port>();
 const stateSubscriptionCleanups: StateSubscriptionCleanup[] = [];
@@ -149,10 +149,10 @@ const notifyAssistantReplyWhenSidePanelClosed = async (
 };
 
 const createActionIconPathMap = (frame: number): ActionIconPathMap => ({
-  16: `public/${String(frame)}.16.png`,
-  32: `public/${String(frame)}.32.png`,
-  48: `public/${String(frame)}.48.png`,
-  128: `public/${String(frame)}.128.png`,
+  16: `${String(frame)}.16.png`,
+  32: `${String(frame)}.32.png`,
+  48: `${String(frame)}.48.png`,
+  128: `${String(frame)}.128.png`,
 });
 
 const loadActionIconImageData = async (

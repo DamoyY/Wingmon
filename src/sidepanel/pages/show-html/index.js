@@ -19,7 +19,7 @@ const loadPreview = async () => {
     }
     const normalizedCode = normalizePreviewHtml(entry.code),
       iframe = document.createElement("iframe");
-    iframe.src = chrome.runtime.getURL("public/sandbox.html");
+    iframe.src = chrome.runtime.getURL("sandbox.html");
     iframe.style.cssText =
       "width: 100vw; height: 100vh; border: none; position: fixed; top: 0; left: 0; display: block;";
     iframe.onload = () => {

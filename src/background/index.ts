@@ -25,13 +25,13 @@ type ContextMenuUpdateProperties = Omit<
   "id"
 >;
 
-const contentScriptFilePath = "public/content.bundle.js",
+const contentScriptFilePath = "content.bundle.js",
   supportedProtocols = new Set<string>(["http:", "https:"]),
   htmlPreviewStorageKey = "html_previews",
   showHtmlContextMenuId = "show-html-download-page",
   showHtmlContextMenuTitle = "下载页面",
   showHtmlDownloadFilename = "wingmon_generation.html",
-  showHtmlPageUrl = chrome.runtime.getURL("public/show-html.html"),
+  showHtmlPageUrl = chrome.runtime.getURL("show-html.html"),
   showHtmlContextMenuProperties: ContextMenuUpdateProperties = {
     contexts: ["all"],
     title: showHtmlContextMenuTitle,

@@ -18,7 +18,7 @@ const parameters = {
     const followMode = await context.shouldFollowMode(),
       previewId = await context.saveHtmlPreview({ code }),
       url = context.getRuntimeUrl(
-        `public/show-html.html?id=${encodeURIComponent(previewId)}`,
+        `show-html.html?id=${encodeURIComponent(previewId)}`,
       ),
       tab = await context.createTab(url, true);
     await context.setTabGroupCollapsed(tab.id, !followMode);

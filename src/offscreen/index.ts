@@ -61,7 +61,7 @@ const createSandboxFrame = (): HTMLIFrameElement => {
   }
   const frame = document.createElement("iframe");
   frame.id = SANDBOX_FRAME_ID;
-  frame.src = chrome.runtime.getURL("public/sandbox.html");
+  frame.src = chrome.runtime.getURL("sandbox.html");
   frame.style.display = "none";
   document.body.append(frame);
   return frame;

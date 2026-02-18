@@ -4,13 +4,12 @@ import {
   buildPolicyWebsite,
   buildStyles,
   copyAssets,
-  outputPublicDir,
   outputRoot,
 } from "./build/index.ts";
-import { mkdir } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 
+await rm(outputRoot, { force: true, recursive: true });
 await mkdir(outputRoot, { recursive: true });
-await mkdir(outputPublicDir, { recursive: true });
 
 await buildManifest();
 await copyAssets();

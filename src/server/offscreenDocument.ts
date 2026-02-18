@@ -1,4 +1,4 @@
-const OFFSCREEN_DOCUMENT_PATH = "public/offscreen.html";
+const OFFSCREEN_DOCUMENT_PATH = "offscreen.html";
 const OFFSCREEN_REASON: chrome.offscreen.Reason = "IFRAME_SCRIPTING";
 const OFFSCREEN_JUSTIFICATION =
   "Host sandbox iframe and keep service worker alive";

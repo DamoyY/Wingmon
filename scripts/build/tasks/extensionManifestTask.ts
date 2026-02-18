@@ -11,14 +11,11 @@ import path from "node:path";
 
 type Manifest = GuardRecord;
 
-const flattenManifestPath = (value: string): string =>
-  value.replaceAll("public/icons/", "public/");
-
 const normalizeManifestIcons = (icons: GuardRecord): GuardRecord =>
   Object.fromEntries(
     Object.entries(icons).map(([size, iconPath]) => [
       size,
-      flattenManifestPath(ensureString(iconPath, `manifest.icons.${size}`)),
+      ensureString(iconPath, `manifest.icons.${size}`),
     ]),
   );
 
