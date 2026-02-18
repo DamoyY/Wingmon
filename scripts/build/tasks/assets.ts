@@ -68,12 +68,7 @@ export const copyDirFlat = async (
       const targetPath = path.join(target, entry.name);
       ensureFlattenTarget(targetPath, sourcePath);
       const action = await resolveFlatCopyAction(
-        {
-          extension: ext,
-          fileName: entry.name,
-          sourcePath,
-          targetPath,
-        },
+        { extension: ext, fileName: entry.name, sourcePath, targetPath },
         processors,
       );
       if (action.type === "skip") {
@@ -102,17 +97,6 @@ export const copyAssets = async (): Promise<void> => {
     outputPublicDir,
     publicAssetProcessors,
   );
-
-  // WASM
-  const md4wWasmSource = path.join(
-    rootDir,
-    "node_modules/md4w/js/md4w-fast.wasm",
-  );
-  const md4wWasmTarget = path.join(outputPublicDir, "md4w-fast.wasm");
-  ensureFlattenTarget(md4wWasmTarget, md4wWasmSource);
-  if (await shouldCopyFile(md4wWasmSource, md4wWasmTarget)) {
-    await copyFile(md4wWasmSource, md4wWasmTarget);
-  }
 
   // Katex Fonts
   const katexFontsDir = path.join(rootDir, "node_modules/katex/dist/fonts");

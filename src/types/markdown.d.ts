@@ -2,12 +2,15 @@ declare module "*.md" {
   const content: string;
   export default content;
 }
-
 declare module "tiktoken/tiktoken_bg.wasm" {
   const content: BufferSource;
   export default content;
 }
 
+declare module "*.wasm" {
+  const content: BufferSource;
+  export default content;
+}
 declare module "turndown" {
   export type TurndownRule = {
     filter:
@@ -16,13 +19,8 @@ declare module "turndown" {
       | ((node: Node, options: Record<string, string>) => boolean);
     replacement: (content: string, node: Node) => string;
   };
-
   export type TurndownPlugin = (service: TurndownService) => void;
-
-  export type TurndownOptions = {
-    codeBlockStyle?: "fenced" | "indented";
-  };
-
+  export type TurndownOptions = { codeBlockStyle?: "fenced" | "indented" };
   export default class TurndownService {
     constructor(options?: TurndownOptions);
     addRule(key: string, rule: TurndownRule): TurndownService;
@@ -32,19 +30,13 @@ declare module "turndown" {
     turndown(input: string | Node): string;
   }
 }
-
 declare module "turndown-plugin-gfm" {
   import { type TurndownPlugin } from "turndown";
-
   export const tables: TurndownPlugin;
   export const gfm: TurndownPlugin;
 }
-
 declare module "md4w" {
-  type MdToHtmlOptions = {
-    parseFlags?: string[];
-  };
-
+  type MdToHtmlOptions = { parseFlags?: string[] };
   export const init: (wasmBuffer: BufferSource) => Promise<void>;
   export const mdToHtml: (
     markdown: string,
