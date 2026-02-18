@@ -10,6 +10,7 @@ import {
   type PanelServerSnapshotMessage,
   type PanelStateSnapshot,
   createPanelCommandError,
+  createRandomId,
   isPanelServerCommandRequest,
   isPanelStateSnapshot,
   normalizeIndices,
@@ -53,6 +54,7 @@ type ActionIconImageDataMap = Record<ActionIconPathSize, ImageData>;
 const PANEL_STATE_STORAGE_KEY = "panel_server_state";
 const actionIconFrameCount = 12;
 const actionIconIntervalMs = 200;
+const answerNotificationIconPath = "public/0.128.png";
 
 const panelPorts = new Set<chrome.runtime.Port>();
 const stateSubscriptionCleanups: StateSubscriptionCleanup[] = [];
@@ -78,6 +80,72 @@ const normalizeErrorMessage = (error: unknown, fallback: string): string => {
     return error;
   }
   return fallback;
+};
+
+const isSidePanelClosed = (): boolean => panelPorts.size === 0;
+
+const resolveCompletedAssistantContentFrom = (
+  startIndex: number,
+): string | null => {
+  if (!Number.isInteger(startIndex) || startIndex < 0) {
+    throw new Error("起始消息索引无效");
+  }
+  for (
+    let messageIndex = state.messages.length - 1;
+    messageIndex >= startIndex;
+    messageIndex -= 1
+  ) {
+    const message = state.messages.at(messageIndex);
+    if (!message) {
+      throw new Error("消息索引无效");
+    }
+    if (message.role !== "assistant" || message.pending) {
+      continue;
+    }
+    if (!message.content.trim()) {
+      continue;
+    }
+    return message.content;
+  }
+  return null;
+};
+
+const createAnswerNotification = async (
+  title: string,
+  message: string,
+): Promise<void> =>
+  new Promise<void>((resolve, reject) => {
+    chrome.notifications.create(
+      createRandomId("notify"),
+      {
+        iconUrl: chrome.runtime.getURL(answerNotificationIconPath),
+        message,
+        title,
+        type: "basic",
+      },
+      () => {
+        const runtimeError = chrome.runtime.lastError;
+        if (runtimeError) {
+          reject(new Error(runtimeError.message));
+          return;
+        }
+        resolve();
+      },
+    );
+  });
+
+const notifyAssistantReplyWhenSidePanelClosed = async (
+  replyContent: string,
+): Promise<void> => {
+  if (!isSidePanelClosed()) {
+    return;
+  }
+  const title = chrome.i18n.getMessage("extensionName").trim() || "Wingmon";
+  try {
+    await createAnswerNotification(title, replyContent);
+  } catch (error) {
+    console.error("发送回答完成通知失败", error);
+  }
 };
 
 const createActionIconPathMap = (frame: number): ActionIconPathMap => ({
@@ -460,6 +528,7 @@ const runConversationSend = async ({
   content: string;
   includePage: boolean;
 }): Promise<void> => {
+  const messageStartIndex = state.messages.length;
   const settings = await getSettings();
   if (!ensureSettingsReady(settings)) {
     setStateValue("sending", false, { type: "server" });
@@ -478,6 +547,11 @@ const runConversationSend = async ({
       settings,
       signal: abortController.signal,
     });
+    const replyContent =
+      resolveCompletedAssistantContentFrom(messageStartIndex);
+    if (replyContent !== null) {
+      await notifyAssistantReplyWhenSidePanelClosed(replyContent);
+    }
   } catch (error) {
     console.error("后台发送会话消息失败", error);
   } finally {

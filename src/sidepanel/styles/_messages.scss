@@ -4,7 +4,6 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
   padding: calc(var(--chat-top-bar-height) + 16px) 20px
     calc(var(--chat-bottom-bar-height) + 16px) 16px;
   z-index: 1;

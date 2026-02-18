@@ -5,15 +5,16 @@
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
   "permissions": [
-    "storage",
-    "sidePanel",
-    "tabs",
-    "tabGroups",
-    "scripting",
-    "webNavigation",
     "contextMenus",
     "downloads",
-    "offscreen"
+    "notifications",
+    "offscreen",
+    "scripting",
+    "sidePanel",
+    "storage",
+    "tabGroups",
+    "tabs",
+    "webNavigation"
   ],
   "host_permissions": ["https://*/*", "http://*/*"],
   "action": {

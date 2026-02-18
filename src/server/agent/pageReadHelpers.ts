@@ -815,5 +815,11 @@ export const syncPageHash = async (
 
 export const shouldFollowMode = async (): Promise<boolean> => {
   const settings = await getSettings();
-  return settings.followMode;
+  if (!settings.followMode) {
+    return false;
+  }
+  const sidePanelContexts = await chrome.runtime.getContexts({
+    contextTypes: ["SIDE_PANEL"],
+  });
+  return sidePanelContexts.length > 0;
 };
