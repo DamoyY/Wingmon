@@ -9,8 +9,57 @@ const parseFlags: string[] = [
   "PERMISSIVE_WWW_AUTO_LINKS",
   "PERMISSIVE_EMAIL_AUTO_LINKS",
 ];
+const backslashCharacter = "\\";
 let initPromise: Promise<void> | null = null;
 let initialized = false;
+
+const toHtmlDecimalEntity = (value: string): string => {
+  const codePoint = value.codePointAt(0);
+  if (codePoint === undefined) {
+    throw new Error("字符编码无效");
+  }
+  return `&#${String(codePoint)};`;
+};
+
+const readUnicodeCharacter = (
+  content: string,
+  index: number,
+): { nextIndex: number; value: string } => {
+  const codePoint = content.codePointAt(index);
+  if (codePoint === undefined) {
+    throw new Error("文本读取失败");
+  }
+  const value = String.fromCodePoint(codePoint);
+  return {
+    nextIndex: index + value.length,
+    value,
+  };
+};
+
+const preserveMarkdownBackslashes = (content: string): string => {
+  if (!content.includes(backslashCharacter)) {
+    return content;
+  }
+  const backslashEntity = toHtmlDecimalEntity(backslashCharacter);
+  let normalized = "";
+  for (let index = 0; index < content.length; ) {
+    const current = readUnicodeCharacter(content, index);
+    if (current.value !== backslashCharacter) {
+      normalized += current.value;
+      index = current.nextIndex;
+      continue;
+    }
+    normalized += backslashEntity;
+    if (current.nextIndex >= content.length) {
+      index = current.nextIndex;
+      continue;
+    }
+    const next = readUnicodeCharacter(content, current.nextIndex);
+    normalized += toHtmlDecimalEntity(next.value);
+    index = next.nextIndex;
+  }
+  return normalized;
+};
 
 export const initMarkdownRenderer = async (): Promise<void> => {
   if (initialized) {
@@ -37,7 +86,7 @@ const renderMarkdown = (content: string | null | undefined): string => {
   if (!text) {
     return "";
   }
-  const html = mdToHtml(text, { parseFlags });
+  const html = mdToHtml(preserveMarkdownBackslashes(text), { parseFlags });
   return sanitizeRenderedHtml(html);
 };
 
