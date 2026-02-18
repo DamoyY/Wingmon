@@ -132,12 +132,12 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "paragraph",
           },
         ],
-        heading: "8. Children’s Privacy",
+        heading: "8. Children's Privacy",
       },
       {
         blocks: [
           {
-            text: "If you choose an external AI provider, data may be processed on servers in other countries according to that provider’s policies.",
+            text: "If you choose an external AI provider, data may be processed on servers in other countries according to that provider's policies.",
             type: "paragraph",
           },
         ],
