@@ -1,24 +1,20 @@
-import { EXCLUDED_INPUT_TYPES, TEXT_INPUT_ROLES } from "../common/index.ts";
+import { getRole, isDisabled, isInaccessible } from "dom-accessibility-api";
 
-import type { ElementVisibilityOptions } from "./visibility.js";
+import { EXCLUDED_INPUT_TYPES } from "../common/index.ts";
 
-const BUTTON_INPUT_TYPES = new Set(["button", "submit", "reset"]);
+const BUTTON_ROLE = "button";
+const ARIA_READONLY_TRUE = "true";
+const EDITABLE_CONTROL_ROLES = new Set([
+  "textbox",
+  "searchbox",
+  "combobox",
+  "spinbutton",
+  "listbox",
+]);
 
-export const llmControlVisibilityOptions: ElementVisibilityOptions = {
-  minimumHeight: 4,
-  minimumWidth: 4,
-  requirePointerEvents: true,
-};
+const normalizeInputType = (value: string): string => value.toLowerCase();
 
-const normalizeControlType = (value: string): string => value.toLowerCase();
-
-const hasTruthyAriaState = (element: Element, attribute: string): boolean => {
-  const value = element.getAttribute(attribute);
-  if (!value) {
-    return false;
-  }
-  return value.trim().toLowerCase() === "true";
-};
+const getElementRole = (element: Element): string => getRole(element) ?? "";
 
 const resolveComposedParent = (element: Element): Element | null => {
   if (element.parentElement) {
@@ -42,32 +38,51 @@ const isInsideInertTree = (element: Element): boolean => {
   return false;
 };
 
-const supportsDisabledPseudoClass = (
-  element: Element,
-): element is HTMLElement =>
-  element instanceof HTMLButtonElement ||
-  element instanceof HTMLInputElement ||
-  element instanceof HTMLSelectElement ||
-  element instanceof HTMLTextAreaElement ||
-  element instanceof HTMLOptionElement ||
-  element instanceof HTMLOptGroupElement ||
-  element instanceof HTMLFieldSetElement;
+const isPseudoDisabledControl = (element: Element): boolean => {
+  if (!(element instanceof HTMLElement)) {
+    return false;
+  }
+  return element.matches(":disabled");
+};
 
-const isElementDisabledForControlUse = (element: Element): boolean => {
+const isControlDisabled = (element: Element): boolean => {
   if (isInsideInertTree(element)) {
     return true;
   }
-  if (hasTruthyAriaState(element, "aria-disabled")) {
+  if (isPseudoDisabledControl(element)) {
     return true;
   }
-  if (supportsDisabledPseudoClass(element) && element.matches(":disabled")) {
-    return true;
-  }
-  return false;
+  return isDisabled(element);
 };
 
-const isElementReadOnlyForControlUse = (element: Element): boolean => {
-  if (hasTruthyAriaState(element, "aria-readonly")) {
+const isControlInaccessible = (element: Element): boolean =>
+  isInaccessible(element);
+
+const isControlUnavailable = (element: Element): boolean => {
+  if (isControlDisabled(element)) {
+    return true;
+  }
+  return isControlInaccessible(element);
+};
+
+const hasEditableRole = (element: Element): boolean => {
+  const role = getElementRole(element);
+  return EDITABLE_CONTROL_ROLES.has(role);
+};
+
+const isEditableInputElement = (element: Element): boolean => {
+  if (!(element instanceof HTMLInputElement)) {
+    return false;
+  }
+  return !EXCLUDED_INPUT_TYPES.has(normalizeInputType(element.type));
+};
+
+const isReadOnlyTextEntryElement = (element: Element): boolean => {
+  const ariaReadOnly = element.getAttribute("aria-readonly");
+  if (
+    ariaReadOnly &&
+    ariaReadOnly.trim().toLowerCase() === ARIA_READONLY_TRUE
+  ) {
     return true;
   }
   if (
@@ -79,76 +94,38 @@ const isElementReadOnlyForControlUse = (element: Element): boolean => {
   return false;
 };
 
-const hasButtonRole = (element: Element): boolean => {
-  if (!(element instanceof HTMLElement)) {
-    return false;
-  }
-  const role = element.getAttribute("role");
-  if (!role) {
-    return false;
-  }
-  return role.trim().toLowerCase() === "button";
-};
-
-const isButtonInputElement = (element: Element): boolean => {
-  if (!(element instanceof HTMLInputElement)) {
-    return false;
-  }
-  return BUTTON_INPUT_TYPES.has(normalizeControlType(element.type));
-};
-
-const isButtonCandidateElement = (element: Element): boolean => {
-  if (element instanceof HTMLButtonElement) {
-    return true;
-  }
-  if (isButtonInputElement(element)) {
-    return true;
-  }
-  return hasButtonRole(element);
-};
-
-const hasTextInputRole = (element: Element): boolean => {
-  if (!(element instanceof HTMLElement)) {
-    return false;
-  }
-  const role = element.getAttribute("role");
-  if (!role) {
-    return false;
-  }
-  return TEXT_INPUT_ROLES.has(role.trim().toLowerCase());
-};
-
 const isEditableCandidateElement = (element: Element): boolean => {
-  if (element instanceof HTMLInputElement) {
-    return !EXCLUDED_INPUT_TYPES.has(normalizeControlType(element.type));
+  if (hasEditableRole(element)) {
+    return true;
   }
-  if (
-    element instanceof HTMLTextAreaElement ||
-    element instanceof HTMLSelectElement
-  ) {
+  if (isEditableInputElement(element)) {
     return true;
   }
   if (element instanceof HTMLElement && element.isContentEditable) {
     return true;
   }
-  return hasTextInputRole(element);
+  return false;
 };
 
+const isNativeButtonElement = (element: Element): boolean =>
+  element instanceof HTMLButtonElement;
+
 const isButtonElement = (element: Element): boolean => {
-  if (!isButtonCandidateElement(element)) {
+  const isButtonByRole = getElementRole(element) === BUTTON_ROLE;
+  if (!isButtonByRole && !isNativeButtonElement(element)) {
     return false;
   }
-  return !isElementDisabledForControlUse(element);
+  return !isControlUnavailable(element);
 };
 
 const isEditableElement = (element: Element): boolean => {
   if (!isEditableCandidateElement(element)) {
     return false;
   }
-  if (isElementDisabledForControlUse(element)) {
+  if (isControlUnavailable(element)) {
     return false;
   }
-  if (isElementReadOnlyForControlUse(element)) {
+  if (isReadOnlyTextEntryElement(element)) {
     return false;
   }
   return true;

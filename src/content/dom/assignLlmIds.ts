@@ -5,14 +5,9 @@ import {
 } from "./domPathHash.js";
 import {
   clearHiddenElementsForMarkdown,
-  isElementVisible,
   markHiddenElementsForMarkdown,
 } from "./visibility.js";
-import {
-  isButtonElement,
-  isEditableElement,
-  llmControlVisibilityOptions,
-} from "./editableElements.js";
+import { isButtonElement, isEditableElement } from "./editableElements.js";
 import { normalizeText } from "../extractors/labels.js";
 import { parseRequiredPositiveInteger } from "../../shared/index.ts";
 import { resolveButtonLabel } from "../extractors/buttons.js";
@@ -66,15 +61,10 @@ const pushComposedChildren = (stack: Element[], element: Element): void => {
   }
 };
 
-const collectVisibleControls = (
+const collectMatchedControls = (
   root: Element,
   matcher: (element: Element) => boolean,
 ): Element[] => {
-  const doc = root.ownerDocument;
-  const win = doc.defaultView;
-  if (!win) {
-    throw new Error("无法获取窗口对象");
-  }
   const controls: Element[] = [];
   const stack: Element[] = [];
   pushComposedChildren(stack, root);
@@ -86,20 +76,17 @@ const collectVisibleControls = (
     if (skippedTraversalTags.has(element.tagName)) {
       continue;
     }
-    if (
-      matcher(element) &&
-      isElementVisible(element, win, llmControlVisibilityOptions)
-    ) {
+    if (matcher(element)) {
       controls.push(element);
     }
     pushComposedChildren(stack, element);
   }
   return controls;
 };
-const collectVisibleInputs = (root: Element): Element[] =>
-  collectVisibleControls(root, isEditableElement);
-const collectVisibleButtons = (root: Element): Element[] =>
-  collectVisibleControls(root, isButtonElement);
+const collectMatchedInputs = (root: Element): Element[] =>
+  collectMatchedControls(root, isEditableElement);
+const collectMatchedButtons = (root: Element): Element[] =>
+  collectMatchedControls(root, isButtonElement);
 
 const clearAssignedLlmIds = (root: Element): void => {
   const stack: Element[] = [root];
@@ -159,8 +146,8 @@ const assignLlmIds = (root: Element, tabId: number): void => {
   clearAssignedLlmIds(root);
   markHiddenElementsForMarkdown(root);
   try {
-    const buttons = collectVisibleButtons(root),
-      inputs = collectVisibleInputs(root),
+    const buttons = collectMatchedButtons(root),
+      inputs = collectMatchedInputs(root),
       namedControls = collectNamedControls([
         {
           controls: buttons,

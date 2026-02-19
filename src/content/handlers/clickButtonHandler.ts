@@ -6,12 +6,8 @@ import {
   invalidateButtonChunkPageSnapshot,
   resolveButtonChunkPageNumberFromSnapshot,
 } from "../extractors/converter.js";
-import {
-  isButtonElement,
-  llmControlVisibilityOptions,
-} from "../dom/editableElements.js";
 import { isPdfDocument, normalizeLlmId } from "../common/index.ts";
-import { isElementVisible } from "../dom/visibility.js";
+import { isButtonElement } from "../dom/editableElements.js";
 
 type SendResponse = (response: ClickButtonResponse) => void;
 
@@ -19,19 +15,10 @@ const domStableDelayMs = 500;
 const domStableMaxDelayMs = 5000;
 
 const findSingleButton = (normalizedId: string): HTMLElement | null => {
-  const win = document.defaultView;
-  if (!win) {
-    throw new Error("无法获取窗口对象");
-  }
   const matches = Array.from(
       document.querySelectorAll<HTMLElement>(`[data-llm-id="${normalizedId}"]`),
     ),
-    buttonMatches = matches.filter((match) => {
-      if (!isButtonElement(match)) {
-        return false;
-      }
-      return isElementVisible(match, win, llmControlVisibilityOptions);
-    });
+    buttonMatches = matches.filter((match) => isButtonElement(match));
   if (!buttonMatches.length) {
     return null;
   }

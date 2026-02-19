@@ -10,6 +10,5 @@ const EXCLUDED_INPUT_TYPES = new Set([
   "range",
   "color",
 ]);
-const TEXT_INPUT_ROLES = new Set(["textbox", "searchbox", "combobox"]);
 
-export { EXCLUDED_INPUT_TYPES, TEXT_INPUT_ROLES };
+export { EXCLUDED_INPUT_TYPES };
