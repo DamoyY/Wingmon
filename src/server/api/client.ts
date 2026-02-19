@@ -365,7 +365,11 @@ const executeRequest = async <TStream, TResponse>(
     return { reply: "", streamed: true, toolCalls };
   } catch (error) {
     if (isAbortError(error)) throw error;
-    if (streamStarted && !isEmptyStreamError(error))
+    if (
+      streamStarted &&
+      streamState.chunkCount > 0 &&
+      !isEmptyStreamError(error)
+    )
       throw normalizeError(error);
     console.warn(`${requestTagPrefix} 流式请求失败，准备回退为非流式`, {
       message: normalizeError(error).message,
@@ -454,7 +458,11 @@ const executeGeminiRequest = async (
     if (isAbortError(error)) {
       throw error;
     }
-    if (streamStarted && !isEmptyStreamError(error)) {
+    if (
+      streamStarted &&
+      streamState.chunkCount > 0 &&
+      !isEmptyStreamError(error)
+    ) {
       throw normalizeError(error);
     }
     console.warn("gemini 流式请求失败，准备回退为非流式", {

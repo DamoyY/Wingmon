@@ -36,6 +36,24 @@ const contentScriptFilePath = "content.bundle.js",
     contexts: ["all"],
     title: showHtmlContextMenuTitle,
     visible: false,
+  },
+  pdfContentDispositionRuleId = 1001,
+  pdfContentDispositionRule: chrome.declarativeNetRequest.Rule = {
+    action: {
+      responseHeaders: [
+        {
+          header: "content-disposition",
+          operation: "remove",
+        },
+      ],
+      type: "modifyHeaders",
+    },
+    condition: {
+      resourceTypes: ["main_frame", "sub_frame"],
+      urlFilter: ".pdf",
+    },
+    id: pdfContentDispositionRuleId,
+    priority: 1,
   };
 
 const logError = (message: string, error: unknown = null): void => {
@@ -375,11 +393,26 @@ const logError = (message: string, error: unknown = null): void => {
       void syncShowHtmlContextMenuVisibilityByActiveTab();
     });
   },
+  ensurePdfContentDispositionRule = async (): Promise<void> => {
+    try {
+      const dynamicRules = await chrome.declarativeNetRequest.getDynamicRules(),
+        removeRuleIds = dynamicRules
+          .map((rule) => rule.id)
+          .filter((ruleId) => ruleId === pdfContentDispositionRuleId);
+      await chrome.declarativeNetRequest.updateDynamicRules({
+        addRules: [pdfContentDispositionRule],
+        removeRuleIds,
+      });
+    } catch (error) {
+      logError("配置 PDF 响应头规则失败", error);
+    }
+  },
   handleExtensionInstalled = async (
     details: chrome.runtime.InstalledDetails,
   ): Promise<void> => {
     await enablePanelBehavior();
     await registerShowHtmlContextMenu();
+    await ensurePdfContentDispositionRule();
     await ensureOffscreenDocument();
     if (details.reason !== "install" && details.reason !== "update") {
       return;
@@ -389,12 +422,14 @@ const logError = (message: string, error: unknown = null): void => {
 
 void enablePanelBehavior();
 void registerShowHtmlContextMenu();
+void ensurePdfContentDispositionRule();
 void ensureOffscreenDocument();
 void startPanelServer();
 chrome.runtime.onInstalled.addListener((details) => {
   void handleExtensionInstalled(details);
 });
 chrome.runtime.onStartup.addListener(() => {
+  void ensurePdfContentDispositionRule();
   void ensureOffscreenDocument();
   void startPanelServer();
 });

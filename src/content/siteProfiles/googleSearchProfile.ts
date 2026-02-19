@@ -219,6 +219,9 @@ const isGoogleSearchPage = (url: string): boolean => {
   if (tbmValues.some((value) => value.trim().length > 0)) {
     return false;
   }
+  if (parsedUrl.searchParams.has("udm")) {
+    return false;
+  }
   return parsedUrl.pathname === googleSearchPath && parsedUrl.search.length > 1;
 };
 
