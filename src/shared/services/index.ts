@@ -1,4 +1,5 @@
 export * from "./activeTab.ts";
+export * from "./codexAuth.ts";
 export * from "./historyStorage.ts";
 export * from "./htmlPreviewStorage.ts";
 export * from "./reloadTab.ts";

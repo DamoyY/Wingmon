@@ -219,10 +219,55 @@
     "message": "Model"
   },
   "apiType": {
-    "message": "API Type"
+    "message": "Service Backend"
+  },
+  "apiTypeCodexRisk": {
+    "message": "Codex CLI (Risk)"
+  },
+  "codexLoginAction": {
+    "message": "Sign in with ChatGPT"
+  },
+  "codexSwitchAction": {
+    "message": "Switch ChatGPT account"
+  },
+  "codexAuthStatusNotLoggedIn": {
+    "message": "Not signed in"
+  },
+  "codexAuthStatusLoggedIn": {
+    "message": "Signed in"
+  },
+  "codexAuthStatusLoggedInAs": {
+    "message": "Signed in: $1"
+  },
+  "codexAuthStatusTokenParseFailed": {
+    "message": "Token parse failed, please sign in again"
   },
   "requestBodyOverrides": {
     "message": "Request Body Overrides"
+  },
+  "settingsStatusCodexOpeningLogin": {
+    "message": "Opening ChatGPT sign-in page..."
+  },
+  "settingsStatusCodexLoginSuccess": {
+    "message": "ChatGPT account signed in successfully"
+  },
+  "settingsStatusCodexLoginSuccessWithIdentity": {
+    "message": "ChatGPT account signed in successfully: $1"
+  },
+  "settingsErrorCodexLoginFailed": {
+    "message": "Failed to sign in ChatGPT account, please try again later"
+  },
+  "settingsValidationModelRequired": {
+    "message": "Model is required"
+  },
+  "settingsValidationCodexLoginRequired": {
+    "message": "Please sign in with your ChatGPT account first"
+  },
+  "settingsValidationApiRequired": {
+    "message": "API Key, Base URL, and Model are required"
+  },
+  "settingsValidationLanguageRequired": {
+    "message": "Language is required"
   },
   "requestBodyOverridesPlaceholder": {
     "message": "- path: \"model\"\n  value: \"gpt-5\"\n- path: \"reasoning.effort\"\n  value: \"high\"\n- path: \"tools.0\"\n  value: null"

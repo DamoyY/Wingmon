@@ -1,6 +1,7 @@
 import {
   type SettingsControllerEffect,
   handleCancelSettings,
+  handleCodexLogin,
   handleFollowModeChange,
   handleLanguageChange,
   handleOpenSettings,
@@ -14,20 +15,63 @@ import {
   elements,
   fillSettingsForm,
   readSettingsFormValues,
+  setCodexAuthModeVisible,
+  setCodexAuthStatus,
+  setCodexLoginButtonBusy,
+  setCodexLoginButtonText,
   setSaveButtonVisible,
   setSettingsStatus,
   showChatView,
   showKeyView,
   updateSettingsFormValues,
 } from "../../ui/index.ts";
-import { setLocale, translateDOM } from "../../lib/utils/index.ts";
+import { codexBackendBaseUrl, isCodexApiType } from "../../../shared/index.ts";
+import { setLocale, t, translateDOM } from "../../lib/utils/index.ts";
 
 let unsubscribeSettingsControllerState: (() => void) | null = null;
 let lastHandledEffectVersion = 0;
 let settingsEffectQueue: Promise<void> = Promise.resolve();
 
+type CodexAuthUiState = {
+  loggedIn: boolean;
+  statusText: string;
+};
+
 const syncSaveButtonVisibility = (): void => {
   handleSettingsFieldChange(readSettingsFormValues());
+};
+
+const resolveCodexAuthState = (
+  formValues: ReturnType<typeof readSettingsFormValues>,
+): CodexAuthUiState => {
+  if (!isCodexApiType(formValues.apiType)) {
+    return { loggedIn: false, statusText: "" };
+  }
+  const normalizedBaseUrl = formValues.baseUrl.trim().replace(/\/+$/u, "");
+  if (
+    !formValues.apiKey.trim() ||
+    normalizedBaseUrl !== codexBackendBaseUrl.replace(/\/+$/u, "")
+  ) {
+    return {
+      loggedIn: false,
+      statusText: t("codexAuthStatusNotLoggedIn"),
+    };
+  }
+  return {
+    loggedIn: true,
+    statusText: t("codexAuthStatusLoggedIn"),
+  };
+};
+
+const syncCodexAuthUi = (): void => {
+  const formValues = readSettingsFormValues();
+  const authState = resolveCodexAuthState(formValues);
+  const visible = isCodexApiType(formValues.apiType);
+  setCodexAuthModeVisible(visible);
+  setCodexAuthStatus(authState.statusText);
+  setCodexLoginButtonText(
+    authState.loggedIn ? t("codexSwitchAction") : t("codexLoginAction"),
+  );
 };
 
 const applySettingsEffect = async (
@@ -42,9 +86,11 @@ const applySettingsEffect = async (
       return;
     case "settingsFormFilled":
       fillSettingsForm(effect.settings);
+      syncCodexAuthUi();
       return;
     case "settingsFormPatched":
       updateSettingsFormValues(effect.values);
+      syncCodexAuthUi();
       return;
     case "themeChanged":
       applyTheme(
@@ -56,6 +102,7 @@ const applySettingsEffect = async (
     case "localeChanged":
       await setLocale(effect.locale);
       translateDOM();
+      syncCodexAuthUi();
       return;
     case "viewSwitchRequested":
       if (effect.target === "chat") {
@@ -121,6 +168,19 @@ const handleLanguageChangeClick = async (): Promise<void> => {
   await handleLanguageChange(readSettingsFormValues());
 };
 
+const handleCodexLoginClick = async (): Promise<void> => {
+  setCodexLoginButtonBusy(true);
+  try {
+    const result = await handleCodexLogin(readSettingsFormValues());
+    if (!result.success) {
+      console.error(result.message);
+    }
+  } finally {
+    setCodexLoginButtonBusy(false);
+    syncCodexAuthUi();
+  }
+};
+
 const handleFollowModeChangeClick = async (
   followMode: boolean,
 ): Promise<void> => {
@@ -128,6 +188,11 @@ const handleFollowModeChangeClick = async (
   if (!result.success) {
     console.error(result.message);
   }
+};
+
+const handleApiTypeChange = (): void => {
+  syncCodexAuthUi();
+  syncSaveButtonVisibility();
 };
 
 const bindSettingsEvents = () => {
@@ -138,6 +203,7 @@ const bindSettingsEvents = () => {
     openSettings,
     keyInput,
     baseUrlInput,
+    codexLoginButton,
     modelInput,
     requestBodyOverridesInput,
     apiTypeSelect,
@@ -160,7 +226,7 @@ const bindSettingsEvents = () => {
   baseUrlInput.addEventListener("input", syncSaveButtonVisibility);
   modelInput.addEventListener("input", syncSaveButtonVisibility);
   requestBodyOverridesInput.addEventListener("input", syncSaveButtonVisibility);
-  apiTypeSelect.addEventListener("change", syncSaveButtonVisibility);
+  apiTypeSelect.addEventListener("change", handleApiTypeChange);
   themeSelect.addEventListener("change", () => {
     void handleThemeSettingsChangeClick();
   });
@@ -176,6 +242,10 @@ const bindSettingsEvents = () => {
   followModeSwitch.addEventListener("change", () => {
     void handleFollowModeChangeClick(followModeSwitch.selected);
   });
+  codexLoginButton.addEventListener("click", () => {
+    void handleCodexLoginClick();
+  });
+  syncCodexAuthUi();
   syncSaveButtonVisibility();
 };
 

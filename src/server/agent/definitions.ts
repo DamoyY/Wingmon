@@ -244,7 +244,7 @@ const buildToolDefinition = (
 };
 
 export const getToolDefinitions = (apiType: string): ToolDefinition[] => {
-  const useResponsesFormat = apiType === "responses";
+  const useResponsesFormat = apiType === "responses" || apiType === "codex";
   return validatedTools.map((tool) =>
     buildToolDefinition(tool, useResponsesFormat),
   );

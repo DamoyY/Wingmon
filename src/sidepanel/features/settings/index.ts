@@ -1,6 +1,7 @@
 export {
   getSettingsControllerState,
   handleCancelSettings,
+  handleCodexLogin,
   handleFollowModeChange,
   handleLanguageChange,
   handleOpenSettings,
@@ -10,6 +11,7 @@ export {
   subscribeSettingsControllerState,
   syncSettingsSnapshot,
 } from "./controller.ts";
+export { ensureSettingsReady } from "./model.ts";
 export type {
   SettingsControllerEffect,
   SettingsControllerState,

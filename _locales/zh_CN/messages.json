@@ -219,10 +219,55 @@
     "message": "模型"
   },
   "apiType": {
-    "message": "API 类型"
+    "message": "服务后端"
+  },
+  "apiTypeCodexRisk": {
+    "message": "Codex CLI [Risk]"
+  },
+  "codexLoginAction": {
+    "message": "登录 ChatGPT 账号"
+  },
+  "codexSwitchAction": {
+    "message": "切换 ChatGPT 账号"
+  },
+  "codexAuthStatusNotLoggedIn": {
+    "message": "尚未登录"
+  },
+  "codexAuthStatusLoggedIn": {
+    "message": "已登录"
+  },
+  "codexAuthStatusLoggedInAs": {
+    "message": "已登录：$1"
+  },
+  "codexAuthStatusTokenParseFailed": {
+    "message": "Token 解析失败，请重新登录"
   },
   "requestBodyOverrides": {
     "message": "请求体覆写"
+  },
+  "settingsStatusCodexOpeningLogin": {
+    "message": "正在打开 ChatGPT 登录页..."
+  },
+  "settingsStatusCodexLoginSuccess": {
+    "message": "ChatGPT 账号登录成功"
+  },
+  "settingsStatusCodexLoginSuccessWithIdentity": {
+    "message": "ChatGPT 账号登录成功：$1"
+  },
+  "settingsErrorCodexLoginFailed": {
+    "message": "登录 ChatGPT 账号失败，请稍后重试"
+  },
+  "settingsValidationModelRequired": {
+    "message": "模型不能为空"
+  },
+  "settingsValidationCodexLoginRequired": {
+    "message": "请先登录 ChatGPT 账号"
+  },
+  "settingsValidationApiRequired": {
+    "message": "API Key、Base URL 和模型不能为空"
+  },
+  "settingsValidationLanguageRequired": {
+    "message": "语言不能为空"
   },
   "requestBodyOverridesPlaceholder": {
     "message": "- path: \"model\"\n  value: \"gpt-5\"\n- path: \"reasoning.effort\"\n  value: \"high\"\n- path: \"tools.0\"\n  value: null"

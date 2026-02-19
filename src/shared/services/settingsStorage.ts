@@ -1,13 +1,13 @@
-import normalizeTheme from "../ui/theme.ts";
 import normalizeThemeColor, {
   normalizeThemeColorSafe,
 } from "../ui/themeColor.ts";
+import normalizeTheme from "../ui/theme.ts";
 import normalizeThemeVariant from "../ui/themeVariant.ts";
 
 type StoredSettingValue = string | boolean | undefined;
 type StoredSettings = Record<string, StoredSettingValue>;
 
-export type ApiType = "chat" | "responses" | "messages" | "gemini";
+export type ApiType = "chat" | "responses" | "messages" | "gemini" | "codex";
 type ThemeColorMode = "safe" | "strict";
 
 export type Settings = {
@@ -56,12 +56,14 @@ const settingsKeys = {
   },
   endpointPathMap: Record<ApiType, string> = {
     chat: "/chat/completions",
+    codex: "/backend-api/codex/responses",
     gemini: "/v1beta/models",
     messages: "/v1/messages",
     responses: "/responses",
   },
   endpointPathEntries: Array<{ apiType: ApiType; path: string }> = [
     { apiType: "chat", path: endpointPathMap.chat },
+    { apiType: "codex", path: endpointPathMap.codex },
     { apiType: "gemini", path: endpointPathMap.gemini },
     { apiType: "responses", path: endpointPathMap.responses },
     { apiType: "messages", path: endpointPathMap.messages },
@@ -81,6 +83,9 @@ const settingsKeys = {
       : normalizeThemeColor(value);
 
 export const normalizeApiType = (value: string | null | undefined): ApiType => {
+  if (value === "codex") {
+    return "codex";
+  }
   if (value === "responses") {
     return "responses";
   }

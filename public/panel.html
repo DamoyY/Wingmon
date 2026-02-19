@@ -53,29 +53,45 @@
             label="API 类型"
           >
             <md-select-option value="chat">
-              <div slot="headline">Chat Completion (Default)</div>
+              <div slot="headline">Chat Completion API (Default)</div>
+            </md-select-option>
+            <md-select-option value="codex">
+              <div slot="headline" data-i18n="apiTypeCodexRisk">
+                Codex Backend [Risk]
+              </div>
             </md-select-option>
             <md-select-option value="gemini">
-              <div slot="headline">Gemini (Google)</div>
+              <div slot="headline">Gemini API (Google)</div>
             </md-select-option>
             <md-select-option value="messages">
-              <div slot="headline">Messages (Claude)</div>
+              <div slot="headline">Messages API (Claude)</div>
             </md-select-option>
             <md-select-option value="responses">
-              <div slot="headline">Response (OpenAI)</div>
+              <div slot="headline">Response API (OpenAI)</div>
             </md-select-option>
           </md-filled-select>
-          <md-filled-text-field
-            id="base-url-input"
-            label="Base URL"
-            placeholder="https://api.openai.com/v1"
-            autocomplete="off"
-          ></md-filled-text-field>
-          <md-filled-text-field
-            id="api-key-input"
-            label="API Key"
-            autocomplete="off"
-          ></md-filled-text-field>
+          <div id="api-credential-fields">
+            <md-filled-text-field
+              id="base-url-input"
+              label="Base URL"
+              placeholder="https://api.openai.com/v1"
+              autocomplete="off"
+            ></md-filled-text-field>
+            <md-filled-text-field
+              id="api-key-input"
+              label="API Key"
+              autocomplete="off"
+            ></md-filled-text-field>
+          </div>
+          <div id="codex-auth-section" class="hidden">
+            <md-filled-button
+              id="codex-login-button"
+              type="button"
+              data-i18n="codexLoginAction"
+              >登录 ChatGPT 账号</md-filled-button
+            >
+            <p id="codex-auth-status" class="md-typescale-body-small"></p>
+          </div>
           <md-filled-text-field
             id="model-input"
             data-i18n-label="model"

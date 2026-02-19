@@ -14,13 +14,16 @@ import {
   refreshSendWithPageButton,
   renderMessagesView,
 } from "../../features/chat/messages/index.ts";
+import {
+  ensureSettingsReady,
+  syncSettingsSnapshot,
+} from "../../features/settings/index.ts";
 import { setLocale, translateDOM } from "../../lib/utils/index.ts";
 import { bindPanelEvents } from "../controllers/index.ts";
 import { getSettings } from "../../../shared/index.ts";
 import { handleOpenHistory } from "../../features/history/index.ts";
 import { initMarkdownRenderer } from "../../lib/markdown/index.ts";
 import { initPanelServerClient } from "../../core/server/index.ts";
-import { syncSettingsSnapshot } from "../../features/settings/index.ts";
 import { updateComposerButtonsState } from "../../features/chat/index.ts";
 
 const initPanel = async (): Promise<void> => {
@@ -44,9 +47,7 @@ const initPanel = async (): Promise<void> => {
   fillSettingsForm(settings);
   syncSettingsSnapshot(settings);
   setupChatLayout();
-  const hasCompleteSettings = Boolean(
-    settings.apiKey && settings.baseUrl && settings.model,
-  );
+  const hasCompleteSettings = ensureSettingsReady(settings);
   const storedPrimaryView = await storedPrimaryViewPromise;
   if (!hasCompleteSettings) {
     await showKeyView({ isFirstUse: true });

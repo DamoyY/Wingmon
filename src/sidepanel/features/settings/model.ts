@@ -1,6 +1,8 @@
 import {
   type ApiType,
   type Settings,
+  codexBackendBaseUrl,
+  isCodexApiType,
   normalizeSettings as normalizeSharedSettings,
   parseBodyOverrideRules,
 } from "../../../shared/index.ts";
@@ -8,6 +10,7 @@ import {
   normalizeTheme,
   normalizeThemeColor,
   normalizeThemeVariant,
+  t,
 } from "../../lib/utils/index.ts";
 
 export type SettingsInput = {
@@ -99,6 +102,13 @@ export const isSettingsDirty = (formValues: SettingsInput): boolean => {
 
 export const isSettingsComplete = (formValues: SettingsInput): boolean => {
   const current = normalizeSettings(formValues);
+  if (isCodexApiType(current.apiType)) {
+    return Boolean(
+      current.apiKey &&
+      current.model &&
+      current.baseUrl === codexBackendBaseUrl,
+    );
+  }
   return Boolean(current.apiKey && current.baseUrl && current.model);
 };
 
@@ -124,9 +134,24 @@ export const validateRequiredSettings = (
   formValues: SettingsInput,
 ): ValidationResult => {
   const payload = buildRequiredSettingsPayload(formValues);
-  if (!payload.apiKey || !payload.baseUrl || !payload.model) {
+  if (!payload.model) {
     return {
-      message: "API Key、Base URL 和模型不能为空",
+      message: t("settingsValidationModelRequired"),
+      payload,
+      valid: false,
+    };
+  }
+  if (isCodexApiType(payload.apiType)) {
+    if (!payload.apiKey || payload.baseUrl !== codexBackendBaseUrl) {
+      return {
+        message: t("settingsValidationCodexLoginRequired"),
+        payload,
+        valid: false,
+      };
+    }
+  } else if (!payload.apiKey || !payload.baseUrl) {
+    return {
+      message: t("settingsValidationApiRequired"),
       payload,
       valid: false,
     };

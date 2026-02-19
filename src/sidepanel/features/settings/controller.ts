@@ -1,7 +1,9 @@
 import {
   type Settings,
+  codexBackendBaseUrl,
   extractErrorMessage,
   getSettings,
+  startCodexLogin,
   updateSettings,
 } from "../../../shared/index.ts";
 import {
@@ -12,28 +14,19 @@ import {
   syncSettingsSnapshotState,
   validateRequiredSettings,
 } from "./model.ts";
+import { t } from "../../lib/utils/index.ts";
 
-type SettingsControllerFailure = {
-  success: false;
-  message: string;
-};
+type SettingsControllerFailure = { success: false; message: string };
 
-type SettingsControllerSuccess<TPayload> = {
-  success: true;
-  payload: TPayload;
-};
+type SettingsControllerSuccess<TPayload> = { success: true; payload: TPayload };
 
 export type SettingsControllerResult<TPayload> =
   | SettingsControllerSuccess<TPayload>
   | SettingsControllerFailure;
 
-type SaveButtonStatePayload = {
-  saveButtonVisible: boolean;
-};
+type SaveButtonStatePayload = { saveButtonVisible: boolean };
 
-type SettingsPayload = {
-  settings: Settings;
-};
+type SettingsPayload = { settings: Settings };
 
 type CancelSettingsPayload = {
   settings: Settings;
@@ -41,45 +34,26 @@ type CancelSettingsPayload = {
   locale: string;
 };
 
-type LanguagePayload = {
-  settings: Settings;
-  locale: string;
-};
+type LanguagePayload = { settings: Settings; locale: string };
 
-type ErrorContext = {
-  fallbackMessage: string;
-  logLabel: string;
-};
+type ErrorContext = { fallbackMessage: string; logLabel: string };
 
 type ThemePayload = Pick<Settings, "theme" | "themeColor" | "themeVariant">;
-type SettingsFormPatch = Partial<Pick<Settings, "themeColor" | "themeVariant">>;
+type SettingsFormPatch = Partial<
+  Pick<
+    Settings,
+    "apiKey" | "apiType" | "baseUrl" | "themeColor" | "themeVariant"
+  >
+>;
 type ViewTarget = "chat" | "key";
 
 export type SettingsControllerEffect =
-  | {
-      type: "saveButtonVisibilityChanged";
-      visible: boolean;
-    }
-  | {
-      type: "settingsStatusChanged";
-      message: string;
-    }
-  | {
-      type: "settingsFormFilled";
-      settings: Settings;
-    }
-  | {
-      type: "settingsFormPatched";
-      values: SettingsFormPatch;
-    }
-  | {
-      type: "themeChanged";
-      theme: ThemePayload;
-    }
-  | {
-      type: "localeChanged";
-      locale: string;
-    }
+  | { type: "saveButtonVisibilityChanged"; visible: boolean }
+  | { type: "settingsStatusChanged"; message: string }
+  | { type: "settingsFormFilled"; settings: Settings }
+  | { type: "settingsFormPatched"; values: SettingsFormPatch }
+  | { type: "themeChanged"; theme: ThemePayload }
+  | { type: "localeChanged"; locale: string }
   | {
       type: "viewSwitchRequested";
       target: ViewTarget;
@@ -143,10 +117,7 @@ const defaultLocale = "en",
     notifySettingsControllerStateChange();
   },
   publishSettingsStatus = (message: string): void => {
-    publishSettingsControllerEffect({
-      message,
-      type: "settingsStatusChanged",
-    });
+    publishSettingsControllerEffect({ message, type: "settingsStatusChanged" });
   },
   publishSaveButtonVisibility = (visible: boolean): SaveButtonStatePayload => {
     publishSettingsControllerEffect({
@@ -156,28 +127,16 @@ const defaultLocale = "en",
     return { saveButtonVisible: visible };
   },
   publishFormFilled = (settings: Settings): void => {
-    publishSettingsControllerEffect({
-      settings,
-      type: "settingsFormFilled",
-    });
+    publishSettingsControllerEffect({ settings, type: "settingsFormFilled" });
   },
   publishFormPatch = (values: SettingsFormPatch): void => {
-    publishSettingsControllerEffect({
-      type: "settingsFormPatched",
-      values,
-    });
+    publishSettingsControllerEffect({ type: "settingsFormPatched", values });
   },
   publishTheme = (theme: ThemePayload): void => {
-    publishSettingsControllerEffect({
-      theme,
-      type: "themeChanged",
-    });
+    publishSettingsControllerEffect({ theme, type: "themeChanged" });
   },
   publishLocale = (locale: string): void => {
-    publishSettingsControllerEffect({
-      locale,
-      type: "localeChanged",
-    });
+    publishSettingsControllerEffect({ locale, type: "localeChanged" });
   },
   publishViewSwitch = ({
     animate,
@@ -203,10 +162,7 @@ const defaultLocale = "en",
   }),
   createSuccessResult = <TPayload>(
     payload: TPayload,
-  ): SettingsControllerResult<TPayload> => ({
-    payload,
-    success: true,
-  }),
+  ): SettingsControllerResult<TPayload> => ({ payload, success: true }),
   createSettingsResult = (
     settings: Settings,
   ): SettingsControllerResult<SettingsPayload> =>
@@ -225,7 +181,7 @@ const defaultLocale = "en",
     return failure;
   },
   resolveShouldShowChatView = (settings: Settings): boolean =>
-    Boolean(settings.apiKey && settings.baseUrl && settings.model),
+    isSettingsComplete(settings),
   resolveLocale = (language: string): string => language || defaultLocale,
   toThemePayload = (settings: Settings): ThemePayload => ({
     theme: settings.theme,
@@ -325,11 +281,7 @@ export const handleSaveSettings = async (
     });
     publishTheme(toThemePayload(result.payload.settings));
     publishSaveButtonVisibility(resolveSaveButtonVisible(formValues));
-    publishViewSwitch({
-      animate: true,
-      isFirstUse: false,
-      target: "chat",
-    });
+    publishViewSwitch({ animate: true, isFirstUse: false, target: "chat" });
     return result;
   } catch (error) {
     return createFailureWithStatus(error, settingsActionErrorContext);
@@ -349,17 +301,9 @@ export const handleCancelSettings = async (): Promise<
     publishLocale(locale);
     publishSaveButtonVisibility(resolveSaveButtonVisible(settings));
     if (shouldShowChatView) {
-      publishViewSwitch({
-        animate: true,
-        isFirstUse: false,
-        target: "chat",
-      });
+      publishViewSwitch({ animate: true, isFirstUse: false, target: "chat" });
     }
-    return createSuccessResult({
-      locale,
-      settings,
-      shouldShowChatView,
-    });
+    return createSuccessResult({ locale, settings, shouldShowChatView });
   } catch (error) {
     return createFailureWithStatus(error, settingsReadErrorContext);
   }
@@ -370,11 +314,7 @@ export const handleOpenSettings = async (): Promise<
 > => {
   try {
     const settings = await readSettingsAndSync();
-    publishViewSwitch({
-      animate: true,
-      isFirstUse: false,
-      target: "key",
-    });
+    publishViewSwitch({ animate: true, isFirstUse: false, target: "key" });
     publishFormFilled(settings);
     publishSaveButtonVisibility(resolveSaveButtonVisible(settings));
     publishSettingsStatus("");
@@ -412,14 +352,57 @@ export const handleThemeSettingsChange = async (
   }
 };
 
+export const handleCodexLogin = async (
+  formValues: SettingsInput,
+): Promise<SettingsControllerResult<SettingsPayload>> => {
+  publishSettingsStatus(t("settingsStatusCodexOpeningLogin"));
+  try {
+    const loginResult = await startCodexLogin();
+    const result = await updateSettingsAndSync({
+      apiKey: loginResult.accessToken,
+      apiType: "codex",
+      baseUrl: codexBackendBaseUrl,
+    });
+    if (!result.success) {
+      publishSettingsStatus(result.message);
+      return result;
+    }
+    publishFormPatch({
+      apiKey: result.payload.settings.apiKey,
+      apiType: result.payload.settings.apiType,
+      baseUrl: result.payload.settings.baseUrl,
+    });
+    const identity = loginResult.profile.email.trim();
+    const loginSuccessMessage = identity
+      ? t("settingsStatusCodexLoginSuccessWithIdentity", [identity])
+      : t("settingsStatusCodexLoginSuccess");
+    publishSettingsStatus(loginSuccessMessage);
+    publishSaveButtonVisibility(
+      resolveSaveButtonVisible({
+        ...formValues,
+        apiKey: result.payload.settings.apiKey,
+        apiType: result.payload.settings.apiType,
+        baseUrl: result.payload.settings.baseUrl,
+      }),
+    );
+    return result;
+  } catch (error) {
+    return createFailureWithStatus(error, {
+      fallbackMessage: t("settingsErrorCodexLoginFailed"),
+      logLabel: "登录 ChatGPT 账号失败",
+    });
+  }
+};
+
 export const handleLanguageChange = async (
   formValues: SettingsInput,
 ): Promise<SettingsControllerResult<LanguagePayload>> => {
   const language = formValues.language?.trim();
   if (!language) {
+    const validationMessage = t("settingsValidationLanguageRequired");
     console.error("语言设置校验失败", { formValues });
-    publishSettingsStatus("语言不能为空");
-    return createFailureResult("语言不能为空");
+    publishSettingsStatus(validationMessage);
+    return createFailureResult(validationMessage);
   }
 
   try {
@@ -429,10 +412,7 @@ export const handleLanguageChange = async (
     publishSettingsStatus("");
     publishLocale(locale);
     publishSaveButtonVisibility(resolveSaveButtonVisible(formValues));
-    return createSuccessResult({
-      locale,
-      settings,
-    });
+    return createSuccessResult({ locale, settings });
   } catch (error) {
     return createFailureWithStatus(error, languageErrorContext);
   }

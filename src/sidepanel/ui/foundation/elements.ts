@@ -32,8 +32,12 @@ export type PanelElements = {
   topTitle: HTMLDivElement;
   bottomBar: HTMLDivElement;
   followModeSwitch: MdSwitch;
+  apiCredentialFields: HTMLDivElement;
   keyInput: MdFilledTextField;
   baseUrlInput: MdFilledTextField;
+  codexAuthSection: HTMLDivElement;
+  codexAuthStatus: HTMLParagraphElement;
+  codexLoginButton: MdFilledButton;
   modelInput: MdFilledTextField;
   requestBodyOverridesInput: MdFilledTextField;
   apiTypeSelect: MdFilledSelect;
@@ -65,6 +69,10 @@ export const elements = {} as PanelElements;
 let initPromise: Promise<PanelElements> | null = null;
 
 const resolveElements = (): PanelElements => ({
+  apiCredentialFields: requireElementById(
+    "api-credential-fields",
+    "apiCredentialFields",
+  ) as HTMLDivElement,
   apiTypeSelect: requireElementById(
     "api-type-select",
     "apiTypeSelect",
@@ -83,6 +91,18 @@ const resolveElements = (): PanelElements => ({
     "close-history",
     "closeHistoryButton",
   ) as MdIconButton,
+  codexAuthSection: requireElementById(
+    "codex-auth-section",
+    "codexAuthSection",
+  ) as HTMLDivElement,
+  codexAuthStatus: requireElementById(
+    "codex-auth-status",
+    "codexAuthStatus",
+  ) as HTMLParagraphElement,
+  codexLoginButton: requireElementById(
+    "codex-login-button",
+    "codexLoginButton",
+  ) as MdFilledButton,
   confirmDialog: requireElementById(
     "confirm-dialog",
     "confirmDialog",

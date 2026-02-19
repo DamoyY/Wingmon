@@ -63,6 +63,7 @@ export default function getApiStrategy(apiType: ApiType): ApiStrategy {
     case "chat":
       return strategyMap.chat;
     case "responses":
+    case "codex":
       return strategyMap.responses;
     case "messages":
       return strategyMap.messages;
