@@ -123,11 +123,15 @@ export class ConversationManager {
     }
     addMessage({ content: normalizedContent, role: "user" });
     reportMessageAcceptedSafely(onMessageAccepted, normalizedContent);
+    const resolvedIncludePage = includePage && settings.apiType !== "gemini";
+    if (includePage && !resolvedIncludePage) {
+      console.warn("Gemini API 下已禁用携页面发送，跳过页面上下文注入");
+    }
     let pendingAssistantIndex: number | null = null;
     try {
       await saveConversationState();
       ensureNotAborted(signal);
-      if (includePage) {
+      if (resolvedIncludePage) {
         await appendSharedPageContext({ apiType: settings.apiType, signal });
       }
       ensureNotAborted(signal);

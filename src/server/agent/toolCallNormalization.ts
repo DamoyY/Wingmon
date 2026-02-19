@@ -111,9 +111,11 @@ const normalizeToolCall = ({
     const resolvedArguments =
       typeof argumentsText === "string" ? argumentsText : defaultArguments;
     return {
+      arguments: resolvedArguments,
       call_id: resolvedId,
       function: { arguments: resolvedArguments, name },
       id: resolvedId,
+      name,
     };
   },
   isNormalizedToolCall = (
@@ -137,20 +139,15 @@ const normalizeToolCall = ({
     if (typeof call.name === "string") {
       entry.name = call.name;
     }
-    if (call.arguments !== undefined) {
-      entry.arguments = call.arguments;
+    if (typeof call.thought_signature === "string") {
+      entry.thought_signature = call.thought_signature;
     }
-    const functionPart = call.function;
-    if (functionPart) {
-      const functionEntry: StoreToolCall = {};
-      if (typeof functionPart.name === "string") {
-        functionEntry.name = functionPart.name;
-      }
-      if (typeof functionPart.arguments === "string") {
-        functionEntry.arguments = functionPart.arguments;
-      }
-      entry.function = functionEntry;
-    }
+    entry.arguments = call.arguments;
+    const functionEntry: StoreToolCall = {
+      arguments: call.function.arguments,
+      name: call.function.name,
+    };
+    entry.function = functionEntry;
     return entry;
   },
   normalizeToolCallsForStore = (toolCalls: ToolCall[]): StoreToolCall[] =>

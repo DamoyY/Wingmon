@@ -27,6 +27,7 @@ import {
 } from "../../ui/index.ts";
 import { codexBackendBaseUrl, isCodexApiType } from "../../../shared/index.ts";
 import { setLocale, t, translateDOM } from "../../lib/utils/index.ts";
+import { refreshSendWithPageButton } from "../../features/chat/messages/index.ts";
 
 let unsubscribeSettingsControllerState: (() => void) | null = null;
 let lastHandledEffectVersion = 0;
@@ -87,10 +88,12 @@ const applySettingsEffect = async (
     case "settingsFormFilled":
       fillSettingsForm(effect.settings);
       syncCodexAuthUi();
+      await refreshSendWithPageButton();
       return;
     case "settingsFormPatched":
       updateSettingsFormValues(effect.values);
       syncCodexAuthUi();
+      await refreshSendWithPageButton();
       return;
     case "themeChanged":
       applyTheme(

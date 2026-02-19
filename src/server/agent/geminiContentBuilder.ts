@@ -58,13 +58,17 @@ export const buildGeminiContentsFromIntermediates = (
       if (message.role === "assistant") {
         message.toolCallEntries.forEach((entry) => {
           toolNameByCallId.set(entry.callId, entry.name);
-          parts.push({
+          const functionCallPart: GeminiPart = {
             functionCall: {
               args: resolveGeminiToolInput(entry),
               id: entry.callId,
               name: entry.name,
             },
-          });
+          };
+          if (entry.thoughtSignature) {
+            functionCallPart.thoughtSignature = entry.thoughtSignature;
+          }
+          parts.push(functionCallPart);
         });
       }
       if (parts.length === 0) {

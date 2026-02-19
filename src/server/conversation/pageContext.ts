@@ -105,11 +105,14 @@ const resolveTabId = (activeTab: BrowserTab): number => {
     pageNumber: number,
     tabId: number,
   ): GetPageToolCall => ({
+    arguments: JSON.stringify(buildGetPageArguments({ pageNumber, tabId })),
+    call_id: callId,
     function: {
       arguments: JSON.stringify(buildGetPageArguments({ pageNumber, tabId })),
       name: toolNames.getPageMarkdown,
     },
     id: callId,
+    name: toolNames.getPageMarkdown,
     type: "function",
   }),
   executeGetPageToolCall = async ({

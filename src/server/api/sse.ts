@@ -5,7 +5,7 @@ import type {
   ResponseStreamEvent,
 } from "openai/resources/responses/responses";
 import type { ChatCompletionChunk } from "openai/resources/chat/completions";
-import type { ToolCall } from "../agent/definitions.ts";
+import type { RawToolCall } from "../agent/definitions.ts";
 
 type StreamChatToolCall = NonNullable<
   NonNullable<
@@ -47,7 +47,7 @@ export type ResponsesToolCallEventPayload = {
 
 export type ApiRequestChunk = {
   delta: string;
-  toolCalls: ToolCall[];
+  toolCalls: RawToolCall[];
 };
 
 const isFunctionCallOutputItem = (
@@ -134,32 +134,52 @@ export const getChatToolCallDeltas = (
 
 export const getToolCallsFromChatDeltas = (
   deltas: ChatToolCallDelta[],
-): ToolCall[] =>
-  deltas.map((delta) => {
-    const call: ToolCall = {};
-    if (typeof delta.id === "string" && delta.id.length > 0) {
-      call.id = delta.id;
-    }
-    if (delta.function) {
-      const functionPayload: NonNullable<ToolCall["function"]> = {};
+): RawToolCall[] =>
+  deltas
+    .map((delta): RawToolCall | null => {
+      let id: string | undefined;
+      let name: string | undefined;
+      let argumentsText: string | undefined;
+      let functionPayload: { arguments: string; name: string } | undefined;
+      if (typeof delta.id === "string" && delta.id.length > 0) {
+        id = delta.id;
+      }
       if (
-        typeof delta.function.name === "string" &&
+        typeof delta.function?.name === "string" &&
         delta.function.name.length > 0
       ) {
-        functionPayload.name = delta.function.name;
+        name = delta.function.name;
       }
-      if (typeof delta.function.arguments === "string") {
-        functionPayload.arguments = delta.function.arguments;
+      if (typeof delta.function?.arguments === "string") {
+        argumentsText = delta.function.arguments;
       }
-      if (
-        functionPayload.name !== undefined ||
-        functionPayload.arguments !== undefined
-      ) {
-        call.function = functionPayload;
+      if (name !== undefined && argumentsText !== undefined) {
+        functionPayload = {
+          arguments: argumentsText,
+          name,
+        };
       }
-    }
-    return call;
-  });
+      if (functionPayload !== undefined) {
+        return id === undefined
+          ? { function: functionPayload }
+          : { function: functionPayload, id };
+      }
+      if (name !== undefined) {
+        const call: RawToolCall = { name };
+        if (id !== undefined) {
+          call.id = id;
+        }
+        if (argumentsText !== undefined) {
+          call.arguments = argumentsText;
+        }
+        return call;
+      }
+      if (id !== undefined) {
+        return { id };
+      }
+      return null;
+    })
+    .filter((call): call is RawToolCall => call !== null);
 
 export const getResponsesToolCallEventPayload = (
   event: ResponseStreamEvent,
@@ -213,7 +233,7 @@ const resolveResponsesEventType = (
 export const getToolCallsFromResponsesEvent = (
   payload: ResponsesToolCallEventPayload,
   eventType: string,
-): ToolCall[] => {
+): RawToolCall[] => {
   const resolvedType = resolveResponsesEventType(payload, eventType);
   if (
     resolvedType === "response.output_item.added" ||
@@ -221,12 +241,35 @@ export const getToolCallsFromResponsesEvent = (
   ) {
     const item = payload.item;
     if (item?.type === "function_call") {
-      return [
-        {
-          arguments: typeof item.arguments === "string" ? item.arguments : "",
-          name: item.name,
-        },
-      ];
+      const id =
+        typeof item.id === "string" && item.id.length > 0 ? item.id : "";
+      const callId =
+        typeof item.call_id === "string" && item.call_id.length > 0
+          ? item.call_id
+          : "";
+      const name =
+        typeof item.name === "string" && item.name.length > 0 ? item.name : "";
+      const argumentsText =
+        typeof item.arguments === "string" ? item.arguments : "";
+      if (name) {
+        const call: RawToolCall = { name };
+        if (argumentsText.length > 0) {
+          call.arguments = argumentsText;
+        }
+        if (id) {
+          call.id = id;
+        }
+        if (callId) {
+          call.call_id = callId;
+        }
+        return [call];
+      }
+      if (callId) {
+        return id ? [{ call_id: callId, id }] : [{ call_id: callId }];
+      }
+      if (id) {
+        return [{ id }];
+      }
     }
   }
   if (resolvedType === "response.function_call_arguments.delta") {

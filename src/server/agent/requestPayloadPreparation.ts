@@ -7,10 +7,12 @@ import type {
   ToolCallEntry,
 } from "./requestPayloadTypes.ts";
 import {
+  type RawToolCall as NormalizedRawToolCall,
   type ToolCall,
   getToolCallArguments,
   getToolCallId,
   getToolCallName,
+  normalizeToolCall,
 } from "./definitions.ts";
 import {
   type ToolImageInput,
@@ -30,49 +32,40 @@ import type { MessageRecord } from "../../shared/state/panelStateContext.ts";
 const isToolCall = (value: ToolCall | null): value is ToolCall =>
     value !== null,
   resolveToolCall = (call: RawToolCall): ToolCall | null => {
-    const toolCall: ToolCall = {},
-      argumentsValue = call.arguments,
+    const argumentsValue = call.arguments,
       callId = resolveString(call.call_id),
       id = resolveString(call.id),
       name = resolveString(call.name),
-      functionValue = call.function;
-    if (id) {
-      toolCall.id = id;
-    }
-    if (callId) {
-      toolCall.call_id = callId;
-    }
-    if (name) {
-      toolCall.name = name;
-    }
-    if (typeof argumentsValue === "string") {
-      toolCall.arguments = argumentsValue;
-    }
+      thoughtSignature = resolveString(call.thought_signature),
+      functionValue = call.function,
+      topLevelArguments =
+        typeof argumentsValue === "string" ? argumentsValue : undefined;
+    let functionPart: { arguments: string; name: string } | undefined;
     if (isRecord(functionValue)) {
       const functionName = resolveString(functionValue.name),
         functionArguments = functionValue.arguments,
-        hasFunctionName = functionName.length > 0,
-        hasFunctionArguments = typeof functionArguments === "string";
-      if (hasFunctionName || hasFunctionArguments) {
-        const fn: NonNullable<ToolCall["function"]> = {};
-        if (hasFunctionName) {
-          fn.name = functionName;
-        }
-        if (hasFunctionArguments) {
-          fn.arguments = functionArguments;
-        }
-        toolCall.function = fn;
+        hasFunctionName = functionName.length > 0;
+      if (hasFunctionName && typeof functionArguments === "string") {
+        functionPart = {
+          arguments: functionArguments,
+          name: functionName,
+        };
       }
     }
-    if (
-      !toolCall.call_id &&
-      !toolCall.id &&
-      !toolCall.name &&
-      toolCall.function === undefined
-    ) {
+    if (!callId && !id && !name && functionPart === undefined) {
       return null;
     }
-    return toolCall;
+    const rawToolCall: NormalizedRawToolCall = {
+      ...(topLevelArguments === undefined
+        ? {}
+        : { arguments: topLevelArguments }),
+      ...(callId ? { call_id: callId } : {}),
+      ...(functionPart === undefined ? {} : { function: functionPart }),
+      ...(id ? { id } : {}),
+      ...(name ? { name } : {}),
+      ...(thoughtSignature ? { thought_signature: thoughtSignature } : {}),
+    };
+    return normalizeToolCall(rawToolCall);
   },
   normalizeMessage = (message: MessageRecord): NormalizedMessage => {
     const validated = ensureMessageRecord(message, "消息");
@@ -114,6 +107,7 @@ const isToolCall = (value: ToolCall | null): value is ToolCall =>
         arguments: getToolCallArguments(call),
         callId,
         name,
+        thoughtSignature: call.thought_signature,
       });
     });
     return entries;

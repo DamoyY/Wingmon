@@ -51,8 +51,15 @@ export const sendMessage = async ({
     requestSettingsCompletion(settings);
     return;
   }
+  const resolvedIncludePage = includePage && settings.apiType !== "gemini";
+  if (includePage && !resolvedIncludePage) {
+    console.warn("Gemini API 下已禁用携页面发送，改为普通发送");
+  }
   try {
-    await requestSendMessage({ content, includePage });
+    await requestSendMessage({
+      content,
+      includePage: resolvedIncludePage,
+    });
     syncComposerAfterSend();
   } catch (error) {
     if (resolveNotReadyError(error, settings)) {

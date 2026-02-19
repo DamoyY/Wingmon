@@ -129,11 +129,10 @@ const resolvePageChunk = (
   totalPages: parseRequiredPositiveInteger(result.totalPages, "totalPages"),
 });
 
-const resolveToolCallName = (call: ToolCall): string =>
-  call.function?.name ?? call.name ?? "";
+const resolveToolCallName = (call: ToolCall): string => call.name;
 
 const resolveToolCallArguments = (call: ToolCall): string => {
-  const args = call.function?.arguments ?? call.arguments;
+  const args = call.arguments;
   return typeof args === "string" ? args : "";
 };
 

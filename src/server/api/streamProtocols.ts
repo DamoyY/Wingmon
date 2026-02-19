@@ -20,7 +20,11 @@ import type {
   MessagesApiStrategy,
   ResponsesApiStrategy,
 } from "./apiContracts.ts";
-import type { FunctionCall, GenerateContentResponse } from "@google/genai";
+import type {
+  FunctionCall,
+  GenerateContentResponse,
+  Part,
+} from "@google/genai";
 import {
   extractResponsesText,
   getChatDeltaText,
@@ -79,24 +83,69 @@ const toChatExtractionPayload = (data: ChatCompletion): ChatCompletionData => {
       throw new Error("Gemini 工具参数序列化失败");
     }
   },
-  toGeminiToolCall = (call: FunctionCall, index: number): ToolCall | null => {
+  toGeminiToolCall = (
+    call: FunctionCall,
+    index: number,
+    thoughtSignature?: string,
+  ): ToolCall | null => {
     if (typeof call.name !== "string" || call.name.length === 0) {
       return null;
     }
     const callId =
-      typeof call.id === "string" && call.id.length > 0
-        ? call.id
-        : `gemini_${String(index)}_${call.name}`;
-    return {
+        typeof call.id === "string" && call.id.length > 0
+          ? call.id
+          : `gemini_${String(index)}_${call.name}`,
+      serializedArguments = serializeGeminiFunctionArguments(call.args),
+      normalizedThoughtSignature =
+        typeof thoughtSignature === "string" && thoughtSignature.length > 0
+          ? thoughtSignature
+          : "";
+    const toolCall: ToolCall = {
+      arguments: serializedArguments,
       call_id: callId,
       function: {
-        arguments: serializeGeminiFunctionArguments(call.args),
+        arguments: serializedArguments,
         name: call.name,
       },
       id: callId,
+      name: call.name,
     };
+    if (normalizedThoughtSignature) {
+      toolCall.thought_signature = normalizedThoughtSignature;
+    }
+    return toolCall;
+  },
+  extractGeminiFunctionCallParts = (
+    data: GenerateContentResponse,
+  ): Array<Part & { functionCall: FunctionCall }> => {
+    const candidate = data.candidates?.at(0),
+      parts = candidate?.content?.parts;
+    if (!Array.isArray(parts)) {
+      return [];
+    }
+    return parts.filter(
+      (part): part is Part & { functionCall: FunctionCall } =>
+        part.functionCall !== undefined,
+    );
+  },
+  extractGeminiToolCallsFromParts = (
+    data: GenerateContentResponse,
+  ): ToolCall[] => {
+    const functionCallParts = extractGeminiFunctionCallParts(data);
+    if (functionCallParts.length === 0) {
+      return [];
+    }
+    return functionCallParts
+      .map((part, index) =>
+        toGeminiToolCall(part.functionCall, index, part.thoughtSignature),
+      )
+      .filter((call): call is ToolCall => call !== null);
   },
   extractGeminiToolCalls = (data: GenerateContentResponse): ToolCall[] => {
+    const callsFromParts = extractGeminiToolCallsFromParts(data);
+    if (callsFromParts.length > 0) {
+      return callsFromParts;
+    }
     const functionCalls = data.functionCalls;
     if (!Array.isArray(functionCalls)) {
       return [];
@@ -195,6 +244,16 @@ export const geminiProtocolHandlers: GeminiProtocolHandlers = {
       toolCalls.forEach((call) => {
         const callId = call.call_id;
         if (typeof callId === "string" && callId.length > 0) {
+          const existing = collectedToolCalls.get(callId);
+          if (
+            existing &&
+            typeof existing.thought_signature === "string" &&
+            existing.thought_signature.length > 0 &&
+            (typeof call.thought_signature !== "string" ||
+              call.thought_signature.length === 0)
+          ) {
+            call.thought_signature = existing.thought_signature;
+          }
           collectedToolCalls.set(callId, call);
         }
       });

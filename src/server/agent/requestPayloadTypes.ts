@@ -20,6 +20,7 @@ export type ToolCallEntry = {
   arguments: ToolCallArguments;
   callId: string;
   name: string;
+  thoughtSignature?: string;
 };
 
 export type ChatToolCallForRequest = {

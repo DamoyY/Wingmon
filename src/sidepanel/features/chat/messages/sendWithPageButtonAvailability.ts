@@ -1,8 +1,13 @@
-import { extractErrorMessage, getActiveTab } from "../../../../shared/index.ts";
+import {
+  extractErrorMessage,
+  getActiveTab,
+  getSettings,
+} from "../../../../shared/index.ts";
 import { isInternalUrl } from "../../../lib/utils/index.ts";
 import { updateSendWithPageButtonState } from "../../../ui/index.ts";
 
 const DEFAULT_PAGE_DISABLED_REASON = "当前标签页不支持携页面发送";
+const GEMINI_PAGE_DISABLED_REASON = "Gemini API 不支持携页面发送";
 
 const disableSendWithPageButtonForPage = (reason: string): void => {
   updateSendWithPageButtonState({
@@ -26,6 +31,11 @@ export const setSendWithPagePromptReady = (hasContent: boolean): void => {
 };
 
 export const updateSendWithPageButtonAvailability = async (): Promise<void> => {
+  const settings = await getSettings();
+  if (settings.apiType === "gemini") {
+    disableSendWithPageButtonForPage(GEMINI_PAGE_DISABLED_REASON);
+    return;
+  }
   const activeTab = await getActiveTab();
   const activeUrl =
     typeof activeTab.url === "string" ? activeTab.url.trim() : "";

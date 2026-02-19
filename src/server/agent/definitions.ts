@@ -87,19 +87,44 @@ export type ToolExecutionContext = {
   waitForContentScript: (tabId: number) => Promise<boolean>;
 };
 
-type ToolCallFunction = { arguments?: string; name?: string };
+type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<
+  T,
+  Exclude<keyof T, Keys>
+> &
+  {
+    [Key in Keys]-?: Required<Pick<T, Key>> &
+      Partial<Pick<T, Exclude<Keys, Key>>>;
+  }[Keys];
+
+type ToolCallFunction = { arguments: string; name: string };
+type RawToolCallFunction = { arguments?: string; name?: string };
 
 export type ToolCallArguments = string | JsonValue;
 
-export type ToolCall = {
+type RawToolCallBase = {
   arguments?: ToolCallArguments;
   call_id?: string;
-  function?: ToolCallFunction;
+  function?: RawToolCallFunction;
   id?: string;
   name?: string;
+  thought_signature?: string;
 };
 
-type ToolCallInput = ToolCall | null | undefined;
+export type RawToolCall = RequireAtLeastOne<
+  RawToolCallBase,
+  "call_id" | "function" | "id" | "name"
+>;
+
+export type ToolCall = {
+  arguments: ToolCallArguments;
+  call_id: string;
+  function: ToolCallFunction;
+  id: string;
+  name: string;
+  thought_signature?: string;
+};
+
+type ToolCallInput = RawToolCall | ToolCall | null | undefined;
 
 export type ToolModule<TArgs = JsonValue, TResult = JsonValue> = {
   buildMessageContext?: (
@@ -260,10 +285,7 @@ export const parseToolArguments = (text: string): JsonValue => {
   }
 };
 
-export const getToolCallArguments = (call: ToolCallInput): ToolCallArguments =>
-  call?.function?.arguments ?? call?.arguments ?? "";
-
-export const getToolCallId = (call: ToolCallInput): string => {
+const resolveToolCallIdValue = (call: ToolCallInput): string => {
   const callId = call?.call_id || call?.id;
   if (!callId) {
     throw new ToolInputError("工具调用缺少 call_id");
@@ -271,12 +293,65 @@ export const getToolCallId = (call: ToolCallInput): string => {
   return callId;
 };
 
-export const getToolCallName = (call: ToolCallInput): string => {
+const resolveToolCallNameValue = (call: ToolCallInput): string => {
   const name = call?.function?.name || call?.name;
   if (!name) {
     throw new ToolInputError("工具调用缺少 name");
   }
   return name;
+};
+
+const resolveToolCallArgumentsValue = (
+  call: ToolCallInput,
+): ToolCallArguments => call?.function?.arguments ?? call?.arguments ?? "";
+
+const toToolFunctionArguments = (argumentsValue: ToolCallArguments): string => {
+  if (typeof argumentsValue === "string") {
+    return argumentsValue;
+  }
+  try {
+    const serialized = JSON.stringify(argumentsValue);
+    if (typeof serialized !== "string") {
+      throw new Error("工具参数序列化结果无效");
+    }
+    return serialized;
+  } catch (error) {
+    console.error("工具参数序列化失败", error);
+    throw new Error("工具参数序列化失败");
+  }
+};
+
+export const normalizeToolCall = (call: ToolCallInput): ToolCall => {
+  const callId = resolveToolCallIdValue(call),
+    name = resolveToolCallNameValue(call),
+    argumentsValue = resolveToolCallArgumentsValue(call),
+    id = typeof call?.id === "string" && call.id.length > 0 ? call.id : callId,
+    normalized: ToolCall = {
+      arguments: argumentsValue,
+      call_id: callId,
+      function: {
+        arguments: toToolFunctionArguments(argumentsValue),
+        name,
+      },
+      id,
+      name,
+    },
+    thoughtSignature = call?.thought_signature;
+  if (typeof thoughtSignature === "string" && thoughtSignature.length > 0) {
+    normalized.thought_signature = thoughtSignature;
+  }
+  return normalized;
+};
+
+export const getToolCallArguments = (call: ToolCallInput): ToolCallArguments =>
+  resolveToolCallArgumentsValue(call);
+
+export const getToolCallId = (call: ToolCallInput): string => {
+  return resolveToolCallIdValue(call);
+};
+
+export const getToolCallName = (call: ToolCallInput): string => {
+  return resolveToolCallNameValue(call);
 };
 
 export const getToolModule = <TArgs = JsonValue, TResult = JsonValue>(
