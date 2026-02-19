@@ -74,6 +74,38 @@ export const policyDocuments: PolicyDocumentMap = {
       {
         blocks: [
           {
+            text: "If you enable ChatGPT account login, Wingmon opens the provider authorization page and stores OAuth tokens locally in your browser extension storage so the extension can send model requests on your behalf.",
+            type: "paragraph",
+          },
+          {
+            items: [
+              "Account restrictions risk: your provider account may be rate-limited, suspended, logged out, or otherwise restricted if your usage is considered inconsistent with the provider's terms, product rules, or security policies.",
+              "Subscription and entitlement risk: paid subscription benefits belong to the account owner and may not be transferable to third-party tools in all cases.",
+              "Automation risk: provider-side anti-abuse systems may flag repeated automated requests, even if initiated by you.",
+              "Security risk: tokens are stored in local extension storage. If your browser profile or device is compromised, attackers may use those tokens until they are revoked or expire.",
+              "Availability risk: provider auth flows, endpoint behavior, or product policy may change without notice and can break this feature at any time.",
+            ],
+            type: "list",
+          },
+          {
+            text: "By using account-based login, you confirm you are authorized to use the account this way and accept the above risks. Wingmon cannot guarantee that this feature will remain available or compliant with all third-party rules at all times.",
+            type: "paragraph",
+          },
+          {
+            items: [
+              "Do not use shared, borrowed, or unauthorized accounts.",
+              "Do not use this feature on untrusted or public devices.",
+              "Revoke sessions/tokens in your provider account security settings if you suspect misuse.",
+              "Use API key mode when you need clearer usage boundaries and operational control.",
+            ],
+            type: "list",
+          },
+        ],
+        heading: "4. Important Risk Notice for Account-based Login",
+      },
+      {
+        blocks: [
+          {
             items: [
               "storage: save settings and local conversation records.",
               "tabs / tabGroups / webNavigation / scripting: read and interact with web pages.",
@@ -83,7 +115,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "list",
           },
         ],
-        heading: "4. Chrome Permissions and Why They Are Used",
+        heading: "5. Chrome Permissions and Why They Are Used",
       },
       {
         blocks: [
@@ -101,7 +133,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "paragraph",
           },
         ],
-        heading: "5. Data Retention",
+        heading: "6. Data Retention",
       },
       {
         blocks: [
@@ -114,7 +146,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "list",
           },
         ],
-        heading: "6. Your Choices and Controls",
+        heading: "7. Your Choices and Controls",
       },
       {
         blocks: [
@@ -123,7 +155,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "paragraph",
           },
         ],
-        heading: "7. Security",
+        heading: "8. Security",
       },
       {
         blocks: [
@@ -132,7 +164,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "paragraph",
           },
         ],
-        heading: "8. Children's Privacy",
+        heading: "9. Children's Privacy",
       },
       {
         blocks: [
@@ -141,7 +173,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "paragraph",
           },
         ],
-        heading: "9. International Data Transfers",
+        heading: "10. International Data Transfers",
       },
       {
         blocks: [
@@ -150,7 +182,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "paragraph",
           },
         ],
-        heading: "10. Google API Services",
+        heading: "11. Google API Services",
       },
       {
         blocks: [
@@ -159,7 +191,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "paragraph",
           },
         ],
-        heading: "11. Changes to This Policy",
+        heading: "12. Changes to This Policy",
       },
       {
         blocks: [
@@ -168,11 +200,11 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "paragraph",
           },
         ],
-        heading: "12. Contact",
+        heading: "13. Contact",
       },
     ],
     title: "Privacy Policy for Wingmon",
-    updatedAt: "Last updated: February 18, 2026 (UTC)",
+    updatedAt: "Last updated: February 19, 2026 (UTC)",
   },
   zh: {
     introduction:
@@ -247,6 +279,38 @@ export const policyDocuments: PolicyDocumentMap = {
       {
         blocks: [
           {
+            text: "若你启用 ChatGPT 账号登录，Wingmon 会打开服务商授权页面，并在浏览器扩展本地存储中保存 OAuth Token，以便扩展代表你发起模型请求。",
+            type: "paragraph",
+          },
+          {
+            items: [
+              "账号限制风险：若服务商认为你的使用方式与其条款、产品规则或安全策略不一致，你的账号可能被限流、强制登出、暂停或施加其他限制。",
+              "订阅权益风险：付费订阅权益归属于账号所有者，未必在所有场景都可转用于第三方工具。",
+              "自动化风险：即使请求由你主动触发，连续自动化请求仍可能触发服务商风控或反滥用机制。",
+              "安全风险：Token 保存在扩展本地存储中；若浏览器配置文件或设备被入侵，攻击者可能在 Token 失效或被撤销前继续使用相关能力。",
+              "可用性风险：服务商的授权流程、接口行为或产品政策可能随时调整且不另行通知，相关功能可能因此中断。",
+            ],
+            type: "list",
+          },
+          {
+            text: "当你使用账号登录能力时，表示你确认自己有权以该方式使用该账号，并接受上述风险。Wingmon 无法保证该能力在任意时间都持续可用，或始终满足所有第三方规则。",
+            type: "paragraph",
+          },
+          {
+            items: [
+              "不要使用共享、借用或未获授权的账号。",
+              "不要在不受信任或公共设备上启用该功能。",
+              "一旦怀疑被滥用，请立即在服务商账号安全设置中撤销会话或 Token。",
+              "若需要更清晰的使用边界和运维控制，建议使用 API Key 模式。",
+            ],
+            type: "list",
+          },
+        ],
+        heading: "4. 账号登录能力的重要风险提示",
+      },
+      {
+        blocks: [
+          {
             items: [
               "storage：保存设置与本地会话记录。",
               "tabs / tabGroups / webNavigation / scripting：读取并操作网页。",
@@ -256,7 +320,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "list",
           },
         ],
-        heading: "4. Chrome 权限及用途",
+        heading: "5. Chrome 权限及用途",
       },
       {
         blocks: [
@@ -273,7 +337,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "paragraph",
           },
         ],
-        heading: "5. 数据保留",
+        heading: "6. 数据保留",
       },
       {
         blocks: [
@@ -286,7 +350,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "list",
           },
         ],
-        heading: "6. 你的选择与控制",
+        heading: "7. 你的选择与控制",
       },
       {
         blocks: [
@@ -295,7 +359,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "paragraph",
           },
         ],
-        heading: "7. 安全性",
+        heading: "8. 安全性",
       },
       {
         blocks: [
@@ -304,7 +368,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "paragraph",
           },
         ],
-        heading: "8. 儿童隐私",
+        heading: "9. 儿童隐私",
       },
       {
         blocks: [
@@ -313,7 +377,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "paragraph",
           },
         ],
-        heading: "9. 跨境传输",
+        heading: "10. 跨境传输",
       },
       {
         blocks: [
@@ -322,7 +386,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "paragraph",
           },
         ],
-        heading: "10. Google API 服务声明",
+        heading: "11. Google API 服务声明",
       },
       {
         blocks: [
@@ -331,7 +395,7 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "paragraph",
           },
         ],
-        heading: "11. 政策更新",
+        heading: "12. 政策更新",
       },
       {
         blocks: [
@@ -340,10 +404,10 @@ export const policyDocuments: PolicyDocumentMap = {
             type: "paragraph",
           },
         ],
-        heading: "12. 联系方式",
+        heading: "13. 联系方式",
       },
     ],
     title: "Wingmon 隐私权政策",
-    updatedAt: "最近更新：2026 年 2 月 18 日（UTC）",
+    updatedAt: "最近更新：2026 年 2 月 19 日（UTC）",
   },
 };
