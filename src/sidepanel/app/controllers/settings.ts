@@ -1,5 +1,6 @@
 import {
   type SettingsControllerEffect,
+  handleApiTypeSelectionChange,
   handleCancelSettings,
   handleCodexLogin,
   handleFollowModeChange,
@@ -32,6 +33,7 @@ import { refreshSendWithPageButton } from "../../features/chat/messages/index.ts
 let unsubscribeSettingsControllerState: (() => void) | null = null;
 let lastHandledEffectVersion = 0;
 let settingsEffectQueue: Promise<void> = Promise.resolve();
+const normalizedCodexBackendBaseUrl = codexBackendBaseUrl.replace(/\/+$/u, "");
 
 type CodexAuthUiState = {
   loggedIn: boolean;
@@ -51,7 +53,7 @@ const resolveCodexAuthState = (
   const normalizedBaseUrl = formValues.baseUrl.trim().replace(/\/+$/u, "");
   if (
     !formValues.apiKey.trim() ||
-    normalizedBaseUrl !== codexBackendBaseUrl.replace(/\/+$/u, "")
+    normalizedBaseUrl !== normalizedCodexBackendBaseUrl
   ) {
     return {
       loggedIn: false,
@@ -75,6 +77,27 @@ const syncCodexAuthUi = (): void => {
   );
 };
 
+const syncFormFilledEffect = async (
+  settings: Parameters<typeof fillSettingsForm>[0],
+): Promise<void> => {
+  fillSettingsForm(settings);
+  syncCodexAuthUi();
+  await refreshSendWithPageButton();
+};
+
+const syncFormPatchedEffect = async (
+  values: Parameters<typeof updateSettingsFormValues>[0],
+): Promise<void> => {
+  syncCodexAuthUi();
+  updateSettingsFormValues(values);
+  syncCodexAuthUi();
+  await refreshSendWithPageButton();
+};
+
+const runAsyncTask = (task: () => Promise<void>): void => {
+  void task();
+};
+
 const applySettingsEffect = async (
   effect: SettingsControllerEffect,
 ): Promise<void> => {
@@ -86,14 +109,10 @@ const applySettingsEffect = async (
       setSettingsStatus(effect.message);
       return;
     case "settingsFormFilled":
-      fillSettingsForm(effect.settings);
-      syncCodexAuthUi();
-      await refreshSendWithPageButton();
+      await syncFormFilledEffect(effect.settings);
       return;
     case "settingsFormPatched":
-      updateSettingsFormValues(effect.values);
-      syncCodexAuthUi();
-      await refreshSendWithPageButton();
+      await syncFormPatchedEffect(effect.values);
       return;
     case "themeChanged":
       applyTheme(
@@ -151,26 +170,6 @@ const ensureSettingsControllerStateSubscription = (): void => {
   );
 };
 
-const handleSaveSettingsClick = async (): Promise<void> => {
-  await handleSaveSettings(readSettingsFormValues());
-};
-
-const handleCancelSettingsClick = async (): Promise<void> => {
-  await handleCancelSettings();
-};
-
-const handleOpenSettingsClick = async (): Promise<void> => {
-  await handleOpenSettings();
-};
-
-const handleThemeSettingsChangeClick = async (): Promise<void> => {
-  await handleThemeSettingsChange(readSettingsFormValues());
-};
-
-const handleLanguageChangeClick = async (): Promise<void> => {
-  await handleLanguageChange(readSettingsFormValues());
-};
-
 const handleCodexLoginClick = async (): Promise<void> => {
   setCodexLoginButtonBusy(true);
   try {
@@ -193,9 +192,13 @@ const handleFollowModeChangeClick = async (
   }
 };
 
-const handleApiTypeChange = (): void => {
-  syncCodexAuthUi();
-  syncSaveButtonVisibility();
+const handleApiTypeChange = async (): Promise<void> => {
+  const result = await handleApiTypeSelectionChange(readSettingsFormValues());
+  if (!result.success) {
+    console.error(result.message);
+    syncCodexAuthUi();
+    syncSaveButtonVisibility();
+  }
 };
 
 const bindSettingsEvents = () => {
@@ -216,37 +219,50 @@ const bindSettingsEvents = () => {
     languageSelect,
     followModeSwitch,
   } = elements;
+  const handleThemeSettingsChangeEvent = (): void => {
+      runAsyncTask(async () => {
+        await handleThemeSettingsChange(readSettingsFormValues());
+      });
+    },
+    handleLanguageChangeEvent = (): void => {
+      runAsyncTask(async () => {
+        await handleLanguageChange(readSettingsFormValues());
+      });
+    };
   saveKey.addEventListener("click", () => {
-    void handleSaveSettingsClick();
+    runAsyncTask(async () => {
+      await handleSaveSettings(readSettingsFormValues());
+    });
   });
   cancelSettings.addEventListener("click", () => {
-    void handleCancelSettingsClick();
+    runAsyncTask(async () => {
+      await handleCancelSettings();
+    });
   });
   openSettings.addEventListener("click", () => {
-    void handleOpenSettingsClick();
+    runAsyncTask(async () => {
+      await handleOpenSettings();
+    });
   });
-  keyInput.addEventListener("input", syncSaveButtonVisibility);
-  baseUrlInput.addEventListener("input", syncSaveButtonVisibility);
-  modelInput.addEventListener("input", syncSaveButtonVisibility);
-  requestBodyOverridesInput.addEventListener("input", syncSaveButtonVisibility);
-  apiTypeSelect.addEventListener("change", handleApiTypeChange);
-  themeSelect.addEventListener("change", () => {
-    void handleThemeSettingsChangeClick();
+  [keyInput, baseUrlInput, modelInput, requestBodyOverridesInput].forEach(
+    (inputElement) => {
+      inputElement.addEventListener("input", syncSaveButtonVisibility);
+    },
+  );
+  apiTypeSelect.addEventListener("change", () => {
+    runAsyncTask(handleApiTypeChange);
   });
-  themeColorInput.addEventListener("change", () => {
-    void handleThemeSettingsChangeClick();
+  [themeSelect, themeColorInput, themeVariantSelect].forEach((themeElement) => {
+    themeElement.addEventListener("change", handleThemeSettingsChangeEvent);
   });
-  themeVariantSelect.addEventListener("change", () => {
-    void handleThemeSettingsChangeClick();
-  });
-  languageSelect.addEventListener("change", () => {
-    void handleLanguageChangeClick();
-  });
+  languageSelect.addEventListener("change", handleLanguageChangeEvent);
   followModeSwitch.addEventListener("change", () => {
-    void handleFollowModeChangeClick(followModeSwitch.selected);
+    runAsyncTask(async () => {
+      await handleFollowModeChangeClick(followModeSwitch.selected);
+    });
   });
   codexLoginButton.addEventListener("click", () => {
-    void handleCodexLoginClick();
+    runAsyncTask(handleCodexLoginClick);
   });
   syncCodexAuthUi();
   syncSaveButtonVisibility();

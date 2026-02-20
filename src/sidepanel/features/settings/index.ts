@@ -1,6 +1,7 @@
 export {
   getSettingsControllerState,
   handleCancelSettings,
+  handleApiTypeSelectionChange,
   handleCodexLogin,
   handleFollowModeChange,
   handleLanguageChange,

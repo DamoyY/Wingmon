@@ -3,6 +3,8 @@ import {
   codexBackendBaseUrl,
   extractErrorMessage,
   getSettings,
+  getSettingsByApiType,
+  normalizeApiType,
   startCodexLogin,
   updateSettings,
 } from "../../../shared/index.ts";
@@ -39,10 +41,20 @@ type LanguagePayload = { settings: Settings; locale: string };
 type ErrorContext = { fallbackMessage: string; logLabel: string };
 
 type ThemePayload = Pick<Settings, "theme" | "themeColor" | "themeVariant">;
+type ApiTypeSettingsDraft = Pick<
+  Settings,
+  "apiKey" | "baseUrl" | "model" | "requestBodyOverrides"
+>;
 type SettingsFormPatch = Partial<
   Pick<
     Settings,
-    "apiKey" | "apiType" | "baseUrl" | "themeColor" | "themeVariant"
+    | "apiKey"
+    | "apiType"
+    | "baseUrl"
+    | "model"
+    | "requestBodyOverrides"
+    | "themeColor"
+    | "themeVariant"
   >
 >;
 type ViewTarget = "chat" | "key";
@@ -67,6 +79,11 @@ export type SettingsControllerState = {
 };
 
 type SettingsControllerStateListener = (state: SettingsControllerState) => void;
+
+let activeFormApiType: Settings["apiType"] | null = null;
+let settingsDraftByApiType: Partial<
+  Record<Settings["apiType"], ApiTypeSettingsDraft>
+> = {};
 
 const defaultLocale = "en",
   settingsControllerState: SettingsControllerState = {
@@ -188,6 +205,31 @@ const defaultLocale = "en",
     themeColor: settings.themeColor,
     themeVariant: settings.themeVariant,
   }),
+  toApiTypeSettingsDraft = (
+    source: Pick<
+      SettingsInput,
+      "apiKey" | "baseUrl" | "model" | "requestBodyOverrides"
+    >,
+  ): ApiTypeSettingsDraft => ({
+    apiKey: source.apiKey ?? "",
+    baseUrl: source.baseUrl ?? "",
+    model: source.model ?? "",
+    requestBodyOverrides: source.requestBodyOverrides ?? "",
+  }),
+  cacheApiTypeSettingsDraft = (
+    apiType: Settings["apiType"],
+    draft: ApiTypeSettingsDraft,
+  ): void => {
+    settingsDraftByApiType[apiType] = draft;
+    activeFormApiType = apiType;
+  },
+  resolveCachedApiTypeSettingsDraft = (
+    apiType: Settings["apiType"],
+  ): ApiTypeSettingsDraft | null => settingsDraftByApiType[apiType] ?? null,
+  resetApiTypeSettingsDraftCache = (): void => {
+    settingsDraftByApiType = {};
+    activeFormApiType = null;
+  },
   buildThemePayloadResult = (
     formValues: SettingsInput,
   ): SettingsControllerResult<ThemePayload> => {
@@ -198,6 +240,7 @@ const defaultLocale = "en",
     }
   },
   readSettingsAndSync = async (): Promise<Settings> => {
+    resetApiTypeSettingsDraftCache();
     const settings = await getSettings();
     syncSettingsSnapshot(settings);
     return settings;
@@ -226,7 +269,9 @@ export const subscribeSettingsControllerState = (
 };
 
 export const syncSettingsSnapshot = (settings: SettingsInput): void => {
-  syncSettingsSnapshotState(settings);
+  const normalized = syncSettingsSnapshotState(settings);
+  const apiType = normalizeApiType(normalized.apiType);
+  cacheApiTypeSettingsDraft(apiType, toApiTypeSettingsDraft(normalized));
 };
 
 export const handleSettingsFieldChange = (
@@ -264,11 +309,22 @@ export const handleSaveSettings = async (
     publishSettingsStatus(themePayloadResult.message);
     return themePayloadResult;
   }
+  const language = formValues.language?.trim();
+  if (!language) {
+    const validationMessage = t("settingsValidationLanguageRequired");
+    console.error("设置保存校验失败", {
+      formValues,
+      message: validationMessage,
+    });
+    publishSettingsStatus(validationMessage);
+    return createFailureResult(validationMessage);
+  }
 
   try {
     const result = await updateSettingsAndSync({
       ...required.payload,
       ...themePayloadResult.payload,
+      language,
     });
     if (!result.success) {
       publishSettingsStatus(result.message);
@@ -334,19 +390,52 @@ export const handleThemeSettingsChange = async (
   }
 
   try {
-    const result = await updateSettingsAndSync(themePayloadResult.payload);
-    if (!result.success) {
-      publishSettingsStatus(result.message);
-      return result;
-    }
+    const currentSettings = await getSettings();
     publishSettingsStatus("");
-    publishTheme(toThemePayload(result.payload.settings));
+    publishTheme(themePayloadResult.payload);
     publishFormPatch({
-      themeColor: result.payload.settings.themeColor,
-      themeVariant: result.payload.settings.themeVariant,
+      themeColor: themePayloadResult.payload.themeColor,
+      themeVariant: themePayloadResult.payload.themeVariant,
     });
     publishSaveButtonVisibility(resolveSaveButtonVisible(formValues));
-    return result;
+    return createSettingsResult({
+      ...currentSettings,
+      ...themePayloadResult.payload,
+    });
+  } catch (error) {
+    return createFailureWithStatus(error, settingsActionErrorContext);
+  }
+};
+
+export const handleApiTypeSelectionChange = async (
+  formValues: SettingsInput,
+): Promise<SettingsControllerResult<SettingsPayload>> => {
+  try {
+    const nextApiType = normalizeApiType(formValues.apiType);
+    const currentApiType = activeFormApiType ?? nextApiType;
+    cacheApiTypeSettingsDraft(
+      currentApiType,
+      toApiTypeSettingsDraft(formValues),
+    );
+    const settings = await getSettingsByApiType(nextApiType);
+    const cachedDraft = resolveCachedApiTypeSettingsDraft(nextApiType);
+    const nextDraft = cachedDraft ?? toApiTypeSettingsDraft(settings);
+    cacheApiTypeSettingsDraft(nextApiType, nextDraft);
+    const nextFormValues: SettingsInput = {
+      ...formValues,
+      ...nextDraft,
+      apiType: nextApiType,
+    };
+    publishSettingsStatus("");
+    publishFormPatch({
+      ...nextDraft,
+    });
+    publishSaveButtonVisibility(resolveSaveButtonVisible(nextFormValues));
+    return createSettingsResult({
+      ...settings,
+      ...nextDraft,
+      apiType: nextApiType,
+    });
   } catch (error) {
     return createFailureWithStatus(error, settingsActionErrorContext);
   }
@@ -367,10 +456,11 @@ export const handleCodexLogin = async (
       publishSettingsStatus(result.message);
       return result;
     }
+    const nextSettings = result.payload.settings;
     publishFormPatch({
-      apiKey: result.payload.settings.apiKey,
-      apiType: result.payload.settings.apiType,
-      baseUrl: result.payload.settings.baseUrl,
+      apiKey: nextSettings.apiKey,
+      apiType: nextSettings.apiType,
+      baseUrl: nextSettings.baseUrl,
     });
     const identity = loginResult.profile.email.trim();
     const loginSuccessMessage = identity
@@ -380,9 +470,9 @@ export const handleCodexLogin = async (
     publishSaveButtonVisibility(
       resolveSaveButtonVisible({
         ...formValues,
-        apiKey: result.payload.settings.apiKey,
-        apiType: result.payload.settings.apiType,
-        baseUrl: result.payload.settings.baseUrl,
+        apiKey: nextSettings.apiKey,
+        apiType: nextSettings.apiType,
+        baseUrl: nextSettings.baseUrl,
       }),
     );
     return result;
@@ -406,13 +496,18 @@ export const handleLanguageChange = async (
   }
 
   try {
-    const settings = await updateSettings({ language });
-    syncSettingsSnapshot(settings);
-    const locale = resolveLocale(settings.language);
+    const settings = await getSettings();
+    const locale = resolveLocale(language);
     publishSettingsStatus("");
     publishLocale(locale);
     publishSaveButtonVisibility(resolveSaveButtonVisible(formValues));
-    return createSuccessResult({ locale, settings });
+    return createSuccessResult({
+      locale,
+      settings: {
+        ...settings,
+        language,
+      },
+    });
   } catch (error) {
     return createFailureWithStatus(error, languageErrorContext);
   }

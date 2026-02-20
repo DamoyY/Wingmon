@@ -24,6 +24,7 @@ export type Settings = {
 };
 
 type SettingsPatch = Partial<Settings>;
+type ApiTypeStorageKeyMap = Record<ApiType, string>;
 
 type SettingsNormalizationInput = {
   apiKey?: string | null;
@@ -42,18 +43,54 @@ type SettingsNormalizationOptions = {
   themeColorMode?: ThemeColorMode;
 };
 
-const settingsKeys = {
-    apiKey: "api_key",
+const apiTypeStorageValues: readonly ApiType[] = [
+    "chat",
+    "responses",
+    "messages",
+    "gemini",
+    "codex",
+  ],
+  createApiTypeStorageKeyMap = (prefix: string): ApiTypeStorageKeyMap => ({
+    chat: `${prefix}_chat`,
+    codex: `${prefix}_codex`,
+    gemini: `${prefix}_gemini`,
+    messages: `${prefix}_messages`,
+    responses: `${prefix}_responses`,
+  }),
+  settingsKeys = {
+    apiKeyByApiType: createApiTypeStorageKeyMap("api_key"),
     apiType: "api_type",
-    baseUrl: "base_url",
+    baseUrlByApiType: createApiTypeStorageKeyMap("base_url"),
     followMode: "follow_mode",
     language: "language",
-    model: "model",
-    requestBodyOverrides: "request_body_overrides",
+    modelByApiType: createApiTypeStorageKeyMap("model"),
+    requestBodyOverridesByApiType: createApiTypeStorageKeyMap(
+      "request_body_overrides",
+    ),
     theme: "theme",
     themeColor: "theme_color",
     themeVariant: "theme_variant",
   },
+  settingsStorageKeys = [
+    settingsKeys.apiType,
+    settingsKeys.followMode,
+    settingsKeys.language,
+    settingsKeys.theme,
+    settingsKeys.themeColor,
+    settingsKeys.themeVariant,
+    ...apiTypeStorageValues.map(
+      (apiType) => settingsKeys.apiKeyByApiType[apiType],
+    ),
+    ...apiTypeStorageValues.map(
+      (apiType) => settingsKeys.baseUrlByApiType[apiType],
+    ),
+    ...apiTypeStorageValues.map(
+      (apiType) => settingsKeys.modelByApiType[apiType],
+    ),
+    ...apiTypeStorageValues.map(
+      (apiType) => settingsKeys.requestBodyOverridesByApiType[apiType],
+    ),
+  ],
   endpointPathMap: Record<ApiType, string> = {
     chat: "/chat/completions",
     codex: "/backend-api/codex/responses",
@@ -74,6 +111,67 @@ const settingsKeys = {
     typeof value === "string" ? value.replaceAll("\r\n", "\n").trim() : "",
   normalizeLanguage = (value: string | null | undefined): string =>
     trimSettingValue(value) || "en",
+  readStoredString = (data: StoredSettings, key: string): string | null => {
+    const value = data[key];
+    if (typeof value === "string") {
+      return value;
+    }
+    return null;
+  },
+  resolveBackendSettingValue = ({
+    apiType,
+    data,
+    keyByApiType,
+  }: {
+    apiType: ApiType;
+    data: StoredSettings;
+    keyByApiType: ApiTypeStorageKeyMap;
+  }): string => {
+    const backendValue = readStoredString(data, keyByApiType[apiType]);
+    if (backendValue !== null) {
+      return backendValue;
+    }
+    return "";
+  },
+  resolveStoredApiType = (data: StoredSettings): ApiType =>
+    normalizeApiType(readStoredString(data, settingsKeys.apiType)),
+  resolveSettingsByApiType = (
+    data: StoredSettings,
+    apiType: ApiType,
+  ): Settings =>
+    normalizeSettings({
+      apiKey: resolveBackendSettingValue({
+        apiType,
+        data,
+        keyByApiType: settingsKeys.apiKeyByApiType,
+      }),
+      apiType,
+      baseUrl: resolveBackendSettingValue({
+        apiType,
+        data,
+        keyByApiType: settingsKeys.baseUrlByApiType,
+      }),
+      followMode:
+        data[settingsKeys.followMode] === undefined
+          ? true
+          : Boolean(data[settingsKeys.followMode]),
+      language: readStoredString(data, settingsKeys.language),
+      model: resolveBackendSettingValue({
+        apiType,
+        data,
+        keyByApiType: settingsKeys.modelByApiType,
+      }),
+      requestBodyOverrides: resolveBackendSettingValue({
+        apiType,
+        data,
+        keyByApiType: settingsKeys.requestBodyOverridesByApiType,
+      }),
+      theme: readStoredString(data, settingsKeys.theme),
+      themeColor: readStoredString(data, settingsKeys.themeColor),
+      themeVariant: readStoredString(data, settingsKeys.themeVariant),
+    }),
+  getStoredSettings = async (): Promise<StoredSettings> =>
+    chrome.storage.local.get<StoredSettings>(settingsStorageKeys),
   normalizeThemeColorValue = (
     value: string | null,
     themeColorMode: ThemeColorMode,
@@ -122,80 +220,71 @@ export const normalizeSettings = (
   };
 };
 
-export const toSettings = (data: StoredSettings): Settings =>
-  normalizeSettings({
-    apiKey:
-      typeof data[settingsKeys.apiKey] === "string"
-        ? data[settingsKeys.apiKey]
-        : null,
-    apiType:
-      typeof data[settingsKeys.apiType] === "string"
-        ? data[settingsKeys.apiType]
-        : null,
-    baseUrl:
-      typeof data[settingsKeys.baseUrl] === "string"
-        ? data[settingsKeys.baseUrl]
-        : null,
-    followMode:
-      data[settingsKeys.followMode] === undefined
-        ? true
-        : Boolean(data[settingsKeys.followMode]),
-    language:
-      typeof data[settingsKeys.language] === "string"
-        ? data[settingsKeys.language]
-        : null,
-    model:
-      typeof data[settingsKeys.model] === "string"
-        ? data[settingsKeys.model]
-        : null,
-    requestBodyOverrides:
-      typeof data[settingsKeys.requestBodyOverrides] === "string"
-        ? data[settingsKeys.requestBodyOverrides]
-        : null,
-    theme:
-      typeof data[settingsKeys.theme] === "string"
-        ? data[settingsKeys.theme]
-        : null,
-    themeColor:
-      typeof data[settingsKeys.themeColor] === "string"
-        ? data[settingsKeys.themeColor]
-        : null,
-    themeVariant:
-      typeof data[settingsKeys.themeVariant] === "string"
-        ? data[settingsKeys.themeVariant]
-        : null,
-  });
+export const toSettings = (data: StoredSettings): Settings => {
+  const apiType = resolveStoredApiType(data);
+  return resolveSettingsByApiType(data, apiType);
+};
 
 export const getSettings = async (): Promise<Settings> => {
-  const result = await chrome.storage.local.get<StoredSettings>(
-    Object.values(settingsKeys),
-  );
-  return toSettings(result);
+  const stored = await getStoredSettings();
+  return toSettings(stored);
+};
+
+export const getSettingsByApiType = async (
+  apiType: ApiType,
+): Promise<Settings> => {
+  const stored = await getStoredSettings();
+  return resolveSettingsByApiType(stored, apiType);
+};
+
+const applyBackendSettings = ({
+  apiType,
+  payload,
+  settings,
+}: {
+  apiType: ApiType;
+  payload: StoredSettings;
+  settings: Settings;
+}): void => {
+  payload[settingsKeys.apiKeyByApiType[apiType]] = settings.apiKey;
+  payload[settingsKeys.baseUrlByApiType[apiType]] = settings.baseUrl;
+  payload[settingsKeys.modelByApiType[apiType]] = settings.model;
+  payload[settingsKeys.requestBodyOverridesByApiType[apiType]] =
+    settings.requestBodyOverrides;
 };
 
 const setSettings = async (settings: Settings): Promise<void> => {
-  await chrome.storage.local.set<StoredSettings>({
-    [settingsKeys.apiKey]: settings.apiKey,
-    [settingsKeys.baseUrl]: settings.baseUrl,
-    [settingsKeys.model]: settings.model,
+  const payload: StoredSettings = {
     [settingsKeys.apiType]: settings.apiType,
-    [settingsKeys.requestBodyOverrides]: settings.requestBodyOverrides,
     [settingsKeys.theme]: normalizeTheme(settings.theme),
     [settingsKeys.themeColor]: normalizeThemeColor(settings.themeColor),
     [settingsKeys.themeVariant]: normalizeThemeVariant(settings.themeVariant),
     [settingsKeys.followMode]: settings.followMode,
     [settingsKeys.language]: settings.language,
+  };
+  applyBackendSettings({
+    apiType: settings.apiType,
+    payload,
+    settings,
   });
+  await chrome.storage.local.set<StoredSettings>(payload);
 };
 
 export const updateSettings = async (
   patch: SettingsPatch,
 ): Promise<Settings> => {
-  const current = await getSettings(),
+  const stored = await getStoredSettings(),
+    current = toSettings(stored),
+    nextApiType =
+      typeof patch.apiType === "string"
+        ? normalizeApiType(patch.apiType)
+        : current.apiType,
+    activeSettings = resolveSettingsByApiType(stored, nextApiType),
     next = normalizeSettings(
       {
-        ...current,
+        ...activeSettings,
         ...patch,
+        apiType: nextApiType,
       },
       { themeColorMode: "strict" },
     );

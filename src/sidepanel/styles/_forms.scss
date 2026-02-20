@@ -41,9 +41,10 @@ md-filled-select {
 }
 
 .key-content {
+  --settings-content-gap: 24px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--settings-content-gap);
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -75,6 +76,16 @@ md-filled-select {
 
 .key-content .hidden {
   display: none !important;
+}
+
+.key-content .settings-section-hidden {
+  max-height: 0 !important;
+  opacity: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  margin: 0 !important;
+  margin-top: calc(var(--settings-content-gap) * -1) !important;
+  gap: 0 !important;
 }
 
 .key-header {

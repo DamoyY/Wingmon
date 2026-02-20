@@ -31,8 +31,12 @@ export const setCodexAuthModeVisible = (visible: boolean): void => {
       "Codex 登录区域",
       "Codex 登录区域未找到",
     );
-  apiCredentialFields.classList.toggle("hidden", visible);
-  codexAuthSection.classList.toggle("hidden", !visible);
+  apiCredentialFields.classList.remove("hidden");
+  codexAuthSection.classList.remove("hidden");
+  apiCredentialFields.classList.toggle("settings-section-hidden", visible);
+  codexAuthSection.classList.toggle("settings-section-hidden", !visible);
+  apiCredentialFields.setAttribute("aria-hidden", String(visible));
+  codexAuthSection.setAttribute("aria-hidden", String(!visible));
 };
 
 export const setCodexAuthStatus = (message: string): void => {

@@ -32,6 +32,7 @@ type NormalizedSettings = Pick<
   | "apiKey"
   | "apiType"
   | "baseUrl"
+  | "language"
   | "model"
   | "requestBodyOverrides"
   | "theme"
@@ -72,6 +73,7 @@ const ensureSettingsInput = (settings: SettingsInputOrNull): SettingsInput =>
       apiKey: normalized.apiKey,
       apiType: normalized.apiType,
       baseUrl: normalized.baseUrl,
+      language: normalized.language,
       model: normalized.model,
       requestBodyOverrides: normalized.requestBodyOverrides,
       theme: normalized.theme,

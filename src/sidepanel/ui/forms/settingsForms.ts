@@ -40,6 +40,12 @@ type SettingsFormElements = {
 const selectValue = (selectEl: SelectElement, value: string) => {
     selectEl.select(value);
   },
+  updateSelectValue = (selectEl: SelectElement, value: string): void => {
+    if (selectEl.value === value) {
+      return;
+    }
+    selectValue(selectEl, value);
+  },
   readInputValue = (input: TextInputElement | null, label: string): string => {
     if (!input) {
       throw new Error(`${label}输入框不存在`);
@@ -155,19 +161,19 @@ export const updateSettingsFormValues = (
     );
   }
   if (Object.hasOwn(values, "apiType")) {
-    selectValue(apiTypeSelect, ensureString(values.apiType, "API 类型"));
+    updateSelectValue(apiTypeSelect, ensureString(values.apiType, "API 类型"));
   }
   if (Object.hasOwn(values, "language")) {
-    selectValue(languageSelect, ensureString(values.language, "语言"));
+    updateSelectValue(languageSelect, ensureString(values.language, "语言"));
   }
   if (Object.hasOwn(values, "theme")) {
-    selectValue(themeSelect, ensureString(values.theme, "主题"));
+    updateSelectValue(themeSelect, ensureString(values.theme, "主题"));
   }
   if (Object.hasOwn(values, "themeColor")) {
     themeColorInput.value = ensureString(values.themeColor, "主题色");
   }
   if (Object.hasOwn(values, "themeVariant")) {
-    selectValue(
+    updateSelectValue(
       themeVariantSelect,
       ensureString(values.themeVariant, "Variant"),
     );
