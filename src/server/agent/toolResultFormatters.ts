@@ -19,12 +19,12 @@ import {
   type ToolCall,
   type ToolMessageContext,
   type ToolPageReadEvent,
-  toolNames,
 } from "./definitions.ts";
 import {
   parseOptionalPositiveInteger,
   parseRequiredPositiveInteger,
 } from "./validation/index.js";
+import { toolNames, toolStatusMap } from "./toolConstants.ts";
 import { buildPageReadResult } from "./pageReadHelpers.ts";
 
 type PageReadEventOptions = {
@@ -47,18 +47,6 @@ type NormalizedPageReadResult = {
 
 export { AGENT_STATUS };
 export type { AgentStatus };
-
-const TOOL_STATUS_MAP: Partial<Record<string, AgentStatus>> = {
-  [toolNames.clickButton]: AGENT_STATUS.operating,
-  [toolNames.closeBrowserPage]: AGENT_STATUS.operating,
-  [toolNames.enterText]: AGENT_STATUS.operating,
-  [toolNames.find]: AGENT_STATUS.searching,
-  [toolNames.getPageMarkdown]: AGENT_STATUS.browsing,
-  [toolNames.listTabs]: AGENT_STATUS.browsing,
-  [toolNames.runConsoleCommand]: AGENT_STATUS.coding,
-  [toolNames.showHtml]: AGENT_STATUS.coding,
-  wait: AGENT_STATUS.thinking,
-};
 
 const resolveBoolean = (value: boolean, fieldName: string): boolean => {
   if (typeof value !== "boolean") {
@@ -159,7 +147,7 @@ export const resolveStatusFromToolCalls = (
         ? AGENT_STATUS.searching
         : AGENT_STATUS.browsing;
     }
-    const mapped = TOOL_STATUS_MAP[name];
+    const mapped = toolStatusMap[name];
     if (mapped !== undefined) {
       return mapped;
     }

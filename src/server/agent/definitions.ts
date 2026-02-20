@@ -17,25 +17,13 @@ import {
   type ToolJsonSchema,
   createToolArgsValidator,
 } from "./validation/index.js";
+import { type ToolNameKey, toolNameKeys, toolNames } from "./toolConstants.ts";
 import type { PageMarkdownData } from "./pageReadHelpers.ts";
 import type { ToolImageInput } from "./toolResultTypes.ts";
 import ToolInputError from "./errors.ts";
 import toolModules from "./tools/index.ts";
 
 const TOOL_STRICT = true;
-
-export type ToolNameKey =
-  | "clickButton"
-  | "closeBrowserPage"
-  | "enterText"
-  | "find"
-  | "getPageMarkdown"
-  | "listTabs"
-  | "openBrowserPage"
-  | "runConsoleCommand"
-  | "showHtml";
-
-export type ToolNameMap = Record<ToolNameKey, string>;
 
 type ToolParameters = ToolJsonSchema;
 
@@ -168,36 +156,9 @@ type ResponsesToolDefinition = {
 
 export type ToolDefinition = ChatToolDefinition | ResponsesToolDefinition;
 
-const ensureToolName = (
-    key: ToolNameKey,
-    value: string | undefined,
-  ): string => {
-    if (!value) {
-      throw new Error(`工具 key 缺失：${key}`);
-    }
-    return value;
-  },
-  resolveToolNames = (names: Partial<ToolNameMap>): ToolNameMap => ({
-    clickButton: ensureToolName("clickButton", names.clickButton),
-    closeBrowserPage: ensureToolName(
-      "closeBrowserPage",
-      names.closeBrowserPage,
-    ),
-    enterText: ensureToolName("enterText", names.enterText),
-    find: ensureToolName("find", names.find),
-    getPageMarkdown: ensureToolName("getPageMarkdown", names.getPageMarkdown),
-    listTabs: ensureToolName("listTabs", names.listTabs),
-    openBrowserPage: ensureToolName("openBrowserPage", names.openBrowserPage),
-    runConsoleCommand: ensureToolName(
-      "runConsoleCommand",
-      names.runConsoleCommand,
-    ),
-    showHtml: ensureToolName("showHtml", names.showHtml),
-  });
-
 const validatedTools: ToolModule[] = [],
   toolModuleByName = new Map<string, ToolModule>(),
-  resolvedToolNames: Partial<ToolNameMap> = {};
+  usedToolKeys = new Set<ToolNameKey>();
 
 toolModules.forEach((tool) => {
   const name = tool.name.trim();
@@ -213,10 +174,16 @@ toolModules.forEach((tool) => {
   }
   const key = tool.key;
   if (key !== undefined) {
-    if (resolvedToolNames[key]) {
+    if (usedToolKeys.has(key)) {
       throw new Error(`重复的工具 key：${key}`);
     }
-    resolvedToolNames[key] = name;
+    const expectedToolName = toolNames[key];
+    if (expectedToolName !== name) {
+      throw new Error(
+        `工具 key 与 name 不一致：${key} -> ${name}，预期 ${expectedToolName}`,
+      );
+    }
+    usedToolKeys.add(key);
   }
   const schemaArgsValidator = createToolArgsValidator(tool.parameters),
     validateArgs = (args: JsonValue): JsonValue => {
@@ -242,7 +209,11 @@ toolModules.forEach((tool) => {
   validatedTools.push(normalized);
 });
 
-export const toolNames = Object.freeze(resolveToolNames(resolvedToolNames));
+toolNameKeys.forEach((toolKey) => {
+  if (!usedToolKeys.has(toolKey)) {
+    throw new Error(`工具 key 缺失：${toolKey}`);
+  }
+});
 
 const buildToolDefinition = (
   tool: ToolModule,

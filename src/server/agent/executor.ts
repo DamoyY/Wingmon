@@ -22,7 +22,6 @@ import {
   getToolCallName,
   getToolModule,
   parseToolArguments,
-  toolNames,
 } from "./definitions.ts";
 import { buildToolErrorOutput, defaultToolSuccessOutput } from "./output.ts";
 import { extractErrorMessage, isRecord } from "../../shared/index.ts";
@@ -31,6 +30,7 @@ import {
   shouldFollowMode,
   syncPageHash,
 } from "./pageReadHelpers.ts";
+import { toolNames } from "./toolConstants.ts";
 import ToolInputError from "./errors.ts";
 
 type ToolOutput = {

@@ -1,11 +1,11 @@
 import type {
   ToolExecutionContext,
   ToolMessageContext,
-  ToolNameKey,
   ToolPageReadDedupeAction,
 } from "../definitions.ts";
 import type { JsonValue } from "../../../shared/index.ts";
 import type { ToolJsonSchema } from "../validation/index.js";
+import type { ToolNameKey } from "../toolConstants.ts";
 import clickButton from "./clickButtonTool.ts";
 import closeBrowserPage from "./closeBrowserPage.ts";
 import enterText from "./enterTextTool.ts";

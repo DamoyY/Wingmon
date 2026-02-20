@@ -7,10 +7,11 @@ import {
   type PageMarkdownData,
   fetchPageMarkdownData,
 } from "../agent/pageReadHelpers.ts";
-import { type ToolCall, toolNames } from "../agent/definitions.ts";
+import { type ToolCall } from "../agent/definitions.ts";
 import { addMessage } from "../../shared/state/panelStateContext.ts";
 import { createRandomId } from "../../shared/index.ts";
 import { handleToolCalls } from "../agent/executor.ts";
+import { toolNames } from "../agent/toolConstants.ts";
 
 type GetPageArguments = {
   pageNumber: number;
