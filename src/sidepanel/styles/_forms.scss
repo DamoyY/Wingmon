@@ -41,7 +41,7 @@ md-filled-select {
 }
 
 .key-content {
-  --settings-content-gap: 24px;
+  --settings-content-gap: 16px;
   display: flex;
   flex-direction: column;
   gap: var(--settings-content-gap);
@@ -50,10 +50,54 @@ md-filled-select {
   overflow-y: auto;
   justify-content: flex-start;
   padding: calc(var(--settings-top-bar-height) + 16px) 16px 16px;
+  background: var(--md-sys-color-surface);
 }
 
-.key-content md-filled-text-field,
-.key-content md-filled-select {
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-surface-container-low) 88%,
+    transparent
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--md-sys-color-outline-variant) 45%, transparent);
+}
+
+.settings-section__header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-section__title {
+  margin: 0;
+  color: var(--md-sys-color-on-surface);
+}
+
+.settings-section__description {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+#settings-hint {
+  margin: 0;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.settings-section__fields {
+  --settings-section-field-gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--settings-section-field-gap);
+}
+
+.key-content .settings-section__fields md-filled-text-field,
+.key-content .settings-section__fields md-filled-select {
   min-height: 64px;
 }
 
@@ -61,17 +105,16 @@ md-filled-select {
 .key-content #codex-auth-section {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--settings-section-field-gap);
 }
 
 .key-content #codex-auth-section {
-  gap: 12px;
+  gap: 10px;
 }
 
 .key-content #codex-auth-status {
   margin: 0;
   color: var(--md-sys-color-on-surface-variant);
-  text-align: center;
 }
 
 .key-content .hidden {
@@ -84,7 +127,7 @@ md-filled-select {
   overflow: hidden !important;
   pointer-events: none !important;
   margin: 0 !important;
-  margin-top: calc(var(--settings-content-gap) * -1) !important;
+  margin-top: calc(var(--settings-section-field-gap) * -1) !important;
   gap: 0 !important;
 }
 

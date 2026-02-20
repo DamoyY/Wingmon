@@ -28,152 +28,232 @@
           </div>
         </header>
         <div class="key-content">
-          <p
-            id="settings-hint"
-            class="md-typescale-body-medium"
-            data-i18n="settingsHint"
-          >
-            首次使用需要输入 API Key、Base URL 和模型，仅保存在本地。
-          </p>
-          <md-filled-select
-            id="language-select"
-            data-i18n-label="language"
-            label="语言"
-          >
-            <md-select-option value="zh_CN">
-              <div slot="headline">简体中文</div>
-            </md-select-option>
-            <md-select-option value="en">
-              <div slot="headline">English</div>
-            </md-select-option>
-          </md-filled-select>
-          <md-filled-select
-            id="api-type-select"
-            data-i18n-label="apiType"
-            label="API 类型"
-          >
-            <md-select-option value="chat">
-              <div slot="headline">Chat Completion API (Default)</div>
-            </md-select-option>
-            <md-select-option value="codex">
-              <div slot="headline" data-i18n="apiTypeCodexRisk">
-                Codex Backend [Risk]
-              </div>
-            </md-select-option>
-            <md-select-option value="gemini">
-              <div slot="headline">Gemini API (Google)</div>
-            </md-select-option>
-            <md-select-option value="messages">
-              <div slot="headline">Messages API (Claude)</div>
-            </md-select-option>
-            <md-select-option value="responses">
-              <div slot="headline">Response API (OpenAI)</div>
-            </md-select-option>
-          </md-filled-select>
-          <div id="api-credential-fields">
-            <md-filled-text-field
-              id="base-url-input"
-              label="Base URL"
-              placeholder="https://api.openai.com/v1"
-              autocomplete="off"
-            ></md-filled-text-field>
-            <md-filled-text-field
-              id="api-key-input"
-              label="API Key"
-              autocomplete="off"
-            ></md-filled-text-field>
-          </div>
-          <div id="codex-auth-section" class="hidden">
-            <md-filled-button
-              id="codex-login-button"
-              type="button"
-              data-i18n="codexLoginAction"
-              >登录 ChatGPT 账号</md-filled-button
+          <section class="settings-section">
+            <header class="settings-section__header">
+              <h2
+                class="settings-section__title md-typescale-title-small"
+                data-i18n="settingsSectionGeneralTitle"
+              >
+                通用设置
+              </h2>
+              <p
+                class="settings-section__description md-typescale-body-small"
+                data-i18n="settingsSectionGeneralDescription"
+              >
+                选择界面语言和服务后端。
+              </p>
+            </header>
+            <p
+              id="settings-hint"
+              class="md-typescale-body-medium"
+              data-i18n="settingsHint"
             >
-            <p id="codex-auth-status" class="md-typescale-body-small"></p>
-          </div>
-          <md-filled-text-field
-            id="model-input"
-            data-i18n-label="model"
-            label="Model"
-            placeholder="gpt-5"
-            autocomplete="off"
-          ></md-filled-text-field>
-          <md-filled-select
-            id="theme-select"
-            data-i18n-label="theme"
-            label="主题"
-          >
-            <md-select-option value="auto">
-              <div slot="headline" data-i18n="themeAuto">自动</div>
-            </md-select-option>
-            <md-select-option value="light">
-              <div slot="headline" data-i18n="themeLight">亮色</div>
-            </md-select-option>
-            <md-select-option value="dark">
-              <div slot="headline" data-i18n="themeDark">暗色</div>
-            </md-select-option>
-          </md-filled-select>
-          <md-filled-text-field
-            id="theme-color-input"
-            data-i18n-label="themeColor"
-            label="主题色"
-            placeholder="#1c7ff8"
-            autocomplete="off"
-          ></md-filled-text-field>
-          <md-filled-select
-            id="theme-variant-select"
-            data-i18n-label="themeVariant"
-            label="Variant"
-          >
-            <md-select-option value="neutral">
-              <div slot="headline" data-i18n="themeVariantNeutral">Neutral</div>
-            </md-select-option>
-            <md-select-option value="tonal_spot">
-              <div slot="headline" data-i18n="themeVariantTonalSpot">
-                Tonal Spot
+              首次使用需要输入 API Key、Base URL 和模型，仅保存在本地。
+            </p>
+            <div class="settings-section__fields">
+              <md-filled-select
+                id="language-select"
+                data-i18n-label="language"
+                label="语言"
+              >
+                <md-select-option value="zh_CN">
+                  <div slot="headline">简体中文</div>
+                </md-select-option>
+                <md-select-option value="en">
+                  <div slot="headline">English</div>
+                </md-select-option>
+              </md-filled-select>
+              <md-filled-select
+                id="api-type-select"
+                data-i18n-label="apiType"
+                label="API 类型"
+              >
+                <md-select-option value="chat">
+                  <div slot="headline">Chat Completion API (Default)</div>
+                </md-select-option>
+                <md-select-option value="codex">
+                  <div slot="headline" data-i18n="apiTypeCodexRisk">
+                    Codex Backend [Risk]
+                  </div>
+                </md-select-option>
+                <md-select-option value="gemini">
+                  <div slot="headline">Gemini API (Google)</div>
+                </md-select-option>
+                <md-select-option value="messages">
+                  <div slot="headline">Messages API (Claude)</div>
+                </md-select-option>
+                <md-select-option value="responses">
+                  <div slot="headline">Response API (OpenAI)</div>
+                </md-select-option>
+              </md-filled-select>
+            </div>
+          </section>
+          <section class="settings-section">
+            <header class="settings-section__header">
+              <h2
+                class="settings-section__title md-typescale-title-small"
+                data-i18n="settingsSectionModelTitle"
+              >
+                模型接入
+              </h2>
+              <p
+                class="settings-section__description md-typescale-body-small"
+                data-i18n="settingsSectionModelDescription"
+              >
+                配置模型、地址和鉴权信息。
+              </p>
+            </header>
+            <div class="settings-section__fields">
+              <div id="api-credential-fields">
+                <md-filled-text-field
+                  id="base-url-input"
+                  label="Base URL"
+                  placeholder="https://api.openai.com/v1"
+                  autocomplete="off"
+                ></md-filled-text-field>
+                <md-filled-text-field
+                  id="api-key-input"
+                  label="API Key"
+                  autocomplete="off"
+                ></md-filled-text-field>
               </div>
-            </md-select-option>
-            <md-select-option value="vibrant">
-              <div slot="headline" data-i18n="themeVariantVibrant">Vibrant</div>
-            </md-select-option>
-            <md-select-option value="expressive">
-              <div slot="headline" data-i18n="themeVariantExpressive">
-                Expressive
+              <div id="codex-auth-section" class="hidden">
+                <md-filled-button
+                  id="codex-login-button"
+                  type="button"
+                  data-i18n="codexLoginAction"
+                  >登录 ChatGPT 账号</md-filled-button
+                >
+                <p id="codex-auth-status" class="md-typescale-body-small"></p>
               </div>
-            </md-select-option>
-            <md-select-option value="fidelity">
-              <div slot="headline" data-i18n="themeVariantFidelity">
-                Fidelity
-              </div>
-            </md-select-option>
-            <md-select-option value="content">
-              <div slot="headline" data-i18n="themeVariantContent">Content</div>
-            </md-select-option>
-            <md-select-option value="monochrome">
-              <div slot="headline" data-i18n="themeVariantMonochrome">
-                Monochrome
-              </div>
-            </md-select-option>
-            <md-select-option value="rainbow">
-              <div slot="headline" data-i18n="themeVariantRainbow">Rainbow</div>
-            </md-select-option>
-            <md-select-option value="fruit_salad">
-              <div slot="headline" data-i18n="themeVariantFruitSalad">
-                Fruit Salad
-              </div>
-            </md-select-option>
-          </md-filled-select>
-          <md-filled-text-field
-            id="request-body-overrides-input"
-            type="textarea"
-            rows="8"
-            data-i18n-label="requestBodyOverrides"
-            data-i18n-placeholder="requestBodyOverridesPlaceholder"
-            label="Request Body Overrides"
-            placeholder="- path: model\n  value: gpt-5"
-            autocomplete="off"
-          ></md-filled-text-field>
+              <md-filled-text-field
+                id="model-input"
+                data-i18n-label="model"
+                label="Model"
+                placeholder="gpt-5"
+                autocomplete="off"
+              ></md-filled-text-field>
+            </div>
+          </section>
+          <section class="settings-section">
+            <header class="settings-section__header">
+              <h2
+                class="settings-section__title md-typescale-title-small"
+                data-i18n="settingsSectionAppearanceTitle"
+              >
+                外观主题
+              </h2>
+              <p
+                class="settings-section__description md-typescale-body-small"
+                data-i18n="settingsSectionAppearanceDescription"
+              >
+                自定义亮暗模式和主题配色。
+              </p>
+            </header>
+            <div class="settings-section__fields">
+              <md-filled-select
+                id="theme-select"
+                data-i18n-label="theme"
+                label="主题"
+              >
+                <md-select-option value="auto">
+                  <div slot="headline" data-i18n="themeAuto">自动</div>
+                </md-select-option>
+                <md-select-option value="light">
+                  <div slot="headline" data-i18n="themeLight">亮色</div>
+                </md-select-option>
+                <md-select-option value="dark">
+                  <div slot="headline" data-i18n="themeDark">暗色</div>
+                </md-select-option>
+              </md-filled-select>
+              <md-filled-text-field
+                id="theme-color-input"
+                data-i18n-label="themeColor"
+                label="主题色"
+                placeholder="#1c7ff8"
+                autocomplete="off"
+              ></md-filled-text-field>
+              <md-filled-select
+                id="theme-variant-select"
+                data-i18n-label="themeVariant"
+                label="Variant"
+              >
+                <md-select-option value="neutral">
+                  <div slot="headline" data-i18n="themeVariantNeutral">
+                    Neutral
+                  </div>
+                </md-select-option>
+                <md-select-option value="tonal_spot">
+                  <div slot="headline" data-i18n="themeVariantTonalSpot">
+                    Tonal Spot
+                  </div>
+                </md-select-option>
+                <md-select-option value="vibrant">
+                  <div slot="headline" data-i18n="themeVariantVibrant">
+                    Vibrant
+                  </div>
+                </md-select-option>
+                <md-select-option value="expressive">
+                  <div slot="headline" data-i18n="themeVariantExpressive">
+                    Expressive
+                  </div>
+                </md-select-option>
+                <md-select-option value="fidelity">
+                  <div slot="headline" data-i18n="themeVariantFidelity">
+                    Fidelity
+                  </div>
+                </md-select-option>
+                <md-select-option value="content">
+                  <div slot="headline" data-i18n="themeVariantContent">
+                    Content
+                  </div>
+                </md-select-option>
+                <md-select-option value="monochrome">
+                  <div slot="headline" data-i18n="themeVariantMonochrome">
+                    Monochrome
+                  </div>
+                </md-select-option>
+                <md-select-option value="rainbow">
+                  <div slot="headline" data-i18n="themeVariantRainbow">
+                    Rainbow
+                  </div>
+                </md-select-option>
+                <md-select-option value="fruit_salad">
+                  <div slot="headline" data-i18n="themeVariantFruitSalad">
+                    Fruit Salad
+                  </div>
+                </md-select-option>
+              </md-filled-select>
+            </div>
+          </section>
+          <section class="settings-section">
+            <header class="settings-section__header">
+              <h2
+                class="settings-section__title md-typescale-title-small"
+                data-i18n="settingsSectionAdvancedTitle"
+              >
+                高级配置
+              </h2>
+              <p
+                class="settings-section__description md-typescale-body-small"
+                data-i18n="settingsSectionAdvancedDescription"
+              >
+                覆写请求体字段以调试或扩展能力。
+              </p>
+            </header>
+            <div class="settings-section__fields">
+              <md-filled-text-field
+                id="request-body-overrides-input"
+                type="textarea"
+                rows="8"
+                data-i18n-label="requestBodyOverrides"
+                data-i18n-placeholder="requestBodyOverridesPlaceholder"
+                label="Request Body Overrides"
+                placeholder="- path: model\n  value: gpt-5"
+                autocomplete="off"
+              ></md-filled-text-field>
+            </div>
+          </section>
           <div id="key-status" class="status md-typescale-label-small"></div>
         </div>
       </section>

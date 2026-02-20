@@ -209,6 +209,30 @@
   "settingsHint": {
     "message": "首次使用需要输入 API Key、Base URL 和模型，仅保存在本地。"
   },
+  "settingsSectionGeneralTitle": {
+    "message": "通用设置"
+  },
+  "settingsSectionGeneralDescription": {
+    "message": "选择界面语言和服务后端。"
+  },
+  "settingsSectionModelTitle": {
+    "message": "模型接入"
+  },
+  "settingsSectionModelDescription": {
+    "message": "配置模型、地址和鉴权信息。"
+  },
+  "settingsSectionAppearanceTitle": {
+    "message": "外观主题"
+  },
+  "settingsSectionAppearanceDescription": {
+    "message": "自定义亮暗模式和主题配色。"
+  },
+  "settingsSectionAdvancedTitle": {
+    "message": "高级配置"
+  },
+  "settingsSectionAdvancedDescription": {
+    "message": "覆写请求体字段以调试或扩展能力。"
+  },
   "apiKey": {
     "message": "API Key"
   },

@@ -209,6 +209,30 @@
   "settingsHint": {
     "message": "For first-time use, please enter API Key, Base URL, and Model. These are only stored locally."
   },
+  "settingsSectionGeneralTitle": {
+    "message": "General"
+  },
+  "settingsSectionGeneralDescription": {
+    "message": "Choose interface language and service backend."
+  },
+  "settingsSectionModelTitle": {
+    "message": "Model Access"
+  },
+  "settingsSectionModelDescription": {
+    "message": "Configure model, endpoint, and credentials."
+  },
+  "settingsSectionAppearanceTitle": {
+    "message": "Appearance"
+  },
+  "settingsSectionAppearanceDescription": {
+    "message": "Customize theme mode and color style."
+  },
+  "settingsSectionAdvancedTitle": {
+    "message": "Advanced"
+  },
+  "settingsSectionAdvancedDescription": {
+    "message": "Override request fields for debugging and extension."
+  },
   "apiKey": {
     "message": "API Key"
   },
