@@ -193,4 +193,15 @@ const fillSettingsForm = (settings: SettingsFormValues) => {
     themeVariant: normalizeThemeVariant(settings.themeVariant),
   });
 };
+
+export const refreshSettingsSelectDisplayText = (): void => {
+  const { apiTypeSelect, languageSelect, themeSelect, themeVariantSelect } =
+    getSettingsFormElements();
+  [apiTypeSelect, languageSelect, themeSelect, themeVariantSelect].forEach(
+    (selectEl) => {
+      selectValue(selectEl, selectEl.value);
+    },
+  );
+};
+
 export default fillSettingsForm;

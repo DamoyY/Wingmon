@@ -16,6 +16,7 @@ import {
   elements,
   fillSettingsForm,
   readSettingsFormValues,
+  refreshSettingsSelectDisplayText,
   setCodexAuthModeVisible,
   setCodexAuthStatus,
   setCodexLoginButtonBusy,
@@ -124,6 +125,7 @@ const applySettingsEffect = async (
     case "localeChanged":
       await setLocale(effect.locale);
       translateDOM();
+      refreshSettingsSelectDisplayText();
       syncCodexAuthUi();
       return;
     case "viewSwitchRequested":

@@ -1,5 +1,6 @@
 export {
   default as fillSettingsForm,
+  refreshSettingsSelectDisplayText,
   readSettingsFormValues,
   updateSettingsFormValues,
 } from "./settingsForms.ts";
