@@ -1,8 +1,9 @@
 import {
   AGENT_STATUS,
   type AgentStatus,
-  resolveStatusFromToolCalls,
-} from "../agent/toolResultFormatters.ts";
+  createRandomId,
+  t,
+} from "../../shared/index.ts";
 import { type Settings, buildSystemPrompt } from "../services/index.ts";
 import { type ToolCall, getToolDefinitions } from "../agent/definitions.ts";
 import {
@@ -11,16 +12,13 @@ import {
   state,
   updateMessage,
 } from "../../shared/state/panelStateContext.ts";
-import { createRandomId, t } from "../../shared/index.ts";
 import { handleToolCalls } from "../agent/executor.ts";
 import requestModel from "../api/client.ts";
+import { resolveStatusFromToolCalls } from "../agent/toolResultFormatters.ts";
 
 type StatusReporter = (status: AgentStatus) => void;
 
-type RequestChunk = {
-  delta: string;
-  toolCalls: ToolCall[];
-};
+type RequestChunk = { delta: string; toolCalls: ToolCall[] };
 
 type CreateResponseStreamPayload = {
   settings: Settings;

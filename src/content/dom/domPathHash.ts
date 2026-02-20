@@ -9,6 +9,28 @@ const hashMultiplier = 131;
 const hashModulo = 4294967296;
 const encodedHashLength = 8;
 
+const resolveComposedParent = (element: Element): Element | null => {
+  if (element.parentElement) {
+    return element.parentElement;
+  }
+  const rootNode = element.getRootNode();
+  if (rootNode instanceof ShadowRoot) {
+    return rootNode.host;
+  }
+  return null;
+};
+
+const isWithinComposedRoot = (element: Element, root: Element): boolean => {
+  let current: Element | null = element;
+  while (current) {
+    if (current === root) {
+      return true;
+    }
+    current = resolveComposedParent(current);
+  }
+  return false;
+};
+
 export const buildDomPath = (
   element: Element | null,
   root: Element | null,
@@ -20,7 +42,7 @@ export const buildDomPath = (
   if (!root) {
     throw new Error(errorMessages.invalidRoot);
   }
-  if (!root.contains(element)) {
+  if (!isWithinComposedRoot(element, root)) {
     throw new Error(errorMessages.outsideRoot);
   }
   const segments: string[] = [];
@@ -39,7 +61,7 @@ export const buildDomPath = (
     if (current === root) {
       break;
     }
-    current = current.parentElement;
+    current = resolveComposedParent(current);
   }
   if (!segments.length) {
     throw new Error(errorMessages.emptyPath);

@@ -15,10 +15,11 @@ import {
   type ToolImageInput,
   isSupportedPageImageMimeType,
 } from "./toolResultTypes.ts";
-import type {
-  ToolCall,
-  ToolMessageContext,
-  ToolPageReadEvent,
+import {
+  type ToolCall,
+  type ToolMessageContext,
+  type ToolPageReadEvent,
+  toolNames,
 } from "./definitions.ts";
 import {
   parseOptionalPositiveInteger,
@@ -48,14 +49,14 @@ export { AGENT_STATUS };
 export type { AgentStatus };
 
 const TOOL_STATUS_MAP: Partial<Record<string, AgentStatus>> = {
-  click_button: AGENT_STATUS.operating,
-  close_tab: AGENT_STATUS.operating,
-  enter_text: AGENT_STATUS.operating,
-  find: AGENT_STATUS.searching,
-  get_page: AGENT_STATUS.browsing,
-  list_tabs: AGENT_STATUS.browsing,
-  run_console: AGENT_STATUS.coding,
-  show_html: AGENT_STATUS.coding,
+  [toolNames.clickButton]: AGENT_STATUS.operating,
+  [toolNames.closeBrowserPage]: AGENT_STATUS.operating,
+  [toolNames.enterText]: AGENT_STATUS.operating,
+  [toolNames.find]: AGENT_STATUS.searching,
+  [toolNames.getPageMarkdown]: AGENT_STATUS.browsing,
+  [toolNames.listTabs]: AGENT_STATUS.browsing,
+  [toolNames.runConsoleCommand]: AGENT_STATUS.coding,
+  [toolNames.showHtml]: AGENT_STATUS.coding,
   wait: AGENT_STATUS.thinking,
 };
 
@@ -153,7 +154,7 @@ export const resolveStatusFromToolCalls = (
     if (!name) {
       continue;
     }
-    if (name === "open_page") {
+    if (name === toolNames.openBrowserPage) {
       return isGoogleSearchOpen(resolveToolCallArguments(call))
         ? AGENT_STATUS.searching
         : AGENT_STATUS.browsing;

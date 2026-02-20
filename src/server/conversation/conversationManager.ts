@@ -1,7 +1,4 @@
-import {
-  AGENT_STATUS,
-  type AgentStatus,
-} from "../agent/toolResultFormatters.ts";
+import { AGENT_STATUS, type AgentStatus } from "../../shared/index.ts";
 import {
   applyNonStreamedResponse,
   applyStreamedResponse,

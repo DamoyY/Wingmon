@@ -1,29 +1,25 @@
-import { AGENT_STATUS, type AgentStatus } from "./agentStatus.ts";
 import {
+  type AgentStatus,
+  agentStatuses,
+  isAgentStatus,
+} from "./agentStatus.ts";
+import {
+  type JsonSchema,
   isJsonObject,
   isJsonSchemaValue,
   isJsonValue,
-  type JsonSchema,
 } from "../utils/runtimeValidation.ts";
 import {
-  isMessageRecordValue,
-  panelMessageRecordSchema,
   type MessageFieldValue,
   type MessageRecord,
+  isMessageRecordValue,
+  panelMessageRecordSchema,
 } from "../state/panelStateStore.ts";
 export const PANEL_SERVER_PORT_NAME = "wingmon-panel-server-port";
 export const PANEL_SERVER_COMMAND_TYPE = "panelServerCommand";
 export const PANEL_SERVER_SNAPSHOT_TYPE = "panelServerSnapshot";
 
-export const panelAgentStatuses = [
-  AGENT_STATUS.idle,
-  AGENT_STATUS.thinking,
-  AGENT_STATUS.speaking,
-  AGENT_STATUS.browsing,
-  AGENT_STATUS.searching,
-  AGENT_STATUS.operating,
-  AGENT_STATUS.coding,
-] as const satisfies readonly AgentStatus[];
+export const panelAgentStatuses = agentStatuses;
 
 export type PanelAgentStatus = AgentStatus;
 
@@ -127,10 +123,7 @@ const panelStateSnapshotSchema: JsonSchema = {
 };
 
 const isPanelAgentStatus = (value: unknown): value is PanelAgentStatus => {
-  if (typeof value !== "string") {
-    return false;
-  }
-  return panelAgentStatuses.some((status) => status === value);
+  return isAgentStatus(value);
 };
 
 export const isPanelStateSnapshot = (

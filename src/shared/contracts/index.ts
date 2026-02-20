@@ -1,4 +1,9 @@
-export { AGENT_STATUS, type AgentStatus } from "./agentStatus.ts";
+export {
+  AGENT_STATUS,
+  agentStatuses,
+  isAgentStatus,
+  type AgentStatus,
+} from "./agentStatus.ts";
 export * from "./contentScriptRpc.ts";
 export {
   OFFSCREEN_HEARTBEAT_TYPE,

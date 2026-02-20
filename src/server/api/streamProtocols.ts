@@ -68,6 +68,23 @@ const toChatExtractionPayload = (data: ChatCompletion): ChatCompletionData => {
   }),
   extractChatReply = (data: ChatCompletion): string =>
     data.choices.at(0)?.message.content?.trim() || "",
+  getGeminiCandidateParts = (data: GenerateContentResponse): Part[] => {
+    const candidate = data.candidates?.at(0),
+      parts = candidate?.content?.parts;
+    if (!Array.isArray(parts)) {
+      return [];
+    }
+    return parts;
+  },
+  extractGeminiText = (data: GenerateContentResponse): string =>
+    getGeminiCandidateParts(data)
+      .filter(
+        (part): part is Part & { text: string } =>
+          typeof part.text === "string" &&
+          !(typeof part.thought === "boolean" && part.thought),
+      )
+      .map((part) => part.text)
+      .join(""),
   serializeGeminiFunctionArguments = (args: unknown): string => {
     if (typeof args === "string") {
       return args;
@@ -118,12 +135,7 @@ const toChatExtractionPayload = (data: ChatCompletion): ChatCompletionData => {
   extractGeminiFunctionCallParts = (
     data: GenerateContentResponse,
   ): Array<Part & { functionCall: FunctionCall }> => {
-    const candidate = data.candidates?.at(0),
-      parts = candidate?.content?.parts;
-    if (!Array.isArray(parts)) {
-      return [];
-    }
-    return parts.filter(
+    return getGeminiCandidateParts(data).filter(
       (part): part is Part & { functionCall: FunctionCall } =>
         part.functionCall !== undefined,
     );
@@ -231,12 +243,12 @@ export const responsesProtocolHandlers: ResponsesProtocolHandlers = {
 };
 
 export const geminiProtocolHandlers: GeminiProtocolHandlers = {
-  extractReply: (data) => data.text?.trim() ?? "",
+  extractReply: (data) => extractGeminiText(data).trim(),
   extractToolCalls: (data) => extractGeminiToolCalls(data),
   stream: async (stream, { onDelta, onChunk }) => {
     const collectedToolCalls = new Map<string, ToolCall>();
     for await (const chunk of stream) {
-      const delta = chunk.text ?? "",
+      const delta = extractGeminiText(chunk),
         toolCalls = extractGeminiToolCalls(chunk);
       if (delta !== "") {
         onDelta(delta);
