@@ -15,10 +15,7 @@ type ContentScriptReadyMessage = RuntimeMessageObject & {
 };
 type BrowserTab = chrome.tabs.Tab;
 type LooseRecord = Record<string, unknown>;
-type HtmlPreviewEntry = {
-  code: string;
-  createdAt: number;
-};
+type HtmlPreviewEntry = { code: string; createdAt: number };
 type HtmlPreviewStoragePayload = Record<string, LooseRecord | undefined>;
 type ContextMenuUpdateProperties = Omit<
   chrome.contextMenus.CreateProperties,
@@ -40,12 +37,7 @@ const contentScriptFilePath = "content.bundle.js",
   pdfContentDispositionRuleId = 1001,
   pdfContentDispositionRule: chrome.declarativeNetRequest.Rule = {
     action: {
-      responseHeaders: [
-        {
-          header: "content-disposition",
-          operation: "remove",
-        },
-      ],
+      responseHeaders: [{ header: "content-disposition", operation: "remove" }],
       type: "modifyHeaders",
     },
     condition: {
@@ -62,6 +54,12 @@ const logError = (message: string, error: unknown = null): void => {
       return;
     }
     console.error(message);
+  },
+  isTabNotFoundRuntimeError = (error: unknown): boolean => {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+    return /No tab with id:/i.test(error.message);
   },
   isRuntimeMessageObject = (
     message: unknown,
@@ -158,9 +156,7 @@ const logError = (message: string, error: unknown = null): void => {
     visible: boolean,
   ): Promise<void> => {
     try {
-      await chrome.contextMenus.update(showHtmlContextMenuId, {
-        visible,
-      });
+      await chrome.contextMenus.update(showHtmlContextMenuId, { visible });
     } catch (error) {
       logError("更新 show-html 右键菜单可见性失败", error);
     }
@@ -178,6 +174,13 @@ const logError = (message: string, error: unknown = null): void => {
     try {
       tab = await chrome.tabs.get(tabId);
     } catch (error) {
+      if (isTabNotFoundRuntimeError(error)) {
+        console.info(
+          `标签页已关闭，改为按当前活动标签页更新菜单可见性: ${String(tabId)}`,
+        );
+        await syncShowHtmlContextMenuVisibilityByActiveTab();
+        return;
+      }
       logError(`读取标签页失败，无法更新菜单可见性: ${String(tabId)}`, error);
       return;
     }
@@ -186,10 +189,7 @@ const logError = (message: string, error: unknown = null): void => {
   syncShowHtmlContextMenuVisibilityByActiveTab = async (): Promise<void> => {
     let tabs: chrome.tabs.Tab[];
     try {
-      tabs = await chrome.tabs.query({
-        active: true,
-        lastFocusedWindow: true,
-      });
+      tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     } catch (error) {
       logError("查询活动标签页失败，无法更新菜单可见性", error);
       return;
@@ -199,10 +199,7 @@ const logError = (message: string, error: unknown = null): void => {
   createOrUpdateShowHtmlContextMenu = async (): Promise<void> => {
     await new Promise<void>((resolve) => {
       chrome.contextMenus.create(
-        {
-          ...showHtmlContextMenuProperties,
-          id: showHtmlContextMenuId,
-        },
+        { ...showHtmlContextMenuProperties, id: showHtmlContextMenuId },
         () => {
           const runtimeError = chrome.runtime.lastError;
           if (!runtimeError) {

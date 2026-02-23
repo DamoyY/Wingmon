@@ -44,6 +44,11 @@ export type RequestModelResult = {
   streamed: boolean;
 };
 
+type StreamRetryTracker = {
+  chunkCount: number;
+  streamStarted: boolean;
+};
+
 class HttpStatusError extends Error {
   status: number;
 
@@ -220,10 +225,7 @@ const findSseBoundary = (
 
 const consumeSseBuffer = (
   buffer: string,
-): {
-  events: OpenAI.Responses.ResponseStreamEvent[];
-  rest: string;
-} => {
+): { events: OpenAI.Responses.ResponseStreamEvent[]; rest: string } => {
   const events: OpenAI.Responses.ResponseStreamEvent[] = [];
   let rest = buffer;
   for (;;) {
@@ -276,6 +278,79 @@ const iterateCodexSseEvents = async function* ({
   yield parseSseEvent(payload);
 };
 
+const logStreamFallback = ({
+  chunkCount,
+  error,
+  requestTag,
+  streamStarted,
+}: {
+  chunkCount: number;
+  error: unknown;
+  requestTag: string;
+  streamStarted: boolean;
+}): void => {
+  const failure = normalizeError(error),
+    logPayload = { chunkCount, message: failure.message, streamStarted };
+  if (streamStarted && chunkCount > 0 && !isEmptyStreamError(error)) {
+    console.warn(`${requestTag} 流式连接中断，改用非流式补全回复`, logPayload);
+    return;
+  }
+  console.warn(`${requestTag} 流式请求失败，回退为非流式`, logPayload);
+};
+
+const executeStreamWithRetry = async <TStream>({
+  consumeStream,
+  extractStatusCode,
+  onChunk,
+  onDelta,
+  onStreamStart,
+  requestStream,
+  requestTag,
+  signal,
+  tracker,
+}: {
+  consumeStream: (
+    stream: TStream,
+    handlers: {
+      onDelta: (delta: string) => void;
+      onChunk: (chunk: ApiRequestChunk) => void;
+    },
+  ) => Promise<ToolCall[]>;
+  extractStatusCode: (error: unknown) => number | null;
+  onChunk: (chunk: ApiRequestChunk) => void;
+  onDelta: (delta: string) => void;
+  onStreamStart: () => void;
+  requestStream: () => Promise<TStream>;
+  requestTag: string;
+  signal: AbortSignal;
+  tracker: StreamRetryTracker;
+}): Promise<ToolCall[]> =>
+  requestWithRetry({
+    extractStatusCode,
+    request: async () => {
+      const stream = await requestStream();
+      if (!tracker.streamStarted) {
+        onStreamStart();
+        tracker.streamStarted = true;
+      }
+      let attemptChunkCount = 0;
+      const toolCalls = await consumeStream(stream, {
+        onChunk: (chunk) => {
+          attemptChunkCount += 1;
+          tracker.chunkCount += 1;
+          onChunk(chunk);
+        },
+        onDelta,
+      });
+      if (attemptChunkCount === 0) {
+        throw createEmptyStreamError();
+      }
+      return toolCalls;
+    },
+    requestTag,
+    signal,
+  });
+
 const codexResponsesApiCall = async (
   settings: Settings,
   body: unknown,
@@ -289,8 +364,8 @@ const codexResponsesApiCall = async (
   }
   const isStream = body.stream === true;
   const response = await postCodexResponses({
-    accessToken: settings.apiKey,
     accept: isStream ? "text/event-stream" : "application/json",
+    accessToken: settings.apiKey,
     baseUrl: settings.baseUrl,
     body,
     signal,
@@ -303,6 +378,102 @@ const codexResponsesApiCall = async (
     throw new Error("Codex 非流式响应为空");
   }
   return parseCodexResponse(responseText);
+};
+
+type StreamFallbackExecution<
+  TStream,
+  TResponse,
+  TStreamRequestBody,
+  TNonStreamRequestBody,
+> = {
+  buildNonStreamRequestBody: () => TNonStreamRequestBody;
+  buildStreamRequestBody: () => TStreamRequestBody;
+  consumeStream: (
+    stream: TStream,
+    handlers: {
+      onDelta: (delta: string) => void;
+      onChunk: (chunk: ApiRequestChunk) => void;
+    },
+  ) => Promise<ToolCall[]>;
+  extractReply: (response: TResponse) => string;
+  extractToolCalls: (response: TResponse) => ToolCall[];
+  onChunk: (chunk: ApiRequestChunk) => void;
+  onDelta: (delta: string) => void;
+  onStreamStart: () => void;
+  requestNonStream: (body: TNonStreamRequestBody) => Promise<TResponse>;
+  requestStream: (body: TStreamRequestBody) => Promise<TStream>;
+  requestTagPrefix: string;
+  signal: AbortSignal;
+};
+
+const executeStreamFallbackRequest = async <
+  TStream,
+  TResponse,
+  TStreamRequestBody,
+  TNonStreamRequestBody,
+>({
+  buildNonStreamRequestBody,
+  buildStreamRequestBody,
+  consumeStream,
+  extractReply,
+  extractToolCalls,
+  onChunk,
+  onDelta,
+  onStreamStart,
+  requestNonStream,
+  requestStream,
+  requestTagPrefix,
+  signal,
+}: StreamFallbackExecution<
+  TStream,
+  TResponse,
+  TStreamRequestBody,
+  TNonStreamRequestBody
+>): Promise<RequestModelResult> => {
+  const streamRequestBody = buildStreamRequestBody();
+  const streamTracker: StreamRetryTracker = {
+    chunkCount: 0,
+    streamStarted: false,
+  };
+
+  try {
+    const toolCalls = await executeStreamWithRetry<TStream>({
+      consumeStream,
+      extractStatusCode,
+      onChunk,
+      onDelta,
+      onStreamStart,
+      requestStream: () => requestStream(streamRequestBody),
+      requestTag: `${requestTagPrefix}.stream`,
+      signal,
+      tracker: streamTracker,
+    });
+    return { reply: "", streamed: true, toolCalls };
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
+    logStreamFallback({
+      chunkCount: streamTracker.chunkCount,
+      error,
+      requestTag: requestTagPrefix,
+      streamStarted: streamTracker.streamStarted,
+    });
+  }
+
+  const nonStreamRequestBody = buildNonStreamRequestBody();
+  const response = await requestWithRetry({
+    extractStatusCode,
+    request: () => requestNonStream(nonStreamRequestBody),
+    requestTag: `${requestTagPrefix}.non_stream`,
+    signal,
+  });
+
+  return {
+    reply: extractReply(response),
+    streamed: false,
+    toolCalls: extractToolCalls(response),
+  };
 };
 
 const executeRequest = async <TStream, TResponse>(
@@ -325,77 +496,38 @@ const executeRequest = async <TStream, TResponse>(
   } = payload;
   const strategy = getApiStrategy(settings.apiType);
 
-  const streamRequestBody = strategy.buildStreamRequestBody(
-    settings,
-    systemPrompt,
-    tools,
-    messages,
-  );
-  let streamStarted = false;
-  const streamState = { chunkCount: 0 };
-
-  try {
-    const stream = (await requestWithRetry({
-      extractStatusCode,
-      request: () => apiCall(streamRequestBody, { signal }),
-      requestTag: `${requestTagPrefix}.stream`,
-      signal,
-    })) as TStream;
-
-    onStreamStart();
-    streamStarted = true;
-
-    const toolCalls = await (
-      strategy.stream as (
-        s: TStream,
-        h: {
-          onDelta: (d: string) => void;
-          onChunk: (c: ApiRequestChunk) => void;
-        },
-      ) => Promise<ToolCall[]>
-    )(stream, {
-      onChunk: (chunk) => {
-        streamState.chunkCount += 1;
-        onChunk(chunk);
-      },
-      onDelta,
-    });
-
-    if (streamState.chunkCount === 0) throw createEmptyStreamError();
-    return { reply: "", streamed: true, toolCalls };
-  } catch (error) {
-    if (isAbortError(error)) throw error;
-    if (
-      streamStarted &&
-      streamState.chunkCount > 0 &&
-      !isEmptyStreamError(error)
-    )
-      throw normalizeError(error);
-    console.warn(`${requestTagPrefix} 流式请求失败，准备回退为非流式`, {
-      message: normalizeError(error).message,
-    });
-  }
-
-  const nonStreamRequestBody = strategy.buildNonStreamRequestBody(
-    settings,
-    systemPrompt,
-    tools,
-    messages,
-  );
-  const response = (await requestWithRetry({
-    extractStatusCode,
-    request: () => apiCall(nonStreamRequestBody, { signal }),
-    requestTag: `${requestTagPrefix}.non_stream`,
+  return executeStreamFallbackRequest<TStream, TResponse, unknown, unknown>({
+    buildNonStreamRequestBody: () =>
+      strategy.buildNonStreamRequestBody(
+        settings,
+        systemPrompt,
+        tools,
+        messages,
+      ),
+    buildStreamRequestBody: () =>
+      strategy.buildStreamRequestBody(settings, systemPrompt, tools, messages),
+    consumeStream: (stream, handlers) =>
+      (
+        strategy.stream as (
+          s: TStream,
+          h: {
+            onDelta: (d: string) => void;
+            onChunk: (c: ApiRequestChunk) => void;
+          },
+        ) => Promise<ToolCall[]>
+      )(stream, handlers),
+    extractReply: (response) =>
+      (strategy.extractReply as (r: TResponse) => string)(response),
+    extractToolCalls: (response) =>
+      (strategy.extractToolCalls as (r: TResponse) => ToolCall[])(response),
+    onChunk,
+    onDelta,
+    onStreamStart,
+    requestNonStream: (body) => apiCall(body, { signal }) as Promise<TResponse>,
+    requestStream: (body) => apiCall(body, { signal }) as Promise<TStream>,
+    requestTagPrefix,
     signal,
-  })) as TResponse;
-
-  return {
-    reply: (strategy.extractReply as (r: TResponse) => string)(response),
-    streamed: false,
-    toolCalls: (strategy.extractToolCalls as (r: TResponse) => ToolCall[])(
-      response,
-    ),
-  };
+  });
 };
 
 const withGeminiAbortSignal = (
@@ -403,10 +535,7 @@ const withGeminiAbortSignal = (
   signal: AbortSignal,
 ): GenerateContentParameters => ({
   ...body,
-  config: {
-    ...body.config,
-    abortSignal: signal,
-  },
+  config: { ...body.config, abortSignal: signal },
 });
 
 const executeGeminiRequest = async (
@@ -423,74 +552,45 @@ const executeGeminiRequest = async (
       signal,
     } = payload,
     strategy = getApiStrategy("gemini") as GeminiApiStrategy,
-    client = createGeminiClient(settings),
-    streamRequestBody = withGeminiAbortSignal(
-      strategy.buildStreamRequestBody(settings, systemPrompt, tools, messages),
-      signal,
-    );
-  let streamStarted = false;
-  const streamState = { chunkCount: 0 };
+    client = createGeminiClient(settings);
 
-  try {
-    const stream = await requestWithRetry({
-      extractStatusCode,
-      request: () => client.models.generateContentStream(streamRequestBody),
-      requestTag: "gemini.stream",
-      signal,
-    });
-
-    onStreamStart();
-    streamStarted = true;
-
-    const toolCalls = await strategy.stream(stream, {
-      onChunk: (chunk) => {
-        streamState.chunkCount += 1;
-        onChunk(chunk);
-      },
-      onDelta,
-    });
-
-    if (streamState.chunkCount === 0) {
-      throw createEmptyStreamError();
-    }
-    return { reply: "", streamed: true, toolCalls };
-  } catch (error) {
-    if (isAbortError(error)) {
-      throw error;
-    }
-    if (
-      streamStarted &&
-      streamState.chunkCount > 0 &&
-      !isEmptyStreamError(error)
-    ) {
-      throw normalizeError(error);
-    }
-    console.warn("gemini 流式请求失败，准备回退为非流式", {
-      message: normalizeError(error).message,
-    });
-  }
-
-  const nonStreamRequestBody = withGeminiAbortSignal(
-      strategy.buildNonStreamRequestBody(
-        settings,
-        systemPrompt,
-        tools,
-        messages,
+  return executeStreamFallbackRequest<
+    Awaited<ReturnType<typeof client.models.generateContentStream>>,
+    Awaited<ReturnType<typeof client.models.generateContent>>,
+    GenerateContentParameters,
+    GenerateContentParameters
+  >({
+    buildNonStreamRequestBody: () =>
+      withGeminiAbortSignal(
+        strategy.buildNonStreamRequestBody(
+          settings,
+          systemPrompt,
+          tools,
+          messages,
+        ),
+        signal,
       ),
-      signal,
-    ),
-    response = await requestWithRetry({
-      extractStatusCode,
-      request: () => client.models.generateContent(nonStreamRequestBody),
-      requestTag: "gemini.non_stream",
-      signal,
-    });
-
-  return {
-    reply: strategy.extractReply(response),
-    streamed: false,
-    toolCalls: strategy.extractToolCalls(response),
-  };
+    buildStreamRequestBody: () =>
+      withGeminiAbortSignal(
+        strategy.buildStreamRequestBody(
+          settings,
+          systemPrompt,
+          tools,
+          messages,
+        ),
+        signal,
+      ),
+    consumeStream: (stream, handlers) => strategy.stream(stream, handlers),
+    extractReply: (response) => strategy.extractReply(response),
+    extractToolCalls: (response) => strategy.extractToolCalls(response),
+    onChunk,
+    onDelta,
+    onStreamStart,
+    requestNonStream: (body) => client.models.generateContent(body),
+    requestStream: (body) => client.models.generateContentStream(body),
+    requestTagPrefix: "gemini",
+    signal,
+  });
 };
 
 const requestModel = async (

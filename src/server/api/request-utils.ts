@@ -76,7 +76,7 @@ export async function requestWithRetry<TResult>({
         throw failure;
       }
       const delayMs = Math.min(resolveRetryDelay(attemptIndex), remainingMs);
-      console.warn("API 请求失败，准备指数退避重试", {
+      console.warn("API 请求失败，指数退避重试", {
         attemptsMade,
         delayMs,
         elapsedMs,
