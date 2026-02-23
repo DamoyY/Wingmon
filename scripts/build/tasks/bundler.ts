@@ -6,11 +6,19 @@ import {
   rootDir,
 } from "../basekit/index.ts";
 import { obfuscateFile, shouldObfuscateBuild } from "../transformers/index.ts";
+import type { BuildCliOptions } from "../cliOptions.ts";
 import { build } from "esbuild";
 import { getToolIndexPlugin } from "../plugins/index.ts";
 import path from "node:path";
 
-export const buildBundles = async (): Promise<void> => {
+const shouldRunObfuscation = (
+  metafile: Parameters<typeof shouldObfuscateBuild>[0],
+  options: BuildCliOptions,
+): boolean => {
+  return options.obfuscate && shouldObfuscateBuild(metafile);
+};
+
+export const buildBundles = async (options: BuildCliOptions): Promise<void> => {
   const toolIndexPlugin = await getToolIndexPlugin();
   const loader = { ".md": "text", ".wasm": "binary" };
 
@@ -51,7 +59,7 @@ export const buildBundles = async (): Promise<void> => {
   if (!panelBuildResult.metafile) {
     throw new Error("panel 构建结果缺少 metafile");
   }
-  if (shouldObfuscateBuild(panelBuildResult.metafile)) {
+  if (shouldRunObfuscation(panelBuildResult.metafile, options)) {
     await obfuscateFile(panelBundlePath);
   }
 
@@ -73,7 +81,7 @@ export const buildBundles = async (): Promise<void> => {
   if (!showHtmlBuildResult.metafile) {
     throw new Error("show-html 构建结果缺少 metafile");
   }
-  if (shouldObfuscateBuild(showHtmlBuildResult.metafile)) {
+  if (shouldRunObfuscation(showHtmlBuildResult.metafile, options)) {
     await obfuscateFile(showHtmlBundlePath);
   }
 
@@ -94,7 +102,7 @@ export const buildBundles = async (): Promise<void> => {
   if (!offscreenBuildResult.metafile) {
     throw new Error("offscreen 构建结果缺少 metafile");
   }
-  if (shouldObfuscateBuild(offscreenBuildResult.metafile)) {
+  if (shouldRunObfuscation(offscreenBuildResult.metafile, options)) {
     await obfuscateFile(offscreenBundlePath);
   }
 
@@ -116,7 +124,7 @@ export const buildBundles = async (): Promise<void> => {
   if (!contentBuildResult.metafile) {
     throw new Error("content 构建结果缺少 metafile");
   }
-  if (shouldObfuscateBuild(contentBuildResult.metafile)) {
+  if (shouldRunObfuscation(contentBuildResult.metafile, options)) {
     await obfuscateFile(contentBundlePath);
   }
 
@@ -137,7 +145,7 @@ export const buildBundles = async (): Promise<void> => {
   if (!sandboxBuildResult.metafile) {
     throw new Error("sandbox 构建结果缺少 metafile");
   }
-  if (shouldObfuscateBuild(sandboxBuildResult.metafile)) {
+  if (shouldRunObfuscation(sandboxBuildResult.metafile, options)) {
     await obfuscateFile(sandboxBundlePath);
   }
 
@@ -157,7 +165,7 @@ export const buildBundles = async (): Promise<void> => {
   if (!backgroundBuildResult.metafile) {
     throw new Error("background 构建结果缺少 metafile");
   }
-  if (shouldObfuscateBuild(backgroundBuildResult.metafile)) {
+  if (shouldRunObfuscation(backgroundBuildResult.metafile, options)) {
     await obfuscateFile(backgroundBundlePath);
   }
 };

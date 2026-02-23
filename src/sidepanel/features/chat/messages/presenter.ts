@@ -18,9 +18,7 @@ import createMessageActionHandlers, {
   type MessageActionHandlers,
 } from "./actions.ts";
 
-type RenderMessagesOptions = {
-  animateIndices?: number[];
-};
+type RenderMessagesOptions = { animateIndices?: number[] };
 
 type MessagesStateChange = StateChangePayload<"messages"> & {
   type?: string;
@@ -81,6 +79,9 @@ const buildMessagesForView = (): DisplayMessage[] =>
       return undefined;
     }
     if (appended.role !== "assistant" && appended.role !== "user") {
+      return undefined;
+    }
+    if (appended.role === "assistant" && appended.content.trim().length === 0) {
       return undefined;
     }
     return appended.indices;

@@ -67,12 +67,13 @@ const animateMessageRowExit = async (row: HTMLElement): Promise<void> => {
   const container = ensureMessagesElement();
   const role = row.classList.contains("user") ? "user" : "assistant";
   const offsetX = resolveMessageRowEdgeOffset(row, role, container);
+  const exitTransform = `translate3d(${String(offsetX)}px, 0, 0)`;
   const animation = row.animate(
     [
       { opacity: 1, transform: "translate3d(0, 0, 0)" },
       {
         opacity: 0,
-        transform: `translate3d(${String(offsetX)}px, 0, 0)`,
+        transform: exitTransform,
       },
     ],
     {
@@ -84,6 +85,8 @@ const animateMessageRowExit = async (row: HTMLElement): Promise<void> => {
   try {
     await animation.finished;
   } finally {
+    row.style.opacity = "0";
+    row.style.transform = exitTransform;
     animation.cancel();
   }
 };
