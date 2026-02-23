@@ -4,7 +4,7 @@
 
 ---
 
-<img src="https://raw.githubusercontent.com/DamoyY/Wingmon-Release/refs/heads/main/res/logo.svg" width="100">
+<img src="https://raw.githubusercontent.com/DamoyY/Wingmon/refs/heads/main/res/logo.svg" width="100">
 
 # Wingmon - 更优雅的浏览体验
 
