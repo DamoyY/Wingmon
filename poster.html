@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +14,8 @@
             --accent-color: #18181b;
             --accent-light: #e4e4e7;
             --border-color: #d4d4d8;
+            --accent-blue: #2563eb;
+            --card-bg: #f4f4f6;
         }
 
         body {
@@ -61,7 +64,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 6cqw;
+            padding: 7cqw 7cqw 8cqw 7cqw;
             box-sizing: border-box;
         }
 
@@ -72,15 +75,15 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: 
+            background-image:
                 linear-gradient(var(--accent-light) 2px, transparent 2px),
                 linear-gradient(90deg, var(--accent-light) 2px, transparent 2px);
             background-size: 8cqw 8cqw;
             background-position: center top;
             opacity: 0.4;
             z-index: 0;
-            mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 60%);
-            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 60%);
+            mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 60%);
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 60%);
         }
 
         .circle-decor {
@@ -109,7 +112,7 @@
         .puzzle-decoration {
             position: absolute;
             right: 3.2cqw;
-            top: 38.5cqh;
+            top: 42cqh;
             width: 27cqw;
             height: 27cqw;
             z-index: 0;
@@ -117,7 +120,8 @@
         }
 
         /* Content Layering */
-        .header, .main, .footer {
+        .header,
+        .main {
             position: relative;
             z-index: 1;
         }
@@ -125,17 +129,17 @@
         .header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
         }
 
         .logo-group {
             display: flex;
             flex-direction: column;
-            gap: 1cqw;
+            gap: 1.5cqw;
         }
 
         .logo {
-            font-size: 8cqw;
+            font-size: 9cqw;
             font-weight: 800;
             letter-spacing: -0.19cqw;
             color: var(--text-primary);
@@ -143,108 +147,176 @@
         }
 
         .tagline {
-            font-size: 2.5cqw;
+            font-size: 2.8cqw;
             font-weight: 700;
             color: var(--text-secondary);
-            letter-spacing: 0.25cqw;
+            letter-spacing: 0.2cqw;
             text-transform: uppercase;
         }
 
         .badge {
-            background-color: var(--text-primary);
+            background-color: var(--accent-blue);
             color: var(--poster-bg);
-            font-size: 2cqw;
+            font-size: 2.2cqw;
             font-weight: 600;
-            padding: 1cqw 2cqw;
+            padding: 1.2cqw 2.5cqw;
             border-radius: 4cqw;
-            letter-spacing: 0.125cqw;
+            letter-spacing: 0.1cqw;
             white-space: nowrap;
-            height: fit-content;
         }
 
         .main {
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            gap: 2.5cqh;
-            padding: 1.5cqh 0;
+            justify-content: space-between;
+            padding: 5cqh 0 0 0;
+            gap: 2cqh;
         }
 
-        /* Visual Graphic for "Browser Extension" */
+        /* Visual Graphic for "Browser Extension" - Upscaled for better balance */
         .browser-mock {
             width: 100%;
-            height: 13cqh;
-            border: 0.375cqw solid var(--border-color);
-            border-radius: 1.5cqw;
+            height: 22cqh;
+            border: 0.3cqw solid var(--border-color);
+            border-radius: 2cqw;
             background: #fff;
             display: flex;
             overflow: hidden;
-            box-shadow: 0 2cqw 4cqw rgba(0,0,0,0.03);
-            margin-bottom: 1cqw;
+            box-shadow: 0 3cqw 6cqw rgba(0, 0, 0, 0.04);
         }
+
         .main-view {
             flex: 1;
             background: var(--bg-color);
             display: flex;
             flex-direction: column;
         }
+
         .top-bar {
-            height: 3cqh;
+            height: 4.5cqh;
             background: #fff;
             border-bottom: 0.25cqw solid var(--border-color);
             display: flex;
             align-items: center;
-            padding: 0 2cqw;
-            gap: 1cqw;
+            padding: 0 2.5cqw;
+            gap: 1.25cqw;
         }
-        .top-bar .dot {
-            width: 1cqw; height: 1cqw; border-radius: 50%; background: var(--border-color);
-        }
-        .top-bar .url-bar {
-            flex: 1; height: 1.75cqw; background: var(--bg-color); border-radius: 1cqw; margin-left: 2cqw;
-        }
-        .content-view {
-            padding: 2.5cqw; display: flex; flex-direction: column; gap: 1.25cqw;
-        }
-        .content-line {
-            height: 1cqw; background: var(--border-color); border-radius: 1cqw; opacity: 0.6;
-        }
-        .content-line.w-long { width: 85%; }
-        .content-line.w-short { width: 60%; }
 
-        .side-panel-mock {
-            width: 30%;
-            background: #fff;
-            border-left: 0.375cqw solid var(--border-color);
+        .top-bar .dot {
+            width: 1.2cqw;
+            height: 1.2cqw;
+            border-radius: 50%;
+            background: var(--border-color);
+        }
+
+        .top-bar .url-bar {
+            flex: 1;
+            height: 2cqw;
+            background: var(--bg-color);
+            border-radius: 1cqw;
+            margin-left: 2.5cqw;
+        }
+
+        .content-view {
+            padding: 3cqw;
             display: flex;
             flex-direction: column;
-            padding: 1.5cqw;
             gap: 1.5cqw;
+        }
+
+        .content-line {
+            height: 1.2cqw;
+            background: var(--border-color);
+            border-radius: 1cqw;
+            opacity: 0.6;
+        }
+
+        .content-line.w-long {
+            width: 85%;
+        }
+
+        .content-line.w-short {
+            width: 60%;
+        }
+
+        .side-panel-mock {
+            width: 35%;
+            background: #fff;
+            border-left: 0.3cqw solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 2cqw;
+            gap: 2cqw;
             position: relative;
         }
+
         .side-panel-mock::after {
             content: '';
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            box-shadow: inset 0 0 2cqw rgba(0,0,0,0.02);
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            box-shadow: inset 0 0 2cqw rgba(0, 0, 0, 0.02);
             pointer-events: none;
         }
-        .panel-header {
-            display: flex; align-items: center; gap: 1cqw;
-        }
-        .ext-icon { width: 1.75cqw; height: 1.75cqw; background: var(--text-primary); border-radius: 0.5cqw; }
-        .ext-name { width: 5cqw; height: 0.75cqw; background: var(--text-primary); border-radius: 0.5cqw; }
-        
-        .panel-chat { flex: 1; display: flex; flex-direction: column; gap: 1.25cqw; justify-content: flex-end; }
-        .chat-bubble { height: 2.25cqw; border-radius: 0.75cqw; }
-        .chat-bubble.left { background: var(--bg-color); width: 80%; align-self: flex-start; }
-        .chat-bubble.right { background: var(--text-primary); width: 60%; align-self: flex-end; opacity: 0.9; }
 
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 1cqw;
+        }
+
+        .ext-icon {
+            width: 2.2cqw;
+            height: 2.2cqw;
+            background: var(--text-primary);
+            border-radius: 0.6cqw;
+        }
+
+        .ext-name {
+            width: 6cqw;
+            height: 1cqw;
+            background: var(--text-primary);
+            border-radius: 0.5cqw;
+        }
+
+        .panel-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5cqw;
+            justify-content: flex-end;
+        }
+
+        .chat-bubble {
+            height: 3cqw;
+            border-radius: 1cqw;
+        }
+
+        .chat-bubble.left {
+            background: var(--bg-color);
+            width: 75%;
+            align-self: flex-start;
+        }
+
+        .chat-bubble.right {
+            background: var(--accent-blue);
+            width: 65%;
+            align-self: flex-end;
+            opacity: 0.9;
+        }
 
         /* Typography Setup */
+        .hero-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5cqh;
+        }
+
         .hero-title {
-            font-size: 7.5cqw;
+            font-size: 8.5cqw;
             font-weight: 800;
             line-height: 1.15;
             color: var(--text-primary);
@@ -258,208 +330,135 @@
         }
 
         .hero-subtitle {
-            font-size: 2.25cqw;
+            font-size: 3.2cqw;
             color: var(--text-secondary);
             margin: 0;
-            line-height: 1.5;
+            line-height: 1.6;
             max-width: 95%;
+            letter-spacing: 0.02cqw;
         }
 
         .hero-subtitle b {
-            color: var(--text-primary);
+            color: var(--accent-blue);
             font-weight: 700;
         }
 
+        /* Re-layout Capabilities into a 2x2 Grid for better space utilization */
         .capabilities {
-            display: flex;
-            flex-direction: column;
-            gap: 2cqh;
-            margin-top: 0.5cqh;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 3.5cqw;
         }
 
         .capability-item {
+            background-color: var(--card-bg);
+            border-radius: 2.5cqw;
+            padding: 4.5cqw 2cqw;
             display: flex;
-            flex-direction: column;
-            gap: 0.5cqh;
-            padding-left: 3cqw;
-            border-left: 0.5cqw solid var(--text-primary);
-            position: relative;
-        }
-
-        /* Subtle dot on the border */
-        .capability-item::before {
-            content: '';
-            position: absolute;
-            left: -1cqw;
-            top: 1cqw;
-            width: 1.5cqw;
-            height: 1.5cqw;
-            border-radius: 50%;
-            background-color: var(--poster-bg);
-            border: 0.5cqw solid var(--text-primary);
-            box-sizing: border-box;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: inset 0 0 0 0.2cqw rgba(255, 255, 255, 0.6), 0 1cqw 2cqw rgba(0, 0, 0, 0.02);
+            transition: transform 0.2s ease;
         }
 
         .cap-title {
-            font-size: 3.25cqw;
+            font-size: 3.6cqw;
             font-weight: 700;
             color: var(--text-primary);
             letter-spacing: 0.06cqw;
             margin: 0;
         }
-
-        .cap-desc {
-            font-size: 1.85cqw;
-            font-weight: 400;
-            color: var(--text-secondary);
-            line-height: 1.45;
-            max-width: 95%;
-            margin: 0;
-        }
-
-        .footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            border-top: 0.25cqw solid var(--border-color);
-            padding-top: 2cqh;
-        }
-
-        .footer-text {
-            font-size: 1.75cqw;
-            color: var(--text-secondary);
-            letter-spacing: 0.125cqw;
-            line-height: 1.5;
-            text-transform: uppercase;
-            font-weight: 500;
-        }
-
-        .footer-icon {
-            display: flex;
-            gap: 0.75cqw;
-        }
-
-        .icon-bar {
-            width: 1.25cqw;
-            height: 4cqw;
-            background-color: var(--text-primary);
-            border-radius: 0.5cqw;
-        }
-        .icon-bar:nth-child(2) {
-            height: 2.5cqw;
-            align-self: flex-end;
-            background-color: var(--text-secondary);
-        }
-        .icon-bar:nth-child(3) {
-            height: 6cqw;
-            align-self: flex-end;
-            background-color: var(--border-color);
-        }
     </style>
 </head>
+
 <body>
     <div class="poster-wrapper">
         <div class="poster-container">
             <div class="poster">
-            <!-- Decorative Elements -->
-            <div class="grid-bg"></div>
-            <div class="circle-decor circle-1"></div>
-            <div class="circle-decor circle-2"></div>
-            <svg class="puzzle-decoration" viewBox="0 0 240 240" aria-hidden="true">
-                <defs>
-                    <filter id="puzzle-shadow" x="-25%" y="-25%" width="150%" height="150%">
-                        <feDropShadow dx="0" dy="10" stdDeviation="7.5" flood-color="#18181b" flood-opacity="0.15" />
-                    </filter>
-                </defs>
-                <path
-                    d="M68 46 H97 A23 23 0 0 1 143 46 H172 A30 30 0 0 1 202 76 V180 A30 30 0 0 1 172 210 H68 A30 30 0 0 1 38 180 V150 A24 24 0 0 0 38 102 V76 A30 30 0 0 1 68 46 Z"
-                    fill="rgba(255,255,255,0.84)"
-                    stroke="rgba(113,113,122,0.32)"
-                    stroke-width="4"
-                    filter="url(#puzzle-shadow)"
-                    transform="rotate(-11 120 126)"
-                />
-            </svg>
-            
-            <!-- Header -->
-            <header class="header">
-                <div class="logo-group">
-                    <div class="logo">Wingmon</div>
-                    <div class="tagline">YOUR AI BROWSER EXTENSION</div>
-                </div>
-                <div class="badge">CHROME / EDGE</div>
-            </header>
+                <!-- Decorative Elements -->
+                <div class="grid-bg"></div>
+                <div class="circle-decor circle-1"></div>
+                <div class="circle-decor circle-2"></div>
+                <svg class="puzzle-decoration" viewBox="0 0 240 240" aria-hidden="true">
+                    <defs>
+                        <filter id="puzzle-shadow" x="-25%" y="-25%" width="150%" height="150%">
+                            <feDropShadow dx="0" dy="10" stdDeviation="7.5" flood-color="#18181b"
+                                flood-opacity="0.15" />
+                        </filter>
+                    </defs>
+                    <path
+                        d="M68 46 H97 A23 23 0 0 1 143 46 H172 A30 30 0 0 1 202 76 V180 A30 30 0 0 1 172 210 H68 A30 30 0 0 1 38 180 V150 A24 24 0 0 0 38 102 V76 A30 30 0 0 1 68 46 Z"
+                        fill="rgba(255,255,255,0.84)" stroke="rgba(113,113,122,0.32)" stroke-width="4"
+                        filter="url(#puzzle-shadow)" transform="rotate(-11 120 126)" />
+                </svg>
 
-            <!-- Main Content -->
-            <main class="main">
-                <!-- Abstract Browser + Side Panel Illustration -->
-                <div class="browser-mock">
-                    <div class="main-view">
-                        <div class="top-bar">
-                            <div class="dot"></div>
-                            <div class="dot"></div>
-                            <div class="dot"></div>
-                            <div class="url-bar"></div>
-                        </div>
-                        <div class="content-view">
-                            <div class="content-line w-long"></div>
-                            <div class="content-line w-short"></div>
-                        </div>
+                <!-- Header -->
+                <header class="header">
+                    <div class="logo-group">
+                        <div class="logo">Wingmon</div>
+                        <div class="tagline">你的 AI 浏览器扩展</div>
                     </div>
-                    <div class="side-panel-mock">
-                        <div class="panel-header">
-                            <div class="ext-icon"></div>
-                            <div class="ext-name"></div>
+                    <div class="badge">支持 Chrome 与 Edge</div>
+                </header>
+
+                <!-- Main Content -->
+                <main class="main">
+                    <!-- Abstract Browser + Side Panel Illustration -->
+                    <div class="browser-mock">
+                        <div class="main-view">
+                            <div class="top-bar">
+                                <div class="dot"></div>
+                                <div class="dot"></div>
+                                <div class="dot"></div>
+                                <div class="url-bar"></div>
+                            </div>
+                            <div class="content-view">
+                                <div class="content-line w-long"></div>
+                                <div class="content-line w-short"></div>
+                            </div>
                         </div>
-                        <div class="panel-chat">
-                            <div class="chat-bubble left"></div>
-                            <div class="chat-bubble right"></div>
+                        <div class="side-panel-mock">
+                            <div class="panel-header">
+                                <div class="ext-icon"></div>
+                                <div class="ext-name"></div>
+                            </div>
+                            <div class="panel-chat">
+                                <div class="chat-bubble left"></div>
+                                <div class="chat-bubble right"></div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <h1 class="hero-title">
-                    赋予浏览器<br>
-                    <span>智能思考的能力。</span>
-                </h1>
-                
-                <p class="hero-subtitle">常驻侧边栏的 <b>浏览器扩展</b>，无缝协助你的网页操作。</p>
+                    <div class="hero-group">
+                        <h1 class="hero-title">
+                            赋予浏览器<br>
+                            <span>智能思考的能力。</span>
+                        </h1>
 
-                <div class="capabilities">
-                    <div class="capability-item">
-                        <h2 class="cap-title">智能自主交互</h2>
-                        <p class="cap-desc">自动操作浏览器，执行搜索与点击，AI 驱动生产力。</p>
+                        <p class="hero-subtitle">常驻侧边栏的 <b>浏览器扩展</b>，无缝协助你的网页操作。</p>
                     </div>
 
-                    <div class="capability-item">
-                        <h2 class="cap-title">深度环境感知</h2>
-                        <p class="cap-desc">一键提取网页与 PDF 内容，赋予 AI 阅读理解力。</p>
-                    </div>
+                    <div class="capabilities">
+                        <div class="capability-item">
+                            <h2 class="cap-title">智能自主交互</h2>
+                        </div>
 
-                    <div class="capability-item">
-                        <h2 class="cap-title">隐私保护</h2>
-                        <p class="cap-desc">无服务器后端，数据仅在本地流转，卸载即清空。</p>
-                    </div>
+                        <div class="capability-item">
+                            <h2 class="cap-title">深度环境感知</h2>
+                        </div>
 
-                    <div class="capability-item">
-                        <h2 class="cap-title">开源与透明</h2>
-                        <p class="cap-desc">完全开源，极简界面撬动强大 Agent 能力。</p>
-                    </div>
-                </div>
-            </main>
+                        <div class="capability-item">
+                            <h2 class="cap-title">隐私保护</h2>
+                        </div>
 
-            <!-- Footer -->
-            <footer class="footer">
-                <div class="footer-text">
-                    CHROMIUM · MANIFEST V3 · LLM POWERED
-                </div>
-                <div class="footer-icon">
-                    <div class="icon-bar"></div>
-                    <div class="icon-bar"></div>
-                    <div class="icon-bar"></div>
-                </div>
-            </footer>
+                        <div class="capability-item">
+                            <h2 class="cap-title">开源与透明</h2>
+                        </div>
+                    </div>
+                </main>
+            </div>
         </div>
-    </div>
 </body>
+
 </html>
