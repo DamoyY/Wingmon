@@ -29,7 +29,7 @@ Wingmon 是一款浏览器侧边栏扩展，旨在将大语言模型深度集成
 
 实际视频：
 
-![能力演示视频](res/show.mp4)
+https://github.com/user-attachments/assets/03e70187-17dc-4a7c-880c-f50fbf59828e
 
 ### 简单的场景
 
