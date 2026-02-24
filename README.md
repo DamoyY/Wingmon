@@ -29,7 +29,7 @@ In one information investigation workflow, Wingmon:
 
 Demo video:
 
-![Capability Demo Video](res/show.mp4)
+https://github.com/user-attachments/assets/03e70187-17dc-4a7c-880c-f50fbf59828e
 
 ### Simple scenarios
 
