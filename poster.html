@@ -27,44 +27,27 @@
             box-sizing: border-box;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-            overflow: hidden; /* Prevent body scroll to focus on poster */
+            overflow: hidden;
         }
 
-        /* 
-         * FAIL-PROOF SCALING MECHANISM:
-         * We define a fixed logical resolution for the poster (e.g., 800x1066.66 which is exactly 3:4).
-         * Then we use a wrapper to dynamically calculate the scale factor based on the viewport.
-         * Everything inside .poster uses absolute pixels (px), and the wrapper scales it down/up.
+        /*
+         * RESPONSIVE SCALING MECHANISM:
+         * The poster-wrapper maintains 3:4 aspect ratio.
+         * The poster-container uses container-type: size so children can use cqw/cqh.
+         * All inner dimensions use cqw (container query width) units for proportional scaling.
+         * This ensures text remains readable at any size, unlike transform:scale().
          */
-        
+
         .poster-wrapper {
-            /* The wrapper takes up available space but maintains 3:4 ratio via max constraints */
             width: min(100%, calc((100vh - 40px) * 0.75));
             aspect-ratio: 3 / 4;
             position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
 
         .poster-container {
-            /* Fixed logical size */
-            width: 800px;
-            height: 1066.66px;
-            position: absolute;
-            /* Calculate scale: actual wrapper width / logical width (800) */
-            /* We use container queries just to get the wrapper's width for scaling */
-            container-type: inline-size;
-            transform-origin: center center;
-            /* Fallback scale, will be overridden by JS for perfect fit if pure CSS fails, 
-               but we can achieve perfect CSS scaling using cqw */
-        }
-        
-        @container (min-width: 0px) {
-            .poster-container {
-                /* 100cqw is the wrapper width. We want 800px to fit exactly in 100cqw. */
-                transform: scale(calc(100cqw / 800));
-            }
+            width: 100%;
+            height: 100%;
+            container-type: size;
         }
 
         .poster {
@@ -72,13 +55,13 @@
             height: 100%;
             background-color: var(--poster-bg);
             box-shadow: 0 24px 64px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.04);
-            border-radius: 16px;
+            border-radius: 2cqw;
             overflow: hidden;
             position: relative;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 48px;
+            padding: 6cqw;
             box-sizing: border-box;
         }
 
@@ -92,7 +75,7 @@
             background-image: 
                 linear-gradient(var(--accent-light) 2px, transparent 2px),
                 linear-gradient(90deg, var(--accent-light) 2px, transparent 2px);
-            background-size: 64px 64px;
+            background-size: 8cqw 8cqw;
             background-position: center top;
             opacity: 0.4;
             z-index: 0;
@@ -103,24 +86,34 @@
         .circle-decor {
             position: absolute;
             border-radius: 50%;
-            border: 3px solid var(--accent-light);
+            border: 0.375cqw solid var(--accent-light);
             z-index: 0;
         }
 
         .circle-1 {
-            width: 640px;
-            height: 640px;
-            top: -160px;
-            right: -240px;
+            width: 80cqw;
+            height: 80cqw;
+            top: -20cqw;
+            right: -30cqw;
             border-color: rgba(228, 228, 231, 0.6);
         }
 
         .circle-2 {
-            width: 320px;
-            height: 320px;
-            bottom: 80px;
-            left: -120px;
+            width: 40cqw;
+            height: 40cqw;
+            bottom: 6cqh;
+            left: -15cqw;
             border-color: rgba(228, 228, 231, 0.4);
+        }
+
+        .puzzle-decoration {
+            position: absolute;
+            right: 3.2cqw;
+            top: 38.5cqh;
+            width: 27cqw;
+            height: 27cqw;
+            z-index: 0;
+            pointer-events: none;
         }
 
         /* Content Layering */
@@ -138,33 +131,35 @@
         .logo-group {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 1cqw;
         }
 
         .logo {
-            font-size: 64px;
+            font-size: 8cqw;
             font-weight: 800;
-            letter-spacing: -1.5px;
+            letter-spacing: -0.19cqw;
             color: var(--text-primary);
             line-height: 1;
         }
 
         .tagline {
-            font-size: 20px;
+            font-size: 2.5cqw;
             font-weight: 700;
             color: var(--text-secondary);
-            letter-spacing: 2px;
+            letter-spacing: 0.25cqw;
             text-transform: uppercase;
         }
 
         .badge {
             background-color: var(--text-primary);
             color: var(--poster-bg);
-            font-size: 16px;
+            font-size: 2cqw;
             font-weight: 600;
-            padding: 8px 16px;
-            border-radius: 32px;
-            letter-spacing: 1px;
+            padding: 1cqw 2cqw;
+            border-radius: 4cqw;
+            letter-spacing: 0.125cqw;
+            white-space: nowrap;
+            height: fit-content;
         }
 
         .main {
@@ -172,21 +167,21 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 28px;
-            padding: 16px 0;
+            gap: 2.5cqh;
+            padding: 1.5cqh 0;
         }
 
         /* Visual Graphic for "Browser Extension" */
         .browser-mock {
             width: 100%;
-            height: 140px;
-            border: 3px solid var(--border-color);
-            border-radius: 12px;
+            height: 13cqh;
+            border: 0.375cqw solid var(--border-color);
+            border-radius: 1.5cqw;
             background: #fff;
             display: flex;
             overflow: hidden;
-            box-shadow: 0 16px 32px rgba(0,0,0,0.03);
-            margin-bottom: 8px;
+            box-shadow: 0 2cqw 4cqw rgba(0,0,0,0.03);
+            margin-bottom: 1cqw;
         }
         .main-view {
             flex: 1;
@@ -195,25 +190,25 @@
             flex-direction: column;
         }
         .top-bar {
-            height: 32px;
+            height: 3cqh;
             background: #fff;
-            border-bottom: 2px solid var(--border-color);
+            border-bottom: 0.25cqw solid var(--border-color);
             display: flex;
             align-items: center;
-            padding: 0 16px;
-            gap: 8px;
+            padding: 0 2cqw;
+            gap: 1cqw;
         }
         .top-bar .dot {
-            width: 8px; height: 8px; border-radius: 50%; background: var(--border-color);
+            width: 1cqw; height: 1cqw; border-radius: 50%; background: var(--border-color);
         }
         .top-bar .url-bar {
-            flex: 1; height: 14px; background: var(--bg-color); border-radius: 8px; margin-left: 16px;
+            flex: 1; height: 1.75cqw; background: var(--bg-color); border-radius: 1cqw; margin-left: 2cqw;
         }
         .content-view {
-            padding: 20px; display: flex; flex-direction: column; gap: 10px;
+            padding: 2.5cqw; display: flex; flex-direction: column; gap: 1.25cqw;
         }
         .content-line {
-            height: 8px; background: var(--border-color); border-radius: 8px; opacity: 0.6;
+            height: 1cqw; background: var(--border-color); border-radius: 1cqw; opacity: 0.6;
         }
         .content-line.w-long { width: 85%; }
         .content-line.w-short { width: 60%; }
@@ -221,39 +216,39 @@
         .side-panel-mock {
             width: 30%;
             background: #fff;
-            border-left: 3px solid var(--border-color);
+            border-left: 0.375cqw solid var(--border-color);
             display: flex;
             flex-direction: column;
-            padding: 12px;
-            gap: 12px;
+            padding: 1.5cqw;
+            gap: 1.5cqw;
             position: relative;
         }
         .side-panel-mock::after {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            box-shadow: inset 0 0 16px rgba(0,0,0,0.02);
+            box-shadow: inset 0 0 2cqw rgba(0,0,0,0.02);
             pointer-events: none;
         }
         .panel-header {
-            display: flex; align-items: center; gap: 8px;
+            display: flex; align-items: center; gap: 1cqw;
         }
-        .ext-icon { width: 14px; height: 14px; background: var(--text-primary); border-radius: 4px; }
-        .ext-name { width: 40px; height: 6px; background: var(--text-primary); border-radius: 4px; }
+        .ext-icon { width: 1.75cqw; height: 1.75cqw; background: var(--text-primary); border-radius: 0.5cqw; }
+        .ext-name { width: 5cqw; height: 0.75cqw; background: var(--text-primary); border-radius: 0.5cqw; }
         
-        .panel-chat { flex: 1; display: flex; flex-direction: column; gap: 10px; justify-content: flex-end; }
-        .chat-bubble { height: 18px; border-radius: 6px; }
+        .panel-chat { flex: 1; display: flex; flex-direction: column; gap: 1.25cqw; justify-content: flex-end; }
+        .chat-bubble { height: 2.25cqw; border-radius: 0.75cqw; }
         .chat-bubble.left { background: var(--bg-color); width: 80%; align-self: flex-start; }
         .chat-bubble.right { background: var(--text-primary); width: 60%; align-self: flex-end; opacity: 0.9; }
 
 
         /* Typography Setup */
         .hero-title {
-            font-size: 56px;
+            font-size: 7.5cqw;
             font-weight: 800;
             line-height: 1.15;
             color: var(--text-primary);
-            letter-spacing: -1.2px;
+            letter-spacing: -0.15cqw;
             margin: 0;
         }
 
@@ -263,7 +258,7 @@
         }
 
         .hero-subtitle {
-            font-size: 20px;
+            font-size: 2.25cqw;
             color: var(--text-secondary);
             margin: 0;
             line-height: 1.5;
@@ -278,16 +273,16 @@
         .capabilities {
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            margin-top: 4px;
+            gap: 2cqh;
+            margin-top: 0.5cqh;
         }
 
         .capability-item {
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            padding-left: 24px;
-            border-left: 4px solid var(--text-primary);
+            gap: 0.5cqh;
+            padding-left: 3cqw;
+            border-left: 0.5cqw solid var(--text-primary);
             position: relative;
         }
 
@@ -295,29 +290,29 @@
         .capability-item::before {
             content: '';
             position: absolute;
-            left: -8px;
-            top: 8px;
-            width: 12px;
-            height: 12px;
+            left: -1cqw;
+            top: 1cqw;
+            width: 1.5cqw;
+            height: 1.5cqw;
             border-radius: 50%;
             background-color: var(--poster-bg);
-            border: 4px solid var(--text-primary);
+            border: 0.5cqw solid var(--text-primary);
             box-sizing: border-box;
         }
 
         .cap-title {
-            font-size: 26px;
+            font-size: 3.25cqw;
             font-weight: 700;
             color: var(--text-primary);
-            letter-spacing: 0.5px;
+            letter-spacing: 0.06cqw;
             margin: 0;
         }
 
         .cap-desc {
-            font-size: 16px;
+            font-size: 1.85cqw;
             font-weight: 400;
             color: var(--text-secondary);
-            line-height: 1.5;
+            line-height: 1.45;
             max-width: 95%;
             margin: 0;
         }
@@ -326,14 +321,14 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            border-top: 2px solid var(--border-color);
-            padding-top: 20px;
+            border-top: 0.25cqw solid var(--border-color);
+            padding-top: 2cqh;
         }
 
         .footer-text {
-            font-size: 14px;
+            font-size: 1.75cqw;
             color: var(--text-secondary);
-            letter-spacing: 1px;
+            letter-spacing: 0.125cqw;
             line-height: 1.5;
             text-transform: uppercase;
             font-weight: 500;
@@ -341,22 +336,22 @@
 
         .footer-icon {
             display: flex;
-            gap: 6px;
+            gap: 0.75cqw;
         }
 
         .icon-bar {
-            width: 10px;
-            height: 32px;
+            width: 1.25cqw;
+            height: 4cqw;
             background-color: var(--text-primary);
-            border-radius: 4px;
+            border-radius: 0.5cqw;
         }
         .icon-bar:nth-child(2) {
-            height: 20px;
+            height: 2.5cqw;
             align-self: flex-end;
             background-color: var(--text-secondary);
         }
         .icon-bar:nth-child(3) {
-            height: 48px;
+            height: 6cqw;
             align-self: flex-end;
             background-color: var(--border-color);
         }
@@ -370,6 +365,21 @@
             <div class="grid-bg"></div>
             <div class="circle-decor circle-1"></div>
             <div class="circle-decor circle-2"></div>
+            <svg class="puzzle-decoration" viewBox="0 0 240 240" aria-hidden="true">
+                <defs>
+                    <filter id="puzzle-shadow" x="-25%" y="-25%" width="150%" height="150%">
+                        <feDropShadow dx="0" dy="10" stdDeviation="7.5" flood-color="#18181b" flood-opacity="0.15" />
+                    </filter>
+                </defs>
+                <path
+                    d="M68 46 H97 A23 23 0 0 1 143 46 H172 A30 30 0 0 1 202 76 V180 A30 30 0 0 1 172 210 H68 A30 30 0 0 1 38 180 V150 A24 24 0 0 0 38 102 V76 A30 30 0 0 1 68 46 Z"
+                    fill="rgba(255,255,255,0.84)"
+                    stroke="rgba(113,113,122,0.32)"
+                    stroke-width="4"
+                    filter="url(#puzzle-shadow)"
+                    transform="rotate(-11 120 126)"
+                />
+            </svg>
             
             <!-- Header -->
             <header class="header">
@@ -413,27 +423,27 @@
                     <span>智能思考的能力。</span>
                 </h1>
                 
-                <p class="hero-subtitle">作为一款常驻于侧边栏的 <b>浏览器扩展</b>，Wingmon 能无缝接管并协助你的所有网页操作。</p>
+                <p class="hero-subtitle">常驻侧边栏的 <b>浏览器扩展</b>，无缝协助你的网页操作。</p>
 
                 <div class="capabilities">
                     <div class="capability-item">
                         <h2 class="cap-title">智能自主交互</h2>
-                        <p class="cap-desc">以人类的方式自动操作浏览器，执行搜索与点击，将 AI 真正引入生产力流程。</p>
+                        <p class="cap-desc">自动操作浏览器，执行搜索与点击，AI 驱动生产力。</p>
                     </div>
 
                     <div class="capability-item">
                         <h2 class="cap-title">深度环境感知</h2>
-                        <p class="cap-desc">一键“携页面发送”，精准提取网页与 PDF 内容，赋予 AI 敏锐的阅读理解能力。</p>
+                        <p class="cap-desc">一键提取网页与 PDF 内容，赋予 AI 阅读理解力。</p>
                     </div>
 
                     <div class="capability-item">
-                        <h2 class="cap-title">坚定的隐私保护</h2>
-                        <p class="cap-desc">无内置模型，无服务器后端。数据仅在本地流转，卸载即清空，守护数据主权。</p>
+                        <h2 class="cap-title">隐私保护</h2>
+                        <p class="cap-desc">无服务器后端，数据仅在本地流转，卸载即清空。</p>
                     </div>
 
                     <div class="capability-item">
                         <h2 class="cap-title">开源与透明</h2>
-                        <p class="cap-desc">完全开源的设计。极简界面撬动强大 Agent 能力，安全透明，少即是多。</p>
+                        <p class="cap-desc">完全开源，极简界面撬动强大 Agent 能力。</p>
                     </div>
                 </div>
             </main>
@@ -441,8 +451,7 @@
             <!-- Footer -->
             <footer class="footer">
                 <div class="footer-text">
-                    DESIGNED FOR CHROMIUM / MANIFEST V3<br>
-                    POWERED BY LARGE LANGUAGE MODELS
+                    CHROMIUM · MANIFEST V3 · LLM POWERED
                 </div>
                 <div class="footer-icon">
                     <div class="icon-bar"></div>
