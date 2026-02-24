@@ -21,6 +21,8 @@ With its unique architecture, Wingmon can continuously interact with the browser
 
 We made an early bet on LLMs, and it paid off. Even with these foundational capabilities alone, Wingmon has already shown strong productivity in real-world tasks.
 
+### Cases
+
 In one information investigation workflow, Wingmon:
 - entered search keywords in Google and launched the search;
 - opened several trustworthy results;
@@ -30,6 +32,10 @@ In one information investigation workflow, Wingmon:
 Demo video:
 
 https://github.com/user-attachments/assets/03e70187-17dc-4a7c-880c-f50fbf59828e
+
+**This is an example where Wingmon autonomously clicks buttons, enters text, and completes a long-running, complex workflow:**
+
+https://github.com/user-attachments/assets/77406e7c-3f28-4fd2-a39b-53e2fa63c61f
 
 ### Simple scenarios
 

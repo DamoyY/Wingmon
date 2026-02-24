@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wingmon - 你的全能浏览器智能扩展</title>
+    <style>
+        :root {
+            --bg-color: #f0f0f3;
+            --poster-bg: #ffffff;
+            --text-primary: #111111;
+            --text-secondary: #71717a;
+            --accent-color: #18181b;
+            --accent-light: #e4e4e7;
+            --border-color: #d4d4d8;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", sans-serif;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow: hidden; /* Prevent body scroll to focus on poster */
+        }
+
+        /* 
+         * FAIL-PROOF SCALING MECHANISM:
+         * We define a fixed logical resolution for the poster (e.g., 800x1066.66 which is exactly 3:4).
+         * Then we use a wrapper to dynamically calculate the scale factor based on the viewport.
+         * Everything inside .poster uses absolute pixels (px), and the wrapper scales it down/up.
+         */
+        
+        .poster-wrapper {
+            /* The wrapper takes up available space but maintains 3:4 ratio via max constraints */
+            width: min(100%, calc((100vh - 40px) * 0.75));
+            aspect-ratio: 3 / 4;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .poster-container {
+            /* Fixed logical size */
+            width: 800px;
+            height: 1066.66px;
+            position: absolute;
+            /* Calculate scale: actual wrapper width / logical width (800) */
+            /* We use container queries just to get the wrapper's width for scaling */
+            container-type: inline-size;
+            transform-origin: center center;
+            /* Fallback scale, will be overridden by JS for perfect fit if pure CSS fails, 
+               but we can achieve perfect CSS scaling using cqw */
+        }
+        
+        @container (min-width: 0px) {
+            .poster-container {
+                /* 100cqw is the wrapper width. We want 800px to fit exactly in 100cqw. */
+                transform: scale(calc(100cqw / 800));
+            }
+        }
+
+        .poster {
+            width: 100%;
+            height: 100%;
+            background-color: var(--poster-bg);
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.04);
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 48px;
+            box-sizing: border-box;
+        }
+
+        /* Abstract Background Elements */
+        .grid-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(var(--accent-light) 2px, transparent 2px),
+                linear-gradient(90deg, var(--accent-light) 2px, transparent 2px);
+            background-size: 64px 64px;
+            background-position: center top;
+            opacity: 0.4;
+            z-index: 0;
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 60%);
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 60%);
+        }
+
+        .circle-decor {
+            position: absolute;
+            border-radius: 50%;
+            border: 3px solid var(--accent-light);
+            z-index: 0;
+        }
+
+        .circle-1 {
+            width: 640px;
+            height: 640px;
+            top: -160px;
+            right: -240px;
+            border-color: rgba(228, 228, 231, 0.6);
+        }
+
+        .circle-2 {
+            width: 320px;
+            height: 320px;
+            bottom: 80px;
+            left: -120px;
+            border-color: rgba(228, 228, 231, 0.4);
+        }
+
+        /* Content Layering */
+        .header, .main, .footer {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .logo-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .logo {
+            font-size: 64px;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .tagline {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .badge {
+            background-color: var(--text-primary);
+            color: var(--poster-bg);
+            font-size: 16px;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 32px;
+            letter-spacing: 1px;
+        }
+
+        .main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 28px;
+            padding: 16px 0;
+        }
+
+        /* Visual Graphic for "Browser Extension" */
+        .browser-mock {
+            width: 100%;
+            height: 140px;
+            border: 3px solid var(--border-color);
+            border-radius: 12px;
+            background: #fff;
+            display: flex;
+            overflow: hidden;
+            box-shadow: 0 16px 32px rgba(0,0,0,0.03);
+            margin-bottom: 8px;
+        }
+        .main-view {
+            flex: 1;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+        }
+        .top-bar {
+            height: 32px;
+            background: #fff;
+            border-bottom: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 8px;
+        }
+        .top-bar .dot {
+            width: 8px; height: 8px; border-radius: 50%; background: var(--border-color);
+        }
+        .top-bar .url-bar {
+            flex: 1; height: 14px; background: var(--bg-color); border-radius: 8px; margin-left: 16px;
+        }
+        .content-view {
+            padding: 20px; display: flex; flex-direction: column; gap: 10px;
+        }
+        .content-line {
+            height: 8px; background: var(--border-color); border-radius: 8px; opacity: 0.6;
+        }
+        .content-line.w-long { width: 85%; }
+        .content-line.w-short { width: 60%; }
+
+        .side-panel-mock {
+            width: 30%;
+            background: #fff;
+            border-left: 3px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 12px;
+            gap: 12px;
+            position: relative;
+        }
+        .side-panel-mock::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            box-shadow: inset 0 0 16px rgba(0,0,0,0.02);
+            pointer-events: none;
+        }
+        .panel-header {
+            display: flex; align-items: center; gap: 8px;
+        }
+        .ext-icon { width: 14px; height: 14px; background: var(--text-primary); border-radius: 4px; }
+        .ext-name { width: 40px; height: 6px; background: var(--text-primary); border-radius: 4px; }
+        
+        .panel-chat { flex: 1; display: flex; flex-direction: column; gap: 10px; justify-content: flex-end; }
+        .chat-bubble { height: 18px; border-radius: 6px; }
+        .chat-bubble.left { background: var(--bg-color); width: 80%; align-self: flex-start; }
+        .chat-bubble.right { background: var(--text-primary); width: 60%; align-self: flex-end; opacity: 0.9; }
+
+
+        /* Typography Setup */
+        .hero-title {
+            font-size: 56px;
+            font-weight: 800;
+            line-height: 1.15;
+            color: var(--text-primary);
+            letter-spacing: -1.2px;
+            margin: 0;
+        }
+
+        .hero-title span {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .hero-subtitle {
+            font-size: 20px;
+            color: var(--text-secondary);
+            margin: 0;
+            line-height: 1.5;
+            max-width: 95%;
+        }
+
+        .hero-subtitle b {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .capabilities {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 4px;
+        }
+
+        .capability-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-left: 24px;
+            border-left: 4px solid var(--text-primary);
+            position: relative;
+        }
+
+        /* Subtle dot on the border */
+        .capability-item::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 8px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--poster-bg);
+            border: 4px solid var(--text-primary);
+            box-sizing: border-box;
+        }
+
+        .cap-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: 0.5px;
+            margin: 0;
+        }
+
+        .cap-desc {
+            font-size: 16px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            max-width: 95%;
+            margin: 0;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-top: 2px solid var(--border-color);
+            padding-top: 20px;
+        }
+
+        .footer-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            line-height: 1.5;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .footer-icon {
+            display: flex;
+            gap: 6px;
+        }
+
+        .icon-bar {
+            width: 10px;
+            height: 32px;
+            background-color: var(--text-primary);
+            border-radius: 4px;
+        }
+        .icon-bar:nth-child(2) {
+            height: 20px;
+            align-self: flex-end;
+            background-color: var(--text-secondary);
+        }
+        .icon-bar:nth-child(3) {
+            height: 48px;
+            align-self: flex-end;
+            background-color: var(--border-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="poster-wrapper">
+        <div class="poster-container">
+            <div class="poster">
+            <!-- Decorative Elements -->
+            <div class="grid-bg"></div>
+            <div class="circle-decor circle-1"></div>
+            <div class="circle-decor circle-2"></div>
+            
+            <!-- Header -->
+            <header class="header">
+                <div class="logo-group">
+                    <div class="logo">Wingmon</div>
+                    <div class="tagline">YOUR AI BROWSER EXTENSION</div>
+                </div>
+                <div class="badge">CHROME / EDGE</div>
+            </header>
+
+            <!-- Main Content -->
+            <main class="main">
+                <!-- Abstract Browser + Side Panel Illustration -->
+                <div class="browser-mock">
+                    <div class="main-view">
+                        <div class="top-bar">
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="dot"></div>
+                            <div class="url-bar"></div>
+                        </div>
+                        <div class="content-view">
+                            <div class="content-line w-long"></div>
+                            <div class="content-line w-short"></div>
+                        </div>
+                    </div>
+                    <div class="side-panel-mock">
+                        <div class="panel-header">
+                            <div class="ext-icon"></div>
+                            <div class="ext-name"></div>
+                        </div>
+                        <div class="panel-chat">
+                            <div class="chat-bubble left"></div>
+                            <div class="chat-bubble right"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <h1 class="hero-title">
+                    赋予浏览器<br>
+                    <span>智能思考的能力。</span>
+                </h1>
+                
+                <p class="hero-subtitle">作为一款常驻于侧边栏的 <b>浏览器扩展</b>，Wingmon 能无缝接管并协助你的所有网页操作。</p>
+
+                <div class="capabilities">
+                    <div class="capability-item">
+                        <h2 class="cap-title">智能自主交互</h2>
+                        <p class="cap-desc">以人类的方式自动操作浏览器，执行搜索与点击，将 AI 真正引入生产力流程。</p>
+                    </div>
+
+                    <div class="capability-item">
+                        <h2 class="cap-title">深度环境感知</h2>
+                        <p class="cap-desc">一键“携页面发送”，精准提取网页与 PDF 内容，赋予 AI 敏锐的阅读理解能力。</p>
+                    </div>
+
+                    <div class="capability-item">
+                        <h2 class="cap-title">坚定的隐私保护</h2>
+                        <p class="cap-desc">无内置模型，无服务器后端。数据仅在本地流转，卸载即清空，守护数据主权。</p>
+                    </div>
+
+                    <div class="capability-item">
+                        <h2 class="cap-title">开源与透明</h2>
+                        <p class="cap-desc">完全开源的设计。极简界面撬动强大 Agent 能力，安全透明，少即是多。</p>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <div class="footer-text">
+                    DESIGNED FOR CHROMIUM / MANIFEST V3<br>
+                    POWERED BY LARGE LANGUAGE MODELS
+                </div>
+                <div class="footer-icon">
+                    <div class="icon-bar"></div>
+                    <div class="icon-bar"></div>
+                    <div class="icon-bar"></div>
+                </div>
+            </footer>
+        </div>
+    </div>
+</body>
+</html>
