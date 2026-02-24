@@ -75,6 +75,25 @@ Wingmon is open source. You can install it in one click from the [Chrome Web Sto
 8. For first-time use, fill in your configuration.
 9. Click Save and start chatting with Wingmon.
 
+### Follow Mode
+Above the composer, you can enable **Follow Mode**. Once enabled, your viewport stays synced with Wingmon.
+
+### Advanced Configuration
+
+If you use a third-party relay API, or want to force-enable hidden model capabilities (for example, exposing reasoning behavior), you can override the request body sent to the model with YAML in **Advanced Configuration** under Settings.
+
+Example:
+```yaml
+- path: "temperature"
+  value: 0.7
+- path: "reasoning.effort"
+  value: "high"
+```
+
+In service backend settings, you may also notice the `Codex Backend [Risk]` option. It lets you sign in with your ChatGPT account and directly use the underlying response interface used by OpenAI Codex CLI.
+- **Advantage**: Faster sign-in, and direct use of quota from your ChatGPT subscription.
+- **Risk**: This is not part of OpenAI’s standard public API offering, and may carry a risk of limitation or account suspension by OpenAI. Please evaluate and use at your own discretion. The developer is not responsible for account issues resulting from this option.
+
 ---
 
 ## Update roadmap

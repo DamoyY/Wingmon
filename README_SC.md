@@ -75,6 +75,24 @@ Wingmon 是一个开源扩展，您既可以通过 [Chrome Web Store](https://ch
 8. 首次使用时，您需要填写配置。
 9. 点击保存，即可开始与 Wingmon 对话
 
+### 跟随模式
+在对话框上方，您可以开启“跟随模式”。开启后，您的视角会与 Wingmon 同步。
+
+### 高级配置
+
+如果您使用的是第三方中转 API，或者希望强制开启某些模型的隐藏能力（例如开启某些模型的 Reasoning 过程），您可以在设置中的“高级配置”利用 YAML 语法覆写发给大模型的 Request Body。
+示例：
+```yaml
+- path: "temperature"
+  value: 0.7
+- path: "reasoning.effort"
+  value: "high"
+```
+
+在后端设置中，您可能会注意到 `Codex Backend [Risk]` 选项。它允许您通过登录 ChatGPT 账号，直接使用 OpenAI Codex CLI 的底层响应接口。
+- **优势**：您可以快捷登录，并利用您在 ChatGPT 中的订阅额度。
+- **风险**：此方式不属于 OpenAI 官方对外开放的常规 API，**可能存在被 OpenAI 限制或封禁账号的风险**。请自行评估风险后谨慎使用，开发者不对由此产生的账号问题负责。
+
 ---
 
 ## 更新规划
