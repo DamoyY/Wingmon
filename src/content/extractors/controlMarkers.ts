@@ -1,3 +1,4 @@
+export { CONTROL_MARKER_PREFIXES } from "../../shared/index.ts";
 import {
   buildChunkAnchorMarker,
   chunkAnchorAttribute,
@@ -15,7 +16,6 @@ export type ControlMarkerExtraction = {
   viewportIndex: number | null;
 };
 
-export const CONTROL_MARKER_PREFIXES = ["<< Button |", "<< Input |"] as const;
 type ControlMarkerKind = "Button" | "Input";
 
 const escapedBacktickToken = "\\`";

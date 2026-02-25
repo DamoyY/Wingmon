@@ -4,12 +4,7 @@ import {
   setComposerSending,
   updateComposerButtonsState,
 } from "../composerView.ts";
-import {
-  elements,
-  fillSettingsForm,
-  setText,
-  showKeyView,
-} from "../../../ui/index.ts";
+import { elements, fillSettingsForm, showKeyView } from "../../../ui/index.ts";
 import {
   setStateValue,
   state,
@@ -125,7 +120,7 @@ export const requestSettingsCompletion = (
 ): void => {
   void showKeyView({ isFirstUse: true });
   fillSettingsForm(settings);
-  setText(elements.keyStatus, "请先补全 API Key、Base URL 和模型");
+  elements.keyStatus.textContent = "请先补全 API Key、Base URL 和模型";
 };
 
 export const syncComposerAfterSend = (): void => {

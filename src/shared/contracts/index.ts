@@ -6,6 +6,13 @@ export {
 } from "./agentStatus.ts";
 export * from "./contentScriptRpc.ts";
 export {
+  BUTTON_CONTROL_MARKER_PATTERN_SOURCE,
+  CONTROL_MARKER_PREFIXES,
+  INPUT_CONTROL_MARKER_PATTERN_SOURCE,
+  createButtonControlMarkerPattern,
+  createInputControlMarkerPattern,
+} from "./controlMarkerSyntax.ts";
+export {
   OFFSCREEN_HEARTBEAT_TYPE,
   OFFSCREEN_RUN_CONSOLE_TYPE,
   isOffscreenHeartbeatMessage,

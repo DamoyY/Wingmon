@@ -1,6 +1,7 @@
 import {
   type ContentScriptRequest,
   type ContentScriptResponseByRequest,
+  extractErrorMessage,
   getActiveTab,
   isInternalUrl,
 } from "../../shared/index.ts";
@@ -33,20 +34,6 @@ let listenersReady = false,
   assistantTabGroup: AssistantTabGroup | null = null;
 
 const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
-  normalizeError = (error: unknown, fallback: string): Error => {
-    if (error instanceof Error) {
-      if (error.message.trim()) {
-        return error;
-      }
-      return new Error(fallback);
-    }
-    return new Error(fallback);
-  },
-  logAndNormalizeError = (error: unknown, fallback: string): Error => {
-    const failure = normalizeError(error, fallback);
-    console.error(failure.message);
-    return failure;
-  },
   resolveNavigationFailureError = (error: string): string | null => {
     const normalized = error.trim();
     if (!normalized) {
@@ -184,7 +171,11 @@ const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
     try {
       return await chrome.tabs.get(tabId);
     } catch (error) {
-      throw logAndNormalizeError(error, "无法获取标签页状态");
+      const message = extractErrorMessage(error, {
+        fallback: "无法获取标签页状态",
+      });
+      console.error(message);
+      throw new Error(message);
     }
   },
   ensureTabConnectable = async (tabId: number): Promise<BrowserTab> => {
@@ -348,7 +339,11 @@ export const getAllTabs = async (): Promise<BrowserTab[]> => {
   try {
     return await chrome.tabs.query({});
   } catch (error) {
-    throw logAndNormalizeError(error, "无法查询所有标签页");
+    const message = extractErrorMessage(error, {
+      fallback: "无法查询所有标签页",
+    });
+    console.error(message);
+    throw new Error(message);
   }
 };
 
@@ -366,7 +361,9 @@ export const createTab = async (
     await ensureAssistantTabGroup(createdTab);
     return createdTab;
   } catch (error) {
-    throw logAndNormalizeError(error, "无法创建标签页");
+    const message = extractErrorMessage(error, { fallback: "无法创建标签页" });
+    console.error(message);
+    throw new Error(message);
   }
 };
 
@@ -383,7 +380,9 @@ export const setTabGroupCollapsed = async (
   try {
     tab = await chrome.tabs.get(tabId);
   } catch (error) {
-    throw logAndNormalizeError(error, "无法获取标签页");
+    const message = extractErrorMessage(error, { fallback: "无法获取标签页" });
+    console.error(message);
+    throw new Error(message);
   }
   if (typeof tab.groupId !== "number") {
     const error = new Error("标签页缺少分组 ID");
@@ -398,7 +397,11 @@ export const setTabGroupCollapsed = async (
   try {
     await chrome.tabGroups.update(tab.groupId, { collapsed });
   } catch (error) {
-    throw logAndNormalizeError(error, "无法更新标签页分组折叠状态");
+    const message = extractErrorMessage(error, {
+      fallback: "无法更新标签页分组折叠状态",
+    });
+    console.error(message);
+    throw new Error(message);
   }
 };
 
@@ -406,7 +409,9 @@ export const closeTab = async (tabId: number): Promise<void> => {
   try {
     await chrome.tabs.remove(tabId);
   } catch (error) {
-    throw logAndNormalizeError(error, "无法关闭标签页");
+    const message = extractErrorMessage(error, { fallback: "无法关闭标签页" });
+    console.error(message);
+    throw new Error(message);
   }
 };
 
@@ -420,7 +425,9 @@ export const focusTab = async (tabId: number): Promise<void> => {
   try {
     tab = await chrome.tabs.get(tabId);
   } catch (error) {
-    throw logAndNormalizeError(error, "无法获取标签页");
+    const message = extractErrorMessage(error, { fallback: "无法获取标签页" });
+    console.error(message);
+    throw new Error(message);
   }
   if (typeof tab.windowId !== "number") {
     const error = new Error("标签页缺少窗口 ID");
@@ -430,12 +437,18 @@ export const focusTab = async (tabId: number): Promise<void> => {
   try {
     await chrome.windows.update(tab.windowId, { focused: true });
   } catch (error) {
-    throw logAndNormalizeError(error, "无法聚焦标签页窗口");
+    const message = extractErrorMessage(error, {
+      fallback: "无法聚焦标签页窗口",
+    });
+    console.error(message);
+    throw new Error(message);
   }
   try {
     await chrome.tabs.update(tabId, { active: true });
   } catch (error) {
-    throw logAndNormalizeError(error, "无法激活标签页");
+    const message = extractErrorMessage(error, { fallback: "无法激活标签页" });
+    console.error(message);
+    throw new Error(message);
   }
 };
 
@@ -458,7 +471,11 @@ export const sendMessageToTab = async <TRequest extends ContentScriptRequest>(
     }
     return response;
   } catch (error) {
-    throw logAndNormalizeError(error, "无法发送消息到页面");
+    const message = extractErrorMessage(error, {
+      fallback: "无法发送消息到页面",
+    });
+    console.error(message);
+    throw new Error(message);
   }
 };
 
@@ -533,7 +550,11 @@ export const waitForContentScript = async (
             waiter.reject(error);
             return;
           }
-          waiter.reject(logAndNormalizeError(error, "无法获取标签页状态"));
+          const message = extractErrorMessage(error, {
+            fallback: "无法获取标签页状态",
+          });
+          console.error(message);
+          waiter.reject(new Error(message));
         });
     });
   return waitForReady();

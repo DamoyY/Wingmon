@@ -4,6 +4,10 @@ import type {
   InputChunkPage,
 } from "../../shared/index.ts";
 import {
+  createButtonControlMarkerPattern,
+  createInputControlMarkerPattern,
+} from "../../shared/index.ts";
+import {
   type PageContentRequest,
   normalizePageContentRequest,
 } from "./pageContentContracts.ts";
@@ -48,10 +52,8 @@ type ControlChunkPage = {
   pageNumber: number;
 };
 
-const buttonControlMarkerPattern =
-  /<< Button \| text: `[\s\S]*?` \| id: `([0-9a-z]+)` >>/gu;
-const inputControlMarkerPattern =
-  /<< Input \| text: `[\s\S]*?` \| id: `([0-9a-z]+)` >>/gu;
+const buttonControlMarkerPattern = createButtonControlMarkerPattern();
+const inputControlMarkerPattern = createInputControlMarkerPattern();
 
 let latestButtonChunkLookupSnapshot: ButtonChunkLookupSnapshot | null = null;
 

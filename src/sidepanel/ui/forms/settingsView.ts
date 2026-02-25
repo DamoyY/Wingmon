@@ -1,6 +1,5 @@
 import { elements } from "../foundation/elements.ts";
 import { ensureElement } from "../../lib/utils/index.ts";
-import setText from "../foundation/text.ts";
 
 export const setSettingsStatus = (message: string): void => {
   const status = ensureElement(
@@ -8,7 +7,7 @@ export const setSettingsStatus = (message: string): void => {
     "状态提示元素",
     "状态提示元素未找到",
   );
-  setText(status, message);
+  status.textContent = message;
 };
 
 export const clearSettingsStatus = (): void => {
@@ -45,7 +44,7 @@ export const setCodexAuthStatus = (message: string): void => {
     "Codex 登录状态元素",
     "Codex 登录状态元素未找到",
   );
-  setText(status, message);
+  status.textContent = message;
 };
 
 export const setCodexLoginButtonBusy = (busy: boolean): void => {
@@ -63,5 +62,5 @@ export const setCodexLoginButtonText = (label: string): void => {
     "Codex 登录按钮",
     "Codex 登录按钮未找到",
   );
-  setText(button, label);
+  button.textContent = label;
 };

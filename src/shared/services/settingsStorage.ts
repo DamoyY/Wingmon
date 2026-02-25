@@ -91,20 +91,6 @@ const apiTypeStorageValues: readonly ApiType[] = [
       (apiType) => settingsKeys.requestBodyOverridesByApiType[apiType],
     ),
   ],
-  endpointPathMap: Record<ApiType, string> = {
-    chat: "/chat/completions",
-    codex: "/backend-api/codex/responses",
-    gemini: "/v1beta/models",
-    messages: "/v1/messages",
-    responses: "/responses",
-  },
-  endpointPathEntries: Array<{ apiType: ApiType; path: string }> = [
-    { apiType: "chat", path: endpointPathMap.chat },
-    { apiType: "codex", path: endpointPathMap.codex },
-    { apiType: "gemini", path: endpointPathMap.gemini },
-    { apiType: "responses", path: endpointPathMap.responses },
-    { apiType: "messages", path: endpointPathMap.messages },
-  ],
   trimSettingValue = (value: string | null | undefined): string =>
     typeof value === "string" ? value.trim() : "",
   normalizeRequestBodyOverrides = (value: string | null | undefined): string =>
@@ -290,17 +276,4 @@ export const updateSettings = async (
     );
   await setSettings(next);
   return next;
-};
-
-export const buildEndpoint = (baseUrl: string, apiType: ApiType): string => {
-  const normalized = baseUrl.replace(/\/+$/u, "");
-  for (const { apiType: existingApiType, path } of endpointPathEntries) {
-    if (normalized.endsWith(path)) {
-      if (existingApiType === apiType) {
-        return normalized;
-      }
-      return `${normalized.slice(0, -path.length)}${endpointPathMap[apiType]}`;
-    }
-  }
-  return `${normalized}${endpointPathMap[apiType]}`;
 };

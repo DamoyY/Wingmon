@@ -2,6 +2,7 @@ import {
   AGENT_STATUS,
   PANEL_SERVER_PORT_NAME,
   type AgentStatus,
+  extractErrorMessage,
   isPanelServerCommandRequest,
   createPanelCommandError,
 } from "../../shared/index.ts";
@@ -14,7 +15,6 @@ import {
 import { ensureOffscreenDocument } from "../offscreenDocument.ts";
 import { createActionIconCycleController } from "./actionIconCycle.ts";
 import { createPanelCommandRequestHandler } from "./commandHandling.ts";
-import { normalizeErrorMessage } from "./errorText.ts";
 import { notifyAssistantReplyWhenSidePanelClosed } from "./replyNotification.ts";
 import { panelServerRuntimeState } from "./runtimeState.ts";
 import { createPanelSnapshotSync } from "./snapshotSync.ts";
@@ -115,7 +115,7 @@ const registerCommandListener = (): void => {
         sendResponse(
           createPanelCommandError(
             "internal",
-            normalizeErrorMessage(error, "后台处理失败"),
+            extractErrorMessage(error, { fallback: "后台处理失败" }),
           ),
         );
       });

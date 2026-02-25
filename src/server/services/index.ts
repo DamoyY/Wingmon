@@ -19,7 +19,6 @@ export {
   type SandboxConsoleCommandResponse,
 } from "../../shared/services/sandboxBridge.ts";
 export {
-  buildEndpoint,
   getSettings,
   updateSettings,
   type ApiType,

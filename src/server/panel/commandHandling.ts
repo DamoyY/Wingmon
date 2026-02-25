@@ -4,6 +4,7 @@ import {
   type PanelServerCommandRequest,
   type PanelServerCommandResponse,
   createPanelCommandError,
+  extractErrorMessage,
   normalizeIndices,
 } from "../../shared/index.ts";
 import {
@@ -22,7 +23,6 @@ import {
   persistConversation,
 } from "../services/index.ts";
 import { ensureSettingsReady } from "../settings/index.ts";
-import { normalizeErrorMessage } from "./errorText.ts";
 
 type CommandDataMap = {
   deleteConversation: { deleted: true };
@@ -303,7 +303,9 @@ const createLoadConversationHandler =
     try {
       conversation = await loadConversation(conversationId);
     } catch (error) {
-      const message = normalizeErrorMessage(error, "对话记录不存在");
+      const message = extractErrorMessage(error, {
+        fallback: "对话记录不存在",
+      });
       return createPanelCommandError("not_found", message);
     }
     loadConversationState(

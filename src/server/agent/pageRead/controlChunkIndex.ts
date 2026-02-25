@@ -1,4 +1,6 @@
 import {
+  createButtonControlMarkerPattern,
+  createInputControlMarkerPattern,
   type ButtonChunkPage,
   type GetPageContentSuccessResponse,
   type InputChunkPage,
@@ -28,10 +30,8 @@ type ControlChunkIndexState = {
   name: string;
 };
 
-const buttonControlMarkerPattern =
-    /<< Button \| text: `[\s\S]*?` \| id: `([0-9a-z]+)` >>/gu,
-  inputControlMarkerPattern =
-    /<< Input \| text: `[\s\S]*?` \| id: `([0-9a-z]+)` >>/gu,
+const buttonControlMarkerPattern = createButtonControlMarkerPattern(),
+  inputControlMarkerPattern = createInputControlMarkerPattern(),
   buttonTabChunkLocationByButtonId: Map<string, ButtonTabChunkLocation> =
     new Map(),
   buttonIdsByTabId: Map<number, Set<string>> = new Map(),
