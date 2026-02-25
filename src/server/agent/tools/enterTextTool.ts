@@ -10,7 +10,7 @@ import {
 } from "../toolResultFormatters.ts";
 import type { EnterTextToolResult } from "../toolResultTypes.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
-import { resolveInputTabChunkLocation } from "../pageReadHelpers.ts";
+import { resolveInputTabChunkLocation } from "../pageRead/index.ts";
 
 type BrowserTab = Awaited<
   ReturnType<ToolExecutionContext["getAllTabs"]>

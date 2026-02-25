@@ -6,7 +6,7 @@ import {
 import {
   type PageMarkdownData,
   fetchPageMarkdownData,
-} from "../agent/pageReadHelpers.ts";
+} from "../agent/pageRead/index.ts";
 import { type ToolCall } from "../agent/definitions.ts";
 import { addMessage } from "../../shared/state/panelStateContext.ts";
 import { createRandomId } from "../../shared/index.ts";

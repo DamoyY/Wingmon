@@ -11,7 +11,7 @@ import {
 import {
   resolvePageImageInput,
   resolvePageImageInputFromMarkdown,
-} from "../pageReadHelpers.ts";
+} from "../pageRead/index.ts";
 import type { OpenBrowserPageToolResult } from "../toolResultTypes.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 import ToolInputError from "../errors.ts";

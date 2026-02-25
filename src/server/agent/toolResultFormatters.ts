@@ -25,7 +25,7 @@ import {
   parseRequiredPositiveInteger,
 } from "./validation/index.js";
 import { toolNames, toolStatusMap } from "./toolConstants.ts";
-import { buildPageReadResult } from "./pageReadHelpers.ts";
+import { buildPageReadResult } from "./pageRead/index.ts";
 
 type PageReadEventOptions = {
   requirePageNumber: boolean;

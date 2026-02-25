@@ -10,7 +10,7 @@ import {
 } from "../toolResultFormatters.ts";
 import type { ClickButtonToolResult } from "../toolResultTypes.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
-import { resolveButtonTabChunkLocation } from "../pageReadHelpers.ts";
+import { resolveButtonTabChunkLocation } from "../pageRead/index.ts";
 
 type BrowserTab = Awaited<
   ReturnType<ToolExecutionContext["getAllTabs"]>

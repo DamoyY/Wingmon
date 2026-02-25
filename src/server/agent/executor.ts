@@ -30,7 +30,7 @@ import {
   fetchPageMarkdownData,
   shouldFollowMode,
   syncPageHash,
-} from "./pageReadHelpers.ts";
+} from "./pageRead/index.ts";
 import { toolNames } from "./toolConstants.ts";
 import ToolInputError from "./errors.ts";
 

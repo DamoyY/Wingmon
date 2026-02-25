@@ -10,7 +10,7 @@ import {
 import {
   resolvePageImageInput,
   resolvePageImageInputFromMarkdown,
-} from "../pageReadHelpers.ts";
+} from "../pageRead/index.ts";
 import type { GetPageMarkdownToolResult } from "../toolResultTypes.ts";
 import type { ToolExecutionContext } from "../definitions.ts";
 

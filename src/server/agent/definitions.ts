@@ -18,7 +18,7 @@ import {
   createToolArgsValidator,
 } from "./validation/index.js";
 import { type ToolNameKey, toolNameKeys, toolNames } from "./toolConstants.ts";
-import type { PageMarkdownData } from "./pageReadHelpers.ts";
+import type { PageMarkdownData } from "./pageRead/index.ts";
 import type { ToolImageInput } from "./toolResultTypes.ts";
 import ToolInputError from "./errors.ts";
 import toolModules from "./tools/index.ts";
