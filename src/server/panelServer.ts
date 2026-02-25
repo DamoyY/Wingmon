@@ -32,6 +32,8 @@ import {
   initTabListeners,
   loadConversation,
   persistConversation,
+  setFocusRippleEnabled,
+  setFocusRippleProcessingTab,
 } from "./services/index.ts";
 import { ConversationManager } from "./conversation/index.ts";
 import { ensureOffscreenDocument } from "./offscreenDocument.ts";
@@ -372,6 +374,10 @@ const registerStateSubscriptions = (): void => {
     const cleanup = subscribeState(key, () => {
       if (key === "sending") {
         syncActionIconCycle(state.sending);
+        setFocusRippleEnabled(state.sending);
+        if (!state.sending) {
+          setFocusRippleProcessingTab(null);
+        }
       }
       broadcastSnapshot();
       schedulePersistSnapshot();
@@ -751,6 +757,10 @@ export const startPanelServer = async (): Promise<void> => {
   }
   await restorePersistedSnapshot();
   syncActionIconCycle(state.sending);
+  setFocusRippleEnabled(state.sending);
+  if (!state.sending) {
+    setFocusRippleProcessingTab(null);
+  }
   broadcastSnapshot();
   schedulePersistSnapshot();
 };

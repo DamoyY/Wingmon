@@ -8,6 +8,7 @@ import {
   saveHtmlPreview,
   sendMessageToSandbox,
   sendMessageToTab,
+  setFocusRippleProcessingTab,
   setTabGroupCollapsed,
   waitForContentScript,
 } from "../services/index.ts";
@@ -35,6 +36,7 @@ import ToolInputError from "./errors.ts";
 
 type ToolOutput = {
   content: string;
+  processingTabId: number | null;
   toolContext: ToolMessageContext | null;
 };
 
@@ -155,6 +157,39 @@ const resolveToolArguments = (rawArgs: string | JsonValue): JsonValue =>
     }
     return context;
   },
+  resolvePositiveTabId = (value: unknown): number | null => {
+    if (typeof value !== "number") {
+      return null;
+    }
+    if (!Number.isInteger(value) || value <= 0) {
+      return null;
+    }
+    return value;
+  },
+  resolveProcessingTabIdFromValue = (value: unknown): number | null => {
+    if (!isRecord(value)) {
+      return null;
+    }
+    const directTabId = resolvePositiveTabId(value.tabId);
+    if (directTabId !== null) {
+      return directTabId;
+    }
+    if (!isRecord(value.pageReadEvent)) {
+      return null;
+    }
+    return resolvePositiveTabId(value.pageReadEvent.tabId);
+  },
+  resolveProcessingTabId = (
+    args: JsonValue,
+    output: unknown,
+    toolContext: ToolMessageContext | null,
+  ): number | null => {
+    return (
+      resolveProcessingTabIdFromValue(args) ??
+      resolveProcessingTabIdFromValue(output) ??
+      resolveProcessingTabIdFromValue(toolContext)
+    );
+  },
   executeTool = async (
     context: ToolExecutionContext,
     name: string,
@@ -180,10 +215,14 @@ const resolveToolArguments = (rawArgs: string | JsonValue): JsonValue =>
     name: string;
     output: unknown;
     tool: ToolModule;
-  }): ToolOutput => ({
-    content: resolveToolContent(name, output, tool),
-    toolContext: resolveToolContext(args, name, output, tool),
-  });
+  }): ToolOutput => {
+    const toolContext = resolveToolContext(args, name, output, tool);
+    return {
+      content: resolveToolContent(name, output, tool),
+      processingTabId: resolveProcessingTabId(args, output, toolContext),
+      toolContext,
+    };
+  };
 
 export const buildPageMarkdownToolOutput = async (
   pageNumber: number,
@@ -242,12 +281,18 @@ const buildToolMessage = ({
         });
       output = resolved.content;
       toolContext = resolved.toolContext;
+      if (resolved.processingTabId !== null) {
+        setFocusRippleProcessingTab(resolved.processingTabId);
+      }
     } catch (error) {
       const isInputError = error instanceof ToolInputError,
         tabId = isInputError ? error.tabId : null,
         errorMessage = extractErrorMessage(error, {
           includeNonStringPrimitives: true,
         });
+      if (tabId !== null) {
+        setFocusRippleProcessingTab(tabId);
+      }
       console.error(`工具执行失败: ${name || "未知工具"}`, errorMessage);
       output = buildToolErrorOutput({
         isCloseTool: name === toolNames.closeBrowserPage,

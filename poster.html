@@ -1,39 +1,41 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Wingmon - 你的全能浏览器智能扩展</title>
     <style>
-        :root {
-            --bg-color: #f0f0f3;
-            --poster-bg: #ffffff;
-            --text-primary: #111111;
-            --text-secondary: #71717a;
-            --accent-color: #18181b;
-            --accent-light: #e4e4e7;
-            --border-color: #d4d4d8;
-            --accent-blue: #2563eb;
-            --card-bg: #f4f4f6;
-        }
+      :root {
+        --bg-color: #f0f0f3;
+        --poster-bg: #ffffff;
+        --text-primary: #111111;
+        --text-secondary: #71717a;
+        --accent-color: #18181b;
+        --accent-light: #e4e4e7;
+        --border-color: #d4d4d8;
+        --accent-blue: #2563eb;
+        --card-bg: #f4f4f6;
+      }
 
-        body {
-            margin: 0;
-            padding: 20px;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: var(--bg-color);
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", sans-serif;
-            box-sizing: border-box;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            overflow: hidden;
-        }
+      body {
+        margin: 0;
+        padding: 20px;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: var(--bg-color);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+          "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei",
+          sans-serif;
+        box-sizing: border-box;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow: hidden;
+      }
 
-        /*
+      /*
          * RESPONSIVE SCALING MECHANISM:
          * The poster-wrapper maintains 3:4 aspect ratio.
          * The poster-container uses container-type: size so children can use cqw/cqh.
@@ -41,424 +43,457 @@
          * This ensures text remains readable at any size, unlike transform:scale().
          */
 
-        .poster-wrapper {
-            width: min(100%, calc((100vh - 40px) * 0.75));
-            aspect-ratio: 3 / 4;
-            position: relative;
-        }
+      .poster-wrapper {
+        width: min(100%, calc((100vh - 40px) * 0.75));
+        aspect-ratio: 3 / 4;
+        position: relative;
+      }
 
-        .poster-container {
-            width: 100%;
-            height: 100%;
-            container-type: size;
-        }
+      .poster-container {
+        width: 100%;
+        height: 100%;
+        container-type: size;
+      }
 
-        .poster {
-            width: 100%;
-            height: 100%;
-            background-color: var(--poster-bg);
-            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.04);
-            border-radius: 2cqw;
-            overflow: hidden;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 7cqw 7cqw 8cqw 7cqw;
-            box-sizing: border-box;
-        }
+      .poster {
+        width: 100%;
+        height: 100%;
+        background-color: var(--poster-bg);
+        box-shadow:
+          0 24px 64px rgba(0, 0, 0, 0.08),
+          0 8px 24px rgba(0, 0, 0, 0.04);
+        border-radius: 2cqw;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 7cqw 7cqw 8cqw 7cqw;
+        box-sizing: border-box;
+      }
 
-        /* Abstract Background Elements */
-        .grid-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image:
-                linear-gradient(var(--accent-light) 2px, transparent 2px),
-                linear-gradient(90deg, var(--accent-light) 2px, transparent 2px);
-            background-size: 8cqw 8cqw;
-            background-position: center top;
-            opacity: 0.4;
-            z-index: 0;
-            mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 60%);
-            -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 60%);
-        }
+      /* Abstract Background Elements */
+      .grid-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image:
+          linear-gradient(var(--accent-light) 2px, transparent 2px),
+          linear-gradient(90deg, var(--accent-light) 2px, transparent 2px);
+        background-size: 8cqw 8cqw;
+        background-position: center top;
+        opacity: 0.4;
+        z-index: 0;
+        mask-image: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 1) 0%,
+          rgba(0, 0, 0, 0) 60%
+        );
+        -webkit-mask-image: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 1) 0%,
+          rgba(0, 0, 0, 0) 60%
+        );
+      }
 
-        .circle-decor {
-            position: absolute;
-            border-radius: 50%;
-            border: 0.375cqw solid var(--accent-light);
-            z-index: 0;
-        }
+      .circle-decor {
+        position: absolute;
+        border-radius: 50%;
+        border: 0.375cqw solid var(--accent-light);
+        z-index: 0;
+      }
 
-        .circle-1 {
-            width: 80cqw;
-            height: 80cqw;
-            top: -20cqw;
-            right: -30cqw;
-            border-color: rgba(228, 228, 231, 0.6);
-        }
+      .circle-1 {
+        width: 80cqw;
+        height: 80cqw;
+        top: -20cqw;
+        right: -30cqw;
+        border-color: rgba(228, 228, 231, 0.6);
+      }
 
-        .circle-2 {
-            width: 40cqw;
-            height: 40cqw;
-            bottom: 6cqh;
-            left: -15cqw;
-            border-color: rgba(228, 228, 231, 0.4);
-        }
+      .circle-2 {
+        width: 40cqw;
+        height: 40cqw;
+        bottom: 6cqh;
+        left: -15cqw;
+        border-color: rgba(228, 228, 231, 0.4);
+      }
 
-        .puzzle-decoration {
-            position: absolute;
-            right: 3.2cqw;
-            top: 42cqh;
-            width: 27cqw;
-            height: 27cqw;
-            z-index: 0;
-            pointer-events: none;
-        }
+      .puzzle-decoration {
+        position: absolute;
+        right: 3.2cqw;
+        top: 42cqh;
+        width: 27cqw;
+        height: 27cqw;
+        z-index: 0;
+        pointer-events: none;
+      }
 
-        /* Content Layering */
-        .header,
-        .main {
-            position: relative;
-            z-index: 1;
-        }
+      /* Content Layering */
+      .header,
+      .main {
+        position: relative;
+        z-index: 1;
+      }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
 
-        .logo-group {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5cqw;
-        }
+      .logo-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5cqw;
+      }
 
-        .logo {
-            font-size: 9cqw;
-            font-weight: 800;
-            letter-spacing: -0.19cqw;
-            color: var(--text-primary);
-            line-height: 1;
-        }
+      .logo {
+        font-size: 9cqw;
+        font-weight: 800;
+        letter-spacing: -0.19cqw;
+        color: var(--text-primary);
+        line-height: 1;
+      }
 
-        .tagline {
-            font-size: 2.8cqw;
-            font-weight: 700;
-            color: var(--text-secondary);
-            letter-spacing: 0.2cqw;
-            text-transform: uppercase;
-        }
+      .tagline {
+        font-size: 2.8cqw;
+        font-weight: 700;
+        color: var(--text-secondary);
+        letter-spacing: 0.2cqw;
+        text-transform: uppercase;
+      }
 
-        .badge {
-            background-color: var(--accent-blue);
-            color: var(--poster-bg);
-            font-size: 2.2cqw;
-            font-weight: 600;
-            padding: 1.2cqw 2.5cqw;
-            border-radius: 4cqw;
-            letter-spacing: 0.1cqw;
-            white-space: nowrap;
-        }
+      .badge {
+        background-color: var(--accent-blue);
+        color: var(--poster-bg);
+        font-size: 2.2cqw;
+        font-weight: 600;
+        padding: 1.2cqw 2.5cqw;
+        border-radius: 4cqw;
+        letter-spacing: 0.1cqw;
+        white-space: nowrap;
+      }
 
-        .main {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 5cqh 0 0 0;
-            gap: 2cqh;
-        }
+      .main {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 5cqh 0 0 0;
+        gap: 2cqh;
+      }
 
-        /* Visual Graphic for "Browser Extension" - Upscaled for better balance */
-        .browser-mock {
-            width: 100%;
-            height: 22cqh;
-            border: 0.3cqw solid var(--border-color);
-            border-radius: 2cqw;
-            background: #fff;
-            display: flex;
-            overflow: hidden;
-            box-shadow: 0 3cqw 6cqw rgba(0, 0, 0, 0.04);
-        }
+      /* Visual Graphic for "Browser Extension" - Upscaled for better balance */
+      .browser-mock {
+        width: 100%;
+        height: 22cqh;
+        border: 0.3cqw solid var(--border-color);
+        border-radius: 2cqw;
+        background: #fff;
+        display: flex;
+        overflow: hidden;
+        box-shadow: 0 3cqw 6cqw rgba(0, 0, 0, 0.04);
+      }
 
-        .main-view {
-            flex: 1;
-            background: var(--bg-color);
-            display: flex;
-            flex-direction: column;
-        }
+      .main-view {
+        flex: 1;
+        background: var(--bg-color);
+        display: flex;
+        flex-direction: column;
+      }
 
-        .top-bar {
-            height: 4.5cqh;
-            background: #fff;
-            border-bottom: 0.25cqw solid var(--border-color);
-            display: flex;
-            align-items: center;
-            padding: 0 2.5cqw;
-            gap: 1.25cqw;
-        }
+      .top-bar {
+        height: 4.5cqh;
+        background: #fff;
+        border-bottom: 0.25cqw solid var(--border-color);
+        display: flex;
+        align-items: center;
+        padding: 0 2.5cqw;
+        gap: 1.25cqw;
+      }
 
-        .top-bar .dot {
-            width: 1.2cqw;
-            height: 1.2cqw;
-            border-radius: 50%;
-            background: var(--border-color);
-        }
+      .top-bar .dot {
+        width: 1.2cqw;
+        height: 1.2cqw;
+        border-radius: 50%;
+        background: var(--border-color);
+      }
 
-        .top-bar .url-bar {
-            flex: 1;
-            height: 2cqw;
-            background: var(--bg-color);
-            border-radius: 1cqw;
-            margin-left: 2.5cqw;
-        }
+      .top-bar .url-bar {
+        flex: 1;
+        height: 2cqw;
+        background: var(--bg-color);
+        border-radius: 1cqw;
+        margin-left: 2.5cqw;
+      }
 
-        .content-view {
-            padding: 3cqw;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5cqw;
-        }
+      .content-view {
+        padding: 3cqw;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5cqw;
+      }
 
-        .content-line {
-            height: 1.2cqw;
-            background: var(--border-color);
-            border-radius: 1cqw;
-            opacity: 0.6;
-        }
+      .content-line {
+        height: 1.2cqw;
+        background: var(--border-color);
+        border-radius: 1cqw;
+        opacity: 0.6;
+      }
 
-        .content-line.w-long {
-            width: 85%;
-        }
+      .content-line.w-long {
+        width: 85%;
+      }
 
-        .content-line.w-short {
-            width: 60%;
-        }
+      .content-line.w-short {
+        width: 60%;
+      }
 
-        .side-panel-mock {
-            width: 35%;
-            background: #fff;
-            border-left: 0.3cqw solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            padding: 2cqw;
-            gap: 2cqw;
-            position: relative;
-        }
+      .side-panel-mock {
+        width: 35%;
+        background: #fff;
+        border-left: 0.3cqw solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+        padding: 2cqw;
+        gap: 2cqw;
+        position: relative;
+      }
 
-        .side-panel-mock::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            box-shadow: inset 0 0 2cqw rgba(0, 0, 0, 0.02);
-            pointer-events: none;
-        }
+      .side-panel-mock::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        box-shadow: inset 0 0 2cqw rgba(0, 0, 0, 0.02);
+        pointer-events: none;
+      }
 
-        .panel-header {
-            display: flex;
-            align-items: center;
-            gap: 1cqw;
-        }
+      .panel-header {
+        display: flex;
+        align-items: center;
+        gap: 1cqw;
+      }
 
-        .ext-icon {
-            width: 2.2cqw;
-            height: 2.2cqw;
-            background: var(--text-primary);
-            border-radius: 0.6cqw;
-        }
+      .ext-icon {
+        width: 2.2cqw;
+        height: 2.2cqw;
+        background: var(--text-primary);
+        border-radius: 0.6cqw;
+      }
 
-        .ext-name {
-            width: 6cqw;
-            height: 1cqw;
-            background: var(--text-primary);
-            border-radius: 0.5cqw;
-        }
+      .ext-name {
+        width: 6cqw;
+        height: 1cqw;
+        background: var(--text-primary);
+        border-radius: 0.5cqw;
+      }
 
-        .panel-chat {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5cqw;
-            justify-content: flex-end;
-        }
+      .panel-chat {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5cqw;
+        justify-content: flex-end;
+      }
 
-        .chat-bubble {
-            height: 3cqw;
-            border-radius: 1cqw;
-        }
+      .chat-bubble {
+        height: 3cqw;
+        border-radius: 1cqw;
+      }
 
-        .chat-bubble.left {
-            background: var(--bg-color);
-            width: 75%;
-            align-self: flex-start;
-        }
+      .chat-bubble.left {
+        background: var(--bg-color);
+        width: 75%;
+        align-self: flex-start;
+      }
 
-        .chat-bubble.right {
-            background: var(--accent-blue);
-            width: 65%;
-            align-self: flex-end;
-            opacity: 0.9;
-        }
+      .chat-bubble.right {
+        background: var(--accent-blue);
+        width: 65%;
+        align-self: flex-end;
+        opacity: 0.9;
+      }
 
-        /* Typography Setup */
-        .hero-group {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5cqh;
-        }
+      /* Typography Setup */
+      .hero-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5cqh;
+      }
 
-        .hero-title {
-            font-size: 8.5cqw;
-            font-weight: 800;
-            line-height: 1.15;
-            color: var(--text-primary);
-            letter-spacing: -0.15cqw;
-            margin: 0;
-        }
+      .hero-title {
+        font-size: 8.5cqw;
+        font-weight: 800;
+        line-height: 1.15;
+        color: var(--text-primary);
+        letter-spacing: -0.15cqw;
+        margin: 0;
+      }
 
-        .hero-title span {
-            color: var(--text-secondary);
-            font-weight: 600;
-        }
+      .hero-title span {
+        color: var(--text-secondary);
+        font-weight: 600;
+      }
 
-        .hero-subtitle {
-            font-size: 3.2cqw;
-            color: var(--text-secondary);
-            margin: 0;
-            line-height: 1.6;
-            max-width: 95%;
-            letter-spacing: 0.02cqw;
-        }
+      .hero-subtitle {
+        font-size: 3.2cqw;
+        color: var(--text-secondary);
+        margin: 0;
+        line-height: 1.6;
+        max-width: 95%;
+        letter-spacing: 0.02cqw;
+      }
 
-        .hero-subtitle b {
-            color: var(--accent-blue);
-            font-weight: 700;
-        }
+      .hero-subtitle b {
+        color: var(--accent-blue);
+        font-weight: 700;
+      }
 
-        /* Re-layout Capabilities into a 2x2 Grid for better space utilization */
-        .capabilities {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 3.5cqw;
-        }
+      /* Re-layout Capabilities into a 2x2 Grid for better space utilization */
+      .capabilities {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 3.5cqw;
+      }
 
-        .capability-item {
-            background-color: var(--card-bg);
-            border-radius: 2.5cqw;
-            padding: 4.5cqw 2cqw;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            box-shadow: inset 0 0 0 0.2cqw rgba(255, 255, 255, 0.6), 0 1cqw 2cqw rgba(0, 0, 0, 0.02);
-            transition: transform 0.2s ease;
-        }
+      .capability-item {
+        background-color: var(--card-bg);
+        border-radius: 2.5cqw;
+        padding: 4.5cqw 2cqw;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        box-shadow:
+          inset 0 0 0 0.2cqw rgba(255, 255, 255, 0.6),
+          0 1cqw 2cqw rgba(0, 0, 0, 0.02);
+        transition: transform 0.2s ease;
+      }
 
-        .cap-title {
-            font-size: 3.6cqw;
-            font-weight: 700;
-            color: var(--text-primary);
-            letter-spacing: 0.06cqw;
-            margin: 0;
-        }
+      .cap-title {
+        font-size: 3.6cqw;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: 0.06cqw;
+        margin: 0;
+      }
     </style>
-</head>
+  </head>
 
-<body>
+  <body>
     <div class="poster-wrapper">
-        <div class="poster-container">
-            <div class="poster">
-                <!-- Decorative Elements -->
-                <div class="grid-bg"></div>
-                <div class="circle-decor circle-1"></div>
-                <div class="circle-decor circle-2"></div>
-                <svg class="puzzle-decoration" viewBox="0 0 240 240" aria-hidden="true">
-                    <defs>
-                        <filter id="puzzle-shadow" x="-25%" y="-25%" width="150%" height="150%">
-                            <feDropShadow dx="0" dy="10" stdDeviation="7.5" flood-color="#18181b"
-                                flood-opacity="0.15" />
-                        </filter>
-                    </defs>
-                    <path
-                        d="M68 46 H97 A23 23 0 0 1 143 46 H172 A30 30 0 0 1 202 76 V180 A30 30 0 0 1 172 210 H68 A30 30 0 0 1 38 180 V150 A24 24 0 0 0 38 102 V76 A30 30 0 0 1 68 46 Z"
-                        fill="rgba(255,255,255,0.84)" stroke="rgba(113,113,122,0.32)" stroke-width="4"
-                        filter="url(#puzzle-shadow)" transform="rotate(-11 120 126)" />
-                </svg>
+      <div class="poster-container">
+        <div class="poster">
+          <!-- Decorative Elements -->
+          <div class="grid-bg"></div>
+          <div class="circle-decor circle-1"></div>
+          <div class="circle-decor circle-2"></div>
+          <svg
+            class="puzzle-decoration"
+            viewBox="0 0 240 240"
+            aria-hidden="true"
+          >
+            <defs>
+              <filter
+                id="puzzle-shadow"
+                x="-25%"
+                y="-25%"
+                width="150%"
+                height="150%"
+              >
+                <feDropShadow
+                  dx="0"
+                  dy="10"
+                  stdDeviation="7.5"
+                  flood-color="#18181b"
+                  flood-opacity="0.15"
+                />
+              </filter>
+            </defs>
+            <path
+              d="M68 46 H97 A23 23 0 0 1 143 46 H172 A30 30 0 0 1 202 76 V180 A30 30 0 0 1 172 210 H68 A30 30 0 0 1 38 180 V150 A24 24 0 0 0 38 102 V76 A30 30 0 0 1 68 46 Z"
+              fill="rgba(255,255,255,0.84)"
+              stroke="rgba(113,113,122,0.32)"
+              stroke-width="4"
+              filter="url(#puzzle-shadow)"
+              transform="rotate(-11 120 126)"
+            />
+          </svg>
 
-                <!-- Header -->
-                <header class="header">
-                    <div class="logo-group">
-                        <div class="logo">Wingmon</div>
-                        <div class="tagline">你的 AI 浏览器扩展</div>
-                    </div>
-                    <div class="badge">支持 Chrome 与 Edge</div>
-                </header>
-
-                <!-- Main Content -->
-                <main class="main">
-                    <!-- Abstract Browser + Side Panel Illustration -->
-                    <div class="browser-mock">
-                        <div class="main-view">
-                            <div class="top-bar">
-                                <div class="dot"></div>
-                                <div class="dot"></div>
-                                <div class="dot"></div>
-                                <div class="url-bar"></div>
-                            </div>
-                            <div class="content-view">
-                                <div class="content-line w-long"></div>
-                                <div class="content-line w-short"></div>
-                            </div>
-                        </div>
-                        <div class="side-panel-mock">
-                            <div class="panel-header">
-                                <div class="ext-icon"></div>
-                                <div class="ext-name"></div>
-                            </div>
-                            <div class="panel-chat">
-                                <div class="chat-bubble left"></div>
-                                <div class="chat-bubble right"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="hero-group">
-                        <h1 class="hero-title">
-                            赋予浏览器<br>
-                            <span>智能思考的能力。</span>
-                        </h1>
-
-                        <p class="hero-subtitle">常驻侧边栏的 <b>浏览器扩展</b>，无缝协助你的网页操作。</p>
-                    </div>
-
-                    <div class="capabilities">
-                        <div class="capability-item">
-                            <h2 class="cap-title">智能自主交互</h2>
-                        </div>
-
-                        <div class="capability-item">
-                            <h2 class="cap-title">深度环境感知</h2>
-                        </div>
-
-                        <div class="capability-item">
-                            <h2 class="cap-title">隐私保护</h2>
-                        </div>
-
-                        <div class="capability-item">
-                            <h2 class="cap-title">开源与透明</h2>
-                        </div>
-                    </div>
-                </main>
+          <!-- Header -->
+          <header class="header">
+            <div class="logo-group">
+              <div class="logo">Wingmon</div>
+              <div class="tagline">你的 AI 浏览器扩展</div>
             </div>
-        </div>
-</body>
+            <div class="badge">支持 Chrome 与 Edge</div>
+          </header>
 
+          <!-- Main Content -->
+          <main class="main">
+            <!-- Abstract Browser + Side Panel Illustration -->
+            <div class="browser-mock">
+              <div class="main-view">
+                <div class="top-bar">
+                  <div class="dot"></div>
+                  <div class="dot"></div>
+                  <div class="dot"></div>
+                  <div class="url-bar"></div>
+                </div>
+                <div class="content-view">
+                  <div class="content-line w-long"></div>
+                  <div class="content-line w-short"></div>
+                </div>
+              </div>
+              <div class="side-panel-mock">
+                <div class="panel-header">
+                  <div class="ext-icon"></div>
+                  <div class="ext-name"></div>
+                </div>
+                <div class="panel-chat">
+                  <div class="chat-bubble left"></div>
+                  <div class="chat-bubble right"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hero-group">
+              <h1 class="hero-title">
+                赋予浏览器<br />
+                <span>智能思考的能力。</span>
+              </h1>
+
+              <p class="hero-subtitle">
+                常驻侧边栏的 <b>浏览器扩展</b>，无缝协助你的网页操作。
+              </p>
+            </div>
+
+            <div class="capabilities">
+              <div class="capability-item">
+                <h2 class="cap-title">智能自主交互</h2>
+              </div>
+
+              <div class="capability-item">
+                <h2 class="cap-title">深度环境感知</h2>
+              </div>
+
+              <div class="capability-item">
+                <h2 class="cap-title">隐私保护</h2>
+              </div>
+
+              <div class="capability-item">
+                <h2 class="cap-title">开源与透明</h2>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  </body>
 </html>

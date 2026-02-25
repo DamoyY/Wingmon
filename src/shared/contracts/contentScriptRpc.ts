@@ -7,10 +7,10 @@ import type {
   RpcResponseByType,
 } from "./rpc.ts";
 import {
+  type JsonSchema,
   isJsonSchemaValue,
   isJsonValue,
   isRecord,
-  type JsonSchema,
 } from "../utils/runtimeValidation.ts";
 
 export type ChunkAnchorWeight = {
@@ -124,6 +124,18 @@ export type EnterTextResponse =
     }
   | ContentScriptErrorResponse;
 
+export type SetFocusRippleRequest = {
+  type: "setFocusRipple";
+  enabled: boolean;
+};
+
+export type SetFocusRippleResponse =
+  | {
+      ok: true;
+      enabled: boolean;
+    }
+  | ContentScriptErrorResponse;
+
 export type GetPageContentResponse =
   | GetPageContentSuccessResponse
   | ContentScriptErrorResponse;
@@ -142,6 +154,7 @@ export type ContentScriptRpcSchema = {
     GetAllPageContentResponse
   >;
   setPageHash: RpcEndpoint<SetPageHashRequest, SetPageHashResponse>;
+  setFocusRipple: RpcEndpoint<SetFocusRippleRequest, SetFocusRippleResponse>;
   clickButton: RpcEndpoint<ClickButtonRequest, ClickButtonResponse>;
   enterText: RpcEndpoint<EnterTextRequest, EnterTextResponse>;
 };
@@ -169,6 +182,7 @@ const contentScriptRequestTypeMap: Record<ContentScriptRequestType, true> = {
   getAllPageContent: true,
   getPageContent: true,
   ping: true,
+  setFocusRipple: true,
   setPageHash: true,
 };
 
@@ -257,6 +271,15 @@ const contentScriptRequestSchemaMap: Record<
       type: { type: "string" },
     },
     required: ["type"],
+    type: "object",
+  },
+  setFocusRipple: {
+    additionalProperties: false,
+    properties: {
+      enabled: { type: "boolean" },
+      type: { type: "string" },
+    },
+    required: ["type", "enabled"],
     type: "object",
   },
   setPageHash: {

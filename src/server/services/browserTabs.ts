@@ -27,6 +27,9 @@ const tabNavigationFailures: Map<number, TabNavigationFailure> = new Map();
 const assistantOpenedTabIds: Set<number> = new Set();
 let listenersReady = false,
   navigationListenersReady = false,
+  focusRippleTabId: number | null = null,
+  focusRippleEnabled = false,
+  focusRippleProcessingTabId: number | null = null,
   assistantTabGroup: AssistantTabGroup | null = null;
 
 const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
@@ -193,6 +196,71 @@ const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
     }
     return tab;
   },
+  resolveConnectableTabId = (tab: BrowserTab | null): number | null => {
+    if (!tab) {
+      return null;
+    }
+    if (typeof tab.id !== "number") {
+      return null;
+    }
+    if (isInternalUrl(tab.url || "")) {
+      return null;
+    }
+    return tab.id;
+  },
+  sendFocusRippleMessage = async (
+    tabId: number,
+    enabled: boolean,
+  ): Promise<void> => {
+    const payload: ContentScriptRequest = { enabled, type: "setFocusRipple" };
+    try {
+      await ensureTabConnectable(tabId);
+      const response = await chrome.tabs.sendMessage<
+        typeof payload,
+        ContentScriptResponseByRequest<typeof payload> | null | undefined
+      >(tabId, payload);
+      if (response === null || response === undefined) {
+        throw new Error("页面未返回焦点波纹状态");
+      }
+      if (isErrorResponse(response)) {
+        throw new Error(response.error);
+      }
+    } catch (error) {
+      console.error("同步焦点波纹失败", { enabled, tabId }, error);
+    }
+  },
+  updateFocusRippleTab = async (nextTabId: number | null): Promise<void> => {
+    const previousTabId = focusRippleTabId;
+    if (previousTabId === nextTabId) {
+      if (nextTabId !== null) {
+        await sendFocusRippleMessage(nextTabId, true);
+      }
+      return;
+    }
+    focusRippleTabId = nextTabId;
+    if (previousTabId !== null) {
+      await sendFocusRippleMessage(previousTabId, false);
+    }
+    if (nextTabId !== null) {
+      await sendFocusRippleMessage(nextTabId, true);
+    }
+  },
+  resolveProcessingFocusRippleTabId = async (): Promise<number | null> => {
+    if (!focusRippleEnabled || focusRippleProcessingTabId === null) {
+      return null;
+    }
+    try {
+      const tab = await getTabSnapshot(focusRippleProcessingTabId);
+      return resolveConnectableTabId(tab);
+    } catch (error) {
+      console.error("获取助手处理标签页失败，无法同步焦点波纹", error);
+      return null;
+    }
+  },
+  syncFocusRippleToProcessingTab = async (): Promise<void> => {
+    const nextTabId = await resolveProcessingFocusRippleTabId();
+    await updateFocusRippleTab(nextTabId);
+  },
   registerContentScriptListeners = (): void => {
     if (listenersReady) {
       return;
@@ -202,11 +270,32 @@ const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
       if (changeInfo.status === "complete") {
         resolvePendingWaits(tabId, true);
       }
+      if (tabId !== focusRippleTabId) {
+        return;
+      }
+      if (
+        changeInfo.status === "complete" ||
+        typeof changeInfo.url === "string"
+      ) {
+        void syncFocusRippleToProcessingTab();
+      }
     });
     chrome.tabs.onRemoved.addListener((tabId) => {
       clearTabNavigationFailure(tabId);
       removeAssistantTabTracking(tabId);
       resolvePendingWaits(tabId, false);
+      let shouldSyncFocusRipple = false;
+      if (focusRippleTabId === tabId) {
+        focusRippleTabId = null;
+        shouldSyncFocusRipple = true;
+      }
+      if (focusRippleProcessingTabId === tabId) {
+        focusRippleProcessingTabId = null;
+        shouldSyncFocusRipple = true;
+      }
+      if (shouldSyncFocusRipple) {
+        void syncFocusRippleToProcessingTab();
+      }
     });
     registerNavigationListeners();
   },
@@ -225,6 +314,7 @@ const internalTabMessage = "浏览器内置页面不支持连接内容脚本",
 
 export const initTabListeners = (): void => {
   registerContentScriptListeners();
+  void syncFocusRippleToProcessingTab();
 };
 
 export const getTabNavigationFailure = (
@@ -238,6 +328,21 @@ export const getTabNavigationFailure = (
 };
 
 export { getActiveTab };
+
+export const setFocusRippleEnabled = (enabled: boolean): void => {
+  focusRippleEnabled = enabled;
+  void syncFocusRippleToProcessingTab();
+};
+
+export const setFocusRippleProcessingTab = (tabId: number | null): void => {
+  if (tabId !== null && (!Number.isInteger(tabId) || tabId <= 0)) {
+    const error = new Error("焦点波纹处理标签页 ID 必须是正整数");
+    console.error(error.message, { tabId });
+    throw error;
+  }
+  focusRippleProcessingTabId = tabId;
+  void syncFocusRippleToProcessingTab();
+};
 
 export const getAllTabs = async (): Promise<BrowserTab[]> => {
   try {
@@ -338,6 +443,7 @@ export const sendMessageToTab = async <TRequest extends ContentScriptRequest>(
   tabId: number,
   payload: TRequest,
 ): Promise<ContentScriptSuccessResponse<TRequest>> => {
+  setFocusRippleProcessingTab(tabId);
   await ensureTabConnectable(tabId);
   try {
     const response = await chrome.tabs.sendMessage<
