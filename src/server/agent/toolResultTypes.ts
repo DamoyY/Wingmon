@@ -32,7 +32,9 @@ export type ClickButtonToolResult = PageReadToolResult;
 
 export type GetPageMarkdownToolResult = PageReadToolResult;
 
-export type OpenBrowserPageToolResult = PageReadToolResult;
+export type OpenBrowserPageToolResult = PageReadToolResult & {
+  alreadyExists?: boolean;
+};
 
 export type FindToolPageResult = {
   pageNumber: number;

@@ -111,7 +111,7 @@
     "message": "URL:"
   },
   "statusAlreadyExists": {
-    "message": "Failed, the same page already exists in the browser, Tab ID: \"$1\""
+    "message": "**Open failed**\nA page with the same URL already exists. Tab ID: \"$1\". If you need to access it, use the `get_page` tool."
   },
   "statusSuccess": {
     "message": "Success"

@@ -99,6 +99,22 @@ const parameters = {
       url,
     };
   },
+  buildAlreadyExistsResult = ({
+    tabId,
+    title,
+    url,
+  }: {
+    tabId: number;
+    title: string;
+    url: string;
+  }): OpenBrowserPageToolResult => ({
+    alreadyExists: true,
+    content: "",
+    isInternal: isInternalUrl(url),
+    tabId,
+    title,
+    url,
+  }),
   fetchPageResult = async ({
     context,
     followMode,
@@ -184,33 +200,11 @@ const parameters = {
         await context.focusTab(matchedTab.id);
       }
       const matchedUrl = matchedTab.url || normalizedUrl,
-        isInternal = isInternalUrl(matchedUrl);
-      if (isInternal) {
-        return {
-          content: "",
-          isInternal: true,
-          tabId: matchedTab.id,
-          title: matchedTab.title || "",
-          url: matchedUrl,
-        };
-      }
-      if (supportsImageInput) {
-        const imageResult = await resolveImagePageResult({
-          tabId: matchedTab.id,
-          title: matchedTab.title || "",
-          url: matchedUrl,
-        });
-        if (imageResult !== null) {
-          return imageResult;
-        }
-      }
-      return fetchPageResult({
-        context,
-        fallbackUrl: matchedUrl,
-        followMode,
-        requestedUrl: normalizedUrl,
-        supportsImageInput,
+        matchedTitle = matchedTab.title || "";
+      return buildAlreadyExistsResult({
         tabId: matchedTab.id,
+        title: matchedTitle,
+        url: matchedUrl,
       });
     }
     const tab = await context.createTab(normalizedUrl, shouldFocus);

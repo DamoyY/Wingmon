@@ -100,6 +100,18 @@ const resolveOptionalImageInput = (
   return { data: value.data, mimeType: value.mimeType, sourceType: "base64" };
 };
 
+const resolveOpenPageAlreadyExists = (
+  value: OpenBrowserPageToolResult["alreadyExists"],
+): boolean => {
+  if (value === undefined) {
+    return false;
+  }
+  if (typeof value !== "boolean") {
+    throw new Error("alreadyExists 必须是布尔值");
+  }
+  return value;
+};
+
 const resolvePageReadResult = (
   result: PageReadToolResult,
 ): NormalizedPageReadResult => ({
@@ -275,13 +287,17 @@ const buildHeaderOnlyPageReadResult = (
   ): string => {
     const { tabId, title, isInternal, imageInput } =
         resolvePageReadResult(result),
-      headerLines = [
-        t("statusOpenSuccess"),
-        `${t("statusTitle")}：`,
-        title,
-        `${t("statusTabId")}：`,
-        String(tabId),
-      ];
+      alreadyExists = resolveOpenPageAlreadyExists(result.alreadyExists);
+    if (alreadyExists) {
+      return t("statusAlreadyExists", [String(tabId)]);
+    }
+    const headerLines = [
+      t("statusOpenSuccess"),
+      `${t("statusTitle")}：`,
+      title,
+      `${t("statusTabId")}：`,
+      String(tabId),
+    ];
     if (isInternal) {
       return buildHeaderOnlyPageReadResult(headerLines, true);
     }
@@ -412,13 +428,17 @@ export const formatOpenBrowserPageResult = (
 ): string => {
   const { tabId, title, content, isInternal, imageInput } =
       resolvePageReadResult(result),
-    headerLines = [
-      t("statusOpenSuccess"),
-      `${t("statusTitle")}：`,
-      title,
-      `${t("statusTabId")}：`,
-      String(tabId),
-    ];
+    alreadyExists = resolveOpenPageAlreadyExists(result.alreadyExists);
+  if (alreadyExists) {
+    return t("statusAlreadyExists", [String(tabId)]);
+  }
+  const headerLines = [
+    t("statusOpenSuccess"),
+    `${t("statusTitle")}：`,
+    title,
+    `${t("statusTabId")}：`,
+    String(tabId),
+  ];
   if (imageInput !== undefined) {
     return buildHeaderOnlyPageReadResult(headerLines, false);
   }
