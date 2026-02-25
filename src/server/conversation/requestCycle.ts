@@ -13,7 +13,7 @@ import {
   updateMessage,
 } from "../../shared/state/panelStateContext.ts";
 import { handleToolCalls } from "../agent/executor.ts";
-import requestModel from "../api/client.ts";
+import requestModel from "../api/requestModel/index.ts";
 import { resolveStatusFromToolCalls } from "../agent/toolResultFormatters.ts";
 
 type StatusReporter = (status: AgentStatus) => void;
