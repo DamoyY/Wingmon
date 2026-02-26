@@ -1,5 +1,6 @@
 import { ensureOffscreenDocument, startPanelServer } from "../server/index.ts";
 import {
+  initializeCodexResponsesVersion,
   isInternalUrl,
   isOffscreenHeartbeatMessage,
   normalizeUrl,
@@ -47,6 +48,14 @@ const contentScriptFilePath = "content.bundle.js",
     id: pdfContentDispositionRuleId,
     priority: 1,
   };
+
+const warmupCodexResponsesVersion = async (): Promise<void> => {
+  try {
+    await initializeCodexResponsesVersion();
+  } catch (error) {
+    console.error("初始化 Codex SDK 版本失败", error);
+  }
+};
 
 const logError = (message: string, error: unknown = null): void => {
     if (error !== null) {
@@ -421,6 +430,7 @@ void enablePanelBehavior();
 void registerShowHtmlContextMenu();
 void ensurePdfContentDispositionRule();
 void ensureOffscreenDocument();
+void warmupCodexResponsesVersion();
 void startPanelServer();
 chrome.runtime.onInstalled.addListener((details) => {
   void handleExtensionInstalled(details);
@@ -428,6 +438,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 chrome.runtime.onStartup.addListener(() => {
   void ensurePdfContentDispositionRule();
   void ensureOffscreenDocument();
+  void warmupCodexResponsesVersion();
   void startPanelServer();
 });
 chrome.action.onClicked.addListener((tab) => {

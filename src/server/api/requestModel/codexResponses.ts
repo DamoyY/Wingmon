@@ -25,7 +25,7 @@ const resolveCodexHeaders = async ({
   accept: string;
   accessToken: string;
 }): Promise<Record<string, string>> => {
-  const codexHeaders = buildCodexResponsesHeaders(),
+  const codexHeaders = await buildCodexResponsesHeaders(),
     savedTokens = await getCodexTokens();
   if (savedTokens !== null && savedTokens.access_token === accessToken) {
     const profile = extractCodexAuthProfile(savedTokens);

@@ -8,11 +8,13 @@ const oauthConfig = {
   scopes: "openid profile email offline_access",
   tokenUrl: "https://auth.openai.com/oauth/token",
 };
-const codexResponsesVersion = "0.104.0";
+const codexSdkLatestMetadataUrl =
+  "https://registry.npmjs.org/@openai%2Fcodex-sdk/latest";
 const oauthTimeoutMs = 5 * 60 * 1000;
 type JsonRecord = Record<string, unknown>;
 type JwtPayload = JsonRecord;
 type CodexAuthClaims = { chatgpt_account_id?: string };
+type CodexSdkLatestMetadata = { version: string };
 type CodexTokenResponse = {
   access_token: string;
   id_token?: string;
@@ -31,6 +33,8 @@ export type CodexLoginResult = {
   accessToken: string;
   profile: CodexAuthProfile;
 };
+let codexResponsesVersion = "";
+let codexResponsesVersionInitialization: Promise<void> | null = null;
 
 const isJsonRecord = (value: unknown): value is JsonRecord =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -68,6 +72,54 @@ const parseJsonRecord = (
   }
   return parsed;
 };
+const parseCodexSdkLatestMetadata = (raw: string): CodexSdkLatestMetadata => {
+  const payload = parseJsonRecord(raw, "Codex SDK npm 元数据解析失败");
+  const version = readString(payload.version).trim();
+  if (!version) {
+    throw new Error("Codex SDK npm 元数据缺少 version");
+  }
+  return { version };
+};
+const readCodexSdkVersionFromNpm = async (): Promise<string> => {
+  const response = await fetch(codexSdkLatestMetadataUrl, {
+    headers: { Accept: "application/json" },
+    method: "GET",
+  });
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(
+      `获取 Codex SDK 版本失败，状态码：${String(response.status)}，响应：${responseText}`,
+    );
+  }
+  const metadata = parseCodexSdkLatestMetadata(responseText);
+  return metadata.version;
+};
+const initializeCodexResponsesVersionInternal = (): Promise<void> => {
+  if (codexResponsesVersionInitialization !== null) {
+    return codexResponsesVersionInitialization;
+  }
+  codexResponsesVersionInitialization = (async () => {
+    try {
+      codexResponsesVersion = await readCodexSdkVersionFromNpm();
+    } catch (error) {
+      console.error("解析 Codex SDK 版本失败", error);
+      throw error;
+    }
+  })();
+  return codexResponsesVersionInitialization;
+};
+const resolveCodexResponsesVersion = async (): Promise<string> => {
+  if (codexResponsesVersion.trim()) {
+    return codexResponsesVersion;
+  }
+  if (codexResponsesVersionInitialization !== null) {
+    await codexResponsesVersionInitialization;
+  }
+  if (codexResponsesVersion.trim()) {
+    return codexResponsesVersion;
+  }
+  throw new Error("Codex SDK 版本未初始化");
+};
 
 const base64UrlEncodeBytes = (bytes: Uint8Array): string => {
   let binary = "";
@@ -90,9 +142,9 @@ const createCodeChallenge = async (codeVerifier: string): Promise<string> => {
   return base64UrlEncodeBytes(new Uint8Array(digest));
 };
 const createUuid = (): string =>
-  typeof crypto.randomUUID === "function"
-    ? crypto.randomUUID()
-    : `${String(Date.now())}-${Math.random().toString(16).slice(2)}`;
+  typeof crypto.randomUUID === "function" ?
+    crypto.randomUUID()
+  : `${String(Date.now())}-${Math.random().toString(16).slice(2)}`;
 const parseJwtPayload = (token: string): JwtPayload => {
   if (!token.trim()) {
     return {};
@@ -119,9 +171,8 @@ const parseCodeAndStateFromUrl = (
   if (queryCode !== null && queryState !== null) {
     return { code: queryCode, state: queryState };
   }
-  const rawHash = parsed.hash.startsWith("#")
-    ? parsed.hash.slice(1)
-    : parsed.hash;
+  const rawHash =
+    parsed.hash.startsWith("#") ? parsed.hash.slice(1) : parsed.hash;
   const hashParams = new URLSearchParams(rawHash);
   const hashCode = hashParams.get("code");
   const hashState = hashParams.get("state");
@@ -332,13 +383,19 @@ export const getCodexTokens = async (): Promise<CodexOAuthTokens | null> => {
 export const clearCodexTokens = async (): Promise<void> => {
   await chrome.storage.local.remove(codexTokenStorageKey);
 };
-export const buildCodexResponsesHeaders = (): Record<string, string> => {
+export const initializeCodexResponsesVersion = async (): Promise<void> => {
+  await initializeCodexResponsesVersionInternal();
+};
+export const buildCodexResponsesHeaders = async (): Promise<
+  Record<string, string>
+> => {
+  const resolvedVersion = await resolveCodexResponsesVersion();
   const headers: Record<string, string> = {
     conversation_id: createUuid(),
     "openai-beta": "responses=experimental",
     originator: codexOriginator,
     session_id: createUuid(),
-    version: codexResponsesVersion,
+    version: resolvedVersion,
   };
   return headers;
 };
