@@ -87,10 +87,14 @@ Wingmon 是一个开源扩展，您既可以通过 [Chrome Web Store](https://ch
 ### 高级配置
 
 如果您使用的是第三方中转 API，或者希望强制开启某些模型的隐藏能力（例如开启某些模型的 Reasoning 过程），您可以在设置中的“高级配置”利用 YAML 语法覆写发给大模型的 Request Body。
+
 示例：
 ```yaml
 - path: "temperature"
   value: 0.7
+```
+对于 GPT 系列模型，我们强烈建议您使用
+```
 - path: "reasoning.effort"
   value: "high"
 ```
